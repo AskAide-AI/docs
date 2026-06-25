@@ -48,10 +48,10 @@ const config = {
       },
       items: [
         {to: '/', label: 'Home', position: 'left'},
-        {to: '/frontend', label: 'Frontend', position: 'left'},
-        {to: '/backend', label: 'Backend', position: 'left'},
-        {to: '/ai-service', label: 'AI Service', position: 'left'},
-        {to: '/shared-contracts', label: 'Contracts', position: 'left'},
+        {to: '/frontend/overview', label: 'Frontend', position: 'left'},
+        {to: '/backend/overview', label: 'Backend', position: 'left'},
+        {to: '/ai-service/overview', label: 'AI Service', position: 'left'},
+        {to: '/shared-contracts/overview', label: 'Contracts', position: 'left'},
       ],
     },
     footer: {
@@ -60,10 +60,10 @@ const config = {
         {
           title: 'Docs',
           items: [
-            {label: 'Frontend', to: '/frontend'},
-            {label: 'Backend', to: '/backend'},
-            {label: 'AI Service', to: '/ai-service'},
-            {label: 'Shared Contracts', to: '/shared-contracts'},
+            {label: 'Frontend', to: '/frontend/overview'},
+            {label: 'Backend', to: '/backend/overview'},
+            {label: 'AI Service', to: '/ai-service/overview'},
+            {label: 'Shared Contracts', to: '/shared-contracts/overview'},
           ],
         },
         {
