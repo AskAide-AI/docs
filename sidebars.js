@@ -48,7 +48,7 @@ const sidebars = {
         {
           type: 'category',
           label: 'Product',
-          items: ['backend/product/product-introduction', 'backend/product/pricing', 'backend/product/growth-analysis', 'backend/product/PRODUCT-INTRODUCTION'],
+            items: ['backend/product/pricing', 'backend/product/growth-analysis', 'backend/product/PRODUCT-INTRODUCTION'],
         },
         {
           type: 'category',
