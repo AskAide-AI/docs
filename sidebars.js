@@ -15,7 +15,7 @@ const sidebars = {
         {
           type: 'category',
           label: 'Development',
-          items: ['frontend/development/setup', 'frontend/development/conventions'],
+          items: ['frontend/development/setup', 'frontend/development/conventions', 'frontend/development/troubleshooting', 'frontend/development/testing-strategy'],
         },
         {
           type: 'category',
@@ -43,7 +43,7 @@ const sidebars = {
         {
           type: 'category',
           label: 'Development',
-          items: ['backend/development/setup', 'backend/development/module-reference', 'backend/development/testing'],
+          items: ['backend/development/setup', 'backend/development/module-reference', 'backend/development/troubleshooting', 'backend/development/testing-strategy', 'backend/development/api-changelog'],
         },
         {
           type: 'category',
@@ -71,7 +71,7 @@ const sidebars = {
         {
           type: 'category',
           label: 'Development',
-          items: ['ai-service/development/setup', 'ai-service/development/integration-plan', 'ai-service/development/integration-plan-full'],
+          items: ['ai-service/development/setup', 'ai-service/development/integration-plan', 'ai-service/development/integration-plan-full', 'ai-service/development/troubleshooting', 'ai-service/development/testing-strategy'],
         },
         {
           type: 'category',
