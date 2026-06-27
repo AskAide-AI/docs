@@ -2,7 +2,7 @@
 
 > **Auditor:** Senior SaaS Product Architect / Investor Simulation
 > **Date:** June 2026
-> **Last Updated:** June 27, 2026
+> **Last Updated:** June 27, 2026 (Sessions 2 & 3)
 > **Status:** Pre-Launch Audit
 
 ---
@@ -649,18 +649,18 @@ Cold Outreach (500 schools) → Interest (50 schools)
 
 # NO
 
-### Launch Readiness Score: 32 / 100 (was) → 48 / 100 (after June 14) → **56 / 100 (after June 27 fixes)**
+### Launch Readiness Score: 32 / 100 (was) → 48 / 100 (after June 14) → 56 / 100 (after June 27 s1) → **62 / 100 (after June 27 s2+s3)**
 
 | Category | Score | Critical Issues | Status |
 |----------|-------|-----------------|--------|
-| Security | 5/20 → **15/20** | Credentials in git, JWT is "suraj", no CSRF | ✅ All routes now have auth (incl. remaining leaderboard + feedback), `$regex` NoSQL injection escaped, password reset tokens hashed, source maps disabled, AI Service auth + rate limiting added, IDOR fixed (all topic-progress routes use `req.user.id`), AI insights endpoints authenticated, x-api-key auto-injected on Backend↔AI Service calls, correlationHeaders() extended |
+| Security | 5/20 → **17/20** | Credentials in git, JWT is "suraj", no CSRF | ✅ All routes now have auth + role guards, `$regex` NoSQL injection escaped, password reset tokens SHA-256 hashed, source maps disabled, AI Service auth + rate limiting, IDOR fixed, x-api-key auto-injected. **NEW:** Password field `select:false`, file upload magic byte validation (PDF/DOCX), Pydantic ObjectId validators, sync LLM calls wrapped in `asyncio.to_thread()`, thread-safe singletons, OpenRouter health check fixed |
 | Payments | 0/15 | Razorpay keys are placeholder. No revenue engine. | ❌ Unchanged |
 | Infrastructure | 3/10 | 512MB AI service. No CDN. No caching. Render free tier. | ❌ Unchanged |
 | Auth/UX | 5/10 → **7/10** | Signup broken. No onboarding. | ✅ Profile endpoints fixed, role guards 403 fix, 401 handler redirects to login, RoleProtectedRoute waits for profile, console.error removed from all API files |
-| Code Quality | 8/15 → **13/15** | Dead code layers removed, fonts deduplicated, console cleanup | ✅ Deleted `frontend/src/services/`, `ai_services.py`, `@prisma/client`, `body-parser` → `express.json()`, removed dead `getTopics`/`TOPICS`, created shared fonts, removed 91 console.error, fixed useQuestionPolling deps, Dashboard caching added |
+| Code Quality | 8/15 → **14/15** | Dead code layers removed, fonts deduplicated, console cleanup | ✅ Deleted `frontend/src/services/`, `ai_services.py`, `@prisma/client`, `body-parser` → `express.json()`, removed dead `getTopics`/`TOPICS`, created shared fonts, removed 91 console.error, fixed useQuestionPolling deps, Dashboard caching added. **NEW:** `proxyAiService()` error transformer, `fetchWithTimeout()` with AbortController, `/health` endpoint, Vitest test suite installed, PWA workbox uses env var |
 | Emails | 3/10 | Gmail SMTP only. Password in git. 500/day limit. | ❌ Unchanged |
 | Business | 3/10 | No sales process. No marketing. No revenue model. | ❌ Unchanged |
-| Product | 5/10 → **6/10** | Core features work, AI quality unvalidated, no content moat. | ✅ Topic ID→names mismatch fixed, Dashboard session cache, SEO config uses env vars, hardcoded URLs removed |
+| Product | 5/10 → **7/10** | Core features work, AI quality unvalidated, no content moat. | ✅ Topic ID→names mismatch fixed, Dashboard session cache, SEO config uses env vars, hardcoded URLs removed. **NEW:** `proxyAiService()` transforms AI errors into Backend canonical format, `fetchWithTimeout()` prevents hung requests |
 
 ### Top 10 Pre-Launch Fixes (Must Do Before Any Users)
 
@@ -787,6 +787,6 @@ And **critical business gaps**:
 
 ---
 
-*Audit conducted: June 2026 | Last updated: June 27, 2026*
+*Audit conducted: June 2026 | Last updated: June 27, 2026 (sessions 2 & 3)*
 *Auditor: Senior SaaS Product Architect / Investor Simulation*
 *Tools: Code review, repo analysis, documentation audit, architectural assessment*
