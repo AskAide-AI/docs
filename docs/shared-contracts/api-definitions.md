@@ -45,14 +45,22 @@ All role guards also allow `SuperAdmin`.
 { "success": false, "message": "Validation failed", "error": { "errors": [{ "field": "name", "message": "Required" }] } }
 ```
 
+## Authentication Methods
+
+| Service | Method | Header |
+|---------|--------|--------|
+| **Backend** | JWT (Bearer token) | `Authorization: Bearer <jwt>` or Cookie `token=<jwt>` |
+| **AI Service** | API Key | `x-api-key: <shared-secret>` |
+| **AI Service** (skip) | Public | `/ping`, `/health`, `/health/live`, `/health/ready`, `/docs`, `/redoc` |
+
 ## Rate Limiting
 
 | Scope | Limit |
 |-------|-------|
-| Global | 100 req / 5 min per IP |
-| Login | 5 req / 15 min |
-| Signup | 3 req / hour |
-| AI Service | 100 req / hour |
+| Backend Global | 100 req / 5 min per IP |
+| Backend Login | 5 req / 15 min |
+| Backend Signup | 3 req / hour |
+| AI Service | 200 req / 60s per IP (skip: `/ping`, `/health`) |
 
 ---
 
@@ -180,11 +188,12 @@ All role guards also allow `SuperAdmin`.
 
 | Method | Path | Notes |
 |--------|------|-------|
-| GET | `/progress/:userId/chapter/:chapterId` | |
-| GET | `/progress/:userId/subject/:subjectId` | |
-| GET | `/ai-insights/userid/:userId/chapter/:chapterId` | Proxies to AI Service `/ai-insights/chapter` |
-| GET | `/ai-insights/userid/:userId/subject/:subjectId` | Proxies to AI Service `/ai-insights/subject` |
-| GET | `/mastery-summary/:userId` | |
+| GET | `/progress/chapter/:chapterId` | `auth` | userId from JWT |
+| GET | `/progress/subject/:subjectId` | `auth` | userId from JWT |
+| GET | `/ai-insights/chapter/:chapterId` | `auth` | Proxies to AI Service `/ai-insights/chapter` |
+| GET | `/ai-insights/subject/:subjectId` | `auth` | Proxies to AI Service `/ai-insights/subject` |
+| GET | `/mastery-summary` | `auth` | userId from JWT |
+| GET | `/teacher/class-insights` | `auth` + `isTeacher` | teacherId from JWT |
 
 ### 1.12 Progress Dashboard (`/api/v1/progress`)
 
@@ -363,6 +372,7 @@ All require `auth, isTeacher` (applied at router level).
 ## 2. AI Service Endpoints (FastAPI + Qdrant)
 
 Base: `http://localhost:8000` (dev) / `https://ai-service.askaide.ai` (prod)
+Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/health/live`, `/health/ready`, `/docs`, `/redoc`)
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
