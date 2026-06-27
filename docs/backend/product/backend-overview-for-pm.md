@@ -119,7 +119,7 @@ We can now tell you exactly *which specific topics* a student struggles with!
 - 🟢 **MASTERED** (>80%): Strong topics
 - 🟡 **PRACTICING** (60-80%): Good progress
 - 🟠 **LEARNING** (35-60%): Needs more practice
-- 🔴 **WEAK** (<35%): Requires attention
+- 🔴 **WEAK** (&lt;35%): Requires attention
 
 ### 🔮 Phase 3: The "Cognitive State Engine" — FUTURE
 **Goal**: Predictive analytics and personalized learning.

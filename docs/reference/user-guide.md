@@ -85,7 +85,7 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
 4. Set a **daily study goal** (recommended: 30 minutes)
 5. You'll be redirected to your student dashboard
 
-> **PLACEHOLDER: <Screenshot of onboarding flow — class/subject selection>**
+> **PLACEHOLDER: `[Screenshot of onboarding flow — class/subject selection]`**
 
 ---
 
