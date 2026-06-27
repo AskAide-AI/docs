@@ -1,6 +1,6 @@
 # AskAide AI — Competitor Research Report
 
-**Date:** May 2026
+**Date:** June 2026
 **Product:** AskAide AI — B2B SaaS EdTech platform for K-12 schools in India (Classes 6-12)
 **Features:** AI-adaptive practice, mastery progress tracking, teacher dashboards, quiz system, question paper generator, document upload + RAG Q&A, AI question generation, school management, gamification (streaks, badges, leaderboards)
 
@@ -13,14 +13,15 @@
 | Field | Details |
 |-------|---------|
 | **Website** | physicswallah.com |
-| **What** | India's largest edtech unicorn with indigenous AI suite "Alakh AI" — AI Guru (24/7 tutor), Sahayak (adaptive practice), NCERT Pitara (AI question generation), Prep Meter (performance tracking) |
-| **Revenue** | ~₹2,887 Cr FY25 |
+| **What** | India's largest edtech unicorn with indigenous AI suite "Alakh AI" — AI Guru (24/7 tutor), Sahayak (adaptive practice), NCERT Pitara (AI question generation), Prep Meter (performance tracking). Building subject-specific small language models (SLMs) |
+| **Revenue** | ~₹2,887 Cr FY25; IPO Nov 2025 (₹3,480 Cr); 5.34M paid users Q4 FY26 |
 | **Key Features** | AI Guru (text/image/speech input, 94% satisfaction), Sahayak (adaptive learning paths, backlog clearance), NCERT Pitara (GenAI question generation), AI doubt engine (85% real-time resolution), LearnOS Tapasya Mode (focus mode), 303 offline centers across 152 cities |
-| **Pricing** | Courses avg ₹4,000; IPO underway (₹3,480 Cr) |
+| **AI Models** | **Aryabhata 1.0** (Jul 2025) — 7B params, 86% JEE Main Jan 2025 / 90.2% Apr 2025, trained on 130K Q&A pairs. **Aryabhata 2.0** (2026) — 20B MoE (3.6B active), 92.99% JEE Main 2026, open-source on HuggingFace. Built via RL with verifiable rewards on GPT-OSS-20B. **Microsoft Research collab** — Phi-based SLMs with 150K math reasoning traces, outperforming leading LLMs on complex math |
+| **Pricing** | Courses avg ₹4,104 online; AI Tutor rolling out FY27; going "100% asset-light" on K-12 |
 | **Target** | JEE/NEET/UPSC/GATE, Classes 6-12, CBSE & State Boards |
-| **Strengths** | Massive scale (45L+ students), profitable unicorn, strong brand trust, offline+online hybrid, building subject-specific SLMs |
-| **What we can learn** | Subject-specific small language models, offline+online hybrid model, comprehensive AI suite under one brand |
-| **Risk to us** | HIGH — direct overlap on AI tutoring, adaptive practice, question generation; massive brand advantage and budget |
+| **Strengths** | Massive scale (5.34M paid users), profitable unicorn, open-source SLMs, Microsoft Research partnership, offline+online hybrid, AI Tutor targeting FY27 revenue |
+| **What we can learn** | Subject-specific SLM strategy (Aryabhata 1.0→2.0 trajectory), Microsoft Research collab for SLM training, open-source model release for community refinement, RL-based reasoning training |
+| **Risk to us** | HIGH — direct overlap on AI tutoring, adaptive practice, question generation; massive brand advantage, budget, and now own open-source SLMs with competitive accuracy |
 
 ### 1.2 Byju's
 
@@ -69,11 +70,12 @@
 | **Website** | sparkschool.ai |
 | **What** | "The #1 AI Teaching Platform in India" — complete AI OS for schools with 40+ AI tools for teachers |
 | **Key Features** | 40+ AI tools (lesson plans, assessments, worksheets), voice-powered AI agent, UltraContext Memory, academic calendar, RAG-powered lesson plans, exam creation + auto-analytics, admin dashboard |
+| **Child Safety** | Dedicated child safety page (sparkschool.ai/child-safety). FERPA/COPPA compliant as "school official". No direct student accounts — teacher-controlled data only. No behavioral tracking, no data selling, no AI provider data sharing. TLS 1.3 / AES-256 encryption. AI content safety filters with mandatory teacher review before student access. 72-hour breach notification. DPA available for schools |
 | **Pricing** | Free pilot, transparent plans; school/group licensing |
 | **Target** | Indian K-12 schools (CBSE/ICSE/State boards) |
-| **Strengths** | Teacher-first approach, 500+ schools onboarded, multi-school deployment, Google Classroom/Moodle/Teams integration |
-| **What we can learn** | Teacher-first product strategy, "40+ AI tools" marketing hook, RAG-powered lesson planning, LMS integrations |
-| **Risk to us** | VERY HIGH — most direct competitor; same B2B school model, more mature (500+ schools), broader feature set |
+| **Strengths** | Teacher-first approach, 500+ schools onboarded, multi-school deployment, Google Classroom/Moodle/Teams integration, strongest child safety positioning among Indian competitors |
+| **What we can learn** | Teacher-first product strategy, "40+ AI tools" marketing hook, RAG-powered lesson planning, LMS integrations, child safety as marketing differentiator (dedicated safety page, no student accounts) |
+| **Risk to us** | VERY HIGH — most direct competitor; same B2B school model, more mature (500+ schools), broader feature set, and strongest child safety compliance |
 
 ### 1.6 Vidhya AI
 
@@ -87,6 +89,8 @@
 | **Strengths** | Built from first principles for India, concept-level adaptation, teacher-led design, eliminates private tutoring gap |
 | **What we can learn** | Socratic approach (not giving answers), misconception detection, teacher-led model positioning |
 | **Risk to us** | HIGH — strong pedagogical approach, concept-level mastery tracking overlaps with our progress system |
+
+> **Note:** A separate US-based startup "Vidya AI" (Mountain View, CA, founded Sep 2025 by Dr. Pingakshya Goswami) targets STEM higher ed — AI grading, lecture analysis, 4K+ academic videos processed, NVIDIA Inception Program member. Not a direct competitor but signals Silicon Valley interest in AI education tools.
 
 ### 1.7 ScholarAI
 
@@ -197,16 +201,56 @@
 | Field | Details |
 |-------|---------|
 | **Website** | theobi.ai |
-| **What** | "World's first AI-native adaptive learning OS" — 3 engines (Knowledge Graph, Adaptive Intelligence, Experience) |
-| **Key Features** | 50K+ interconnected concept knowledge graph, multi-modal adaptive AI (12+ languages), personalized explanations + practice + simulations |
+| **What** | "World's first AI-native adaptive learning OS" — 3 engines (Knowledge Graph, Large Adaptive Models, Psychometric) |
+| **Key Features** | 50K+ interconnected concept knowledge graph, GraphRAG (multi-hop prerequisite gap detection), Large Adaptive Models with 15-hop tracing, psychometric engines (BKT + IRT 3-parameter), 283K+ JEE/NEET questions (2005-2024), multi-board curriculum maps (CBSE, ICSE, Cambridge, Edexcel, IB), 9 boards + JEE/NEET, real-time mastery probability estimation, parent reporting |
 | **Pricing** | ₹499/mo (Go), ₹699/mo (Plus), ₹1,299/mo (Pro); campus pricing for schools |
-| **Target** | K-12, competitive exams, Indian families |
-| **Strengths** | Deep knowledge graph (50K concept nodes), truly adaptive (not just search), built as private tutoring alternative |
-| **What we can learn** | Knowledge graph approach for concept mapping, tiered pricing with school/campus plans |
-| **Risk to us** | MEDIUM — also targeting schools with campus pricing; strong AI-native positioning |
+| **Target** | K-12, competitive exams, Indian families, schools |
+| **Strengths** | Deep knowledge graph (50K concept nodes), GraphRAG for prerequisite diagnosis, true adaptivity (not just search), 15-hop concept tracing, built as private tutoring alternative |
+| **What we can learn** | GraphRAG for concept-level gap detection, Large Adaptive Models with multi-hop tracing, psychometric engines (BKT+IRT) for mastery estimation, multi-board curriculum mapping, concept prerequisite chain visualization |
+| **Risk to us** | MEDIUM — also targeting schools with campus pricing; strong AI-native positioning, GraphRAG is technically ahead of our current RAG implementation |
 
 ---
 
+### 1.16 Fermi.ai
+
+| Field | Details |
+|-------|---------|
+| **Website** | fermi.ai |
+| **What** | AI-first STEM learning platform for high-school students, launched Jan 2026 by ex-Flipkart execs (Peeyush Ranjan, Mukesh Bansal) |
+| **Key Features** | Stylus-first canvas-based interface, adaptive real-time tutor (doesn't give answers), handwriting recognition, curriculum-linked concept graph, exam-aligned question bank (AP, IB, JEE), diagnostic tools identifying reasoning breakdown points |
+| **Pricing** | Free (pilot phase); Singapore HQ with India/US subsidiaries |
+| **Target** | High-school STEM students, India and US (AP, IB, JEE) |
+| **Strengths** | Founder pedigree (ex-Flipkart CTO + ex-Myntra co-founder), 3-month pilot (79 students, 15K+ concept tests), 4.68-point improvement for low-scorers, stylus-first UX differentiator |
+| **What we can learn** | Stylus-first canvas for math/physics (natural input), guided-not-given approach, concept graph for diagnostic feedback |
+| **Risk to us** | MEDIUM — high-quality founding team, AI-first STEM focus overlaps with our math/science practice; stylus approach could set new UX expectations |
+
+### 1.17 Oda Class
+
+| Field | Details |
+|-------|---------|
+| **Website** | odaclass.com |
+| **What** | Bengaluru-based K-12 online tutoring startup with dual-teacher model and AI learning agent |
+| **Key Features** | Dual-teacher model (live + AI), AI learning agent (planning, doubt resolution, adaptive learning, companionship), 120% revenue CAGR, ₹86.5 Cr FY25 revenue |
+| **Pricing** | Subscription (digital-first) |
+| **Target** | K-12 Indian students |
+| **Strengths** | Profitable growth trajectory (losses halved from ₹71 Cr to ₹35 Cr), dual-teacher model for retention, seeking $10M funding for AI expansion |
+| **What we can learn** | Dual-teacher model (human + AI), AI companionship feature for engagement, measured approach to scaling |
+| **Risk to us** | MEDIUM — growing K-12 presence in India, AI agent with companionship is unique; but B2C not B2B school licensing |
+
+### 1.18 VedaAI
+
+| Field | Details |
+|-------|---------|
+| **Website** | vedaai.com |
+| **What** | AI academic platform incubated at IIM Bangalore's NSRCEL — AI grading, school analytics, personalised feedback |
+| **Key Features** | AI grading platform (subjective + objective), school-wide analytics dashboard, personalised student feedback, DPDP Act 2023 compliant, NEP 2020 aligned |
+| **Pricing** | Institutional licensing; Actis Technologies as exclusive India distribution partner |
+| **Target** | CBSE/ICSE/IGCSE/IB schools, universities, coaching institutes (JEE/NEET/CUET/CA) |
+| **Strengths** | IIM-B incubation, Google/Microsoft/AWS Startups backing, 88% AI grades accepted after teacher review, DPDP Act 2023 compliance |
+| **What we can learn** | AI grading + teacher review loop for trust, institutional analytics dashboard, compliance-first positioning (DPDP Act, NEP 2020) |
+| **Risk to us** | MEDIUM — AI grading overlaps with our auto-assessment; institutional analytics dashboard could compete with teacher dashboards |
+
+---
 ## 2. GLOBAL AI TUTORING & EDTECH PLATFORMS
 
 ### 2.1 Khan Academy — Khanmigo
@@ -359,6 +403,9 @@
 | Apar Academy | Indian AI | ❌ | ✅ | ✅ | ❌ | ✅ | ✅ | LOW |
 | Doubtnut | Indian EdTech | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | MEDIUM |
 | Obi | Indian AI | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | MEDIUM |
+| Fermi.ai | Indian AI | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | MEDIUM |
+| Oda Class | Indian EdTech | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | MEDIUM |
+| VedaAI | Indian AI | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | MEDIUM |
 | Khan Academy | Global | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | LOW |
 | Carnegie Learning | Global | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | LOW |
 | CENTURY Tech | Global | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ | VERY LOW |
@@ -373,12 +420,15 @@
 | 2 | **Teacher + Student dual-sided platform in Indian B2B school space** — underserved | SparkSchool is teacher-first, Vidhya is student-first; no one balances both equally for schools |
 | 3 | **Indian curriculum depth (CBSE/NCERT/State boards)** — not served well by global tools | Khan Academy, CENTURY, Carnegie have no Indian curriculum alignment |
 | 4 | **Affordable all-in-one for K-12 schools** — not just competitive exam prep | PhysicsWallah, Unacademy, Gyanis focus on JEE/NEET; schools need general curriculum coverage |
-| 5 | **AI-native from the ground up** vs incumbents adding AI as afterthought | Byju's, Unacademy retrofitting AI; Obi and AskAide are AI-native |
+| 5 | **AI-native from the ground up** vs incumbents adding AI as afterthought | Byju's, Unacademy retrofitting AI; Obi, Fermi.ai, and AskAide are AI-native |
 | 6 | **WhatsApp/delivery channel integration** for accessibility | Edzy's WhatsApp Tutor is the only example; proven distribution channel |
 | 7 | **Mental health + academic learning combo** | Gyanis Aura is unique — no direct competitor in school B2B |
 | 8 | **Gamified role-based learning missions** | Apar Academy's Mission Labs are unique (village planner, startup founder) |
-| 9 | **22+ Indian language support** through Bhashini/government initiatives | Apar Academy uses Bhashini; most competitors are English/Hindi-only |
+| 9 | **22+ Indian language support** through Bhashini/government initiatives | Apar Academy uses Bhashini; most competitors are English/Hindi-only. Obi supports 12+ languages |
 | 10 | **Parent engagement & real-time progress tracking** | ✅ **NOW SHIPPED** — AskAide AI now has multi-child parent dashboard with real-time progress, streaks, subject performance, and activity feed. Next: parent-teacher communication (no competitor offers this). |
+| 11 | **GraphRAG / concept-grounded RAG** — moving beyond document search to concept-level prerequisite reasoning | Obi's GraphRAG with 15-hop tracing and 50K concept nodes is the gold standard; no other Indian B2B school competitor has this |
+| 12 | **Stylus-first STEM input** — natural math/physics interaction beyond keyboard | Fermi.ai's handwriting-first canvas is the only example; sets new UX expectations for STEM platforms |
+| 13 | **Child safety as marketing differentiator** — dedicated safety page, no student accounts | SparkSchool leads on safety positioning; growing parent concern about AI safety (86% want pop-up warnings per EdWeek Mar 2026 survey) |
 
 ---
 
@@ -464,14 +514,31 @@ Google Classroom, Moodle integrations for stickiness:
 - Assignment push/pull
 - SparkSchool and QuestionWell already do this
 
-### 5.9 Build Knowledge Graph
+### 5.9 Build Knowledge Graph + GraphRAG
 
 Concept-level mapping for true adaptivity:
-- Obi has 50K+ concept nodes
+- Obi has 50K+ concept nodes with GraphRAG (multi-hop prerequisite gap detection)
 - Squirrel AI has 10K+ per subject
 - Enables: precise misconception detection, adaptive learning paths, progress heatmap at concept granularity
+- **Move from document RAG to concept GraphRAG** — Obi's 15-hop tracing is technically ahead; at minimum, build concept prerequisite chains for each subject/chapter
 
-### 5.10 Consider Micro-Transactions / XP Economy
+### 5.10 Position Child Safety as Marketing Advantage
+
+Growing parent concern about AI safety (86% want pop-up warnings per EdWeek 2026):
+- Publish a dedicated child safety page (like SparkSchool)
+- Document FERPA/COPPA compliance, data encryption, no behavioral tracking
+- Teacher-control-first data model
+- AI content safety filters with teacher review gate
+- This is table stakes for school B2B procurement
+
+### 5.11 Add Stylus/Canvas STEM Input
+
+Fermi.ai's handwriting-first approach sets new UX expectations:
+- Students in math/physics prefer writing equations naturally
+- Consider canvas-based input for problem-solving in math/science
+- Enables: handwriting recognition, step-by-step verification, natural STEM interaction
+
+### 5.12 Consider Micro-Transactions / XP Economy
 
 Gyanis and Apar Academy models for engagement:
 - XP earning for completing practice, streaks, duels
@@ -487,15 +554,18 @@ Gyanis and Apar Academy models for engagement:
 
 | Competitor | Why |
 |------------|-----|
-| **SparkSchool AI** | Same B2B school model, 500+ schools onboarded, broader teacher toolset |
-| **PhysicsWallah** | Massive brand, budget, and AI suite; can enter school B2B at any time |
+| **SparkSchool AI** | Same B2B school model, 500+ schools onboarded, broader teacher toolset, strongest child safety compliance |
+| **PhysicsWallah** | Massive brand, budget, and AI suite; open-source SLMs (Aryabhata 2.0 at 92.99% JEE accuracy); can enter school B2B at any time |
 | **Vidhya AI** | Strong pedagogical approach, concept-level mastery tracking, teacher-led model |
 
 ### Tier 2: WATCHLIST (Medium Priority)
 
 | Competitor | Why |
 |------------|-----|
-| **Obi** | AI-native, knowledge graph, campus pricing for schools |
+| **Obi** | AI-native, GraphRAG, 50K+ knowledge graph, campus pricing for schools |
+| **Fermi.ai** | Ex-Flipkart founders, AI-first STEM, stylus UX, concept graph diagnostics |
+| **Oda Class** | 120% revenue CAGR, dual-teacher model, AI learning agent with companionship |
+| **VedaAI** | IIM-B incubated, AI grading platform, Actis distribution, school analytics |
 | **Edzy** | WhatsApp distribution, gamified duels, Socratic approach |
 | **Super Tutor** | 26 exam coverage, parent tracking, could expand to school B2B |
 | **ScholarAI** | NEP 2020 aligned, claims 35-40% improvement |
@@ -515,9 +585,9 @@ Gyanis and Apar Academy models for engagement:
 
 ---
 
-## 7. KEY TAKEWAYS
+## 7. KEY TAKEAWAYS
 
-1. **SparkSchool AI is the #1 competitor to watch** — identical target market, more mature, broader teacher tools. Need to match teacher features while leading on student-facing AI.
+1. **SparkSchool AI is the #1 competitor to watch** — identical target market, more mature, broader teacher tools, strongest child safety positioning. Need to match teacher features while leading on student-facing AI.
 
 2. **RAG + Question Gen combo is our strongest differentiator** — no one in Indian B2B school space offers document upload with instant question generation.
 
@@ -527,6 +597,12 @@ Gyanis and Apar Academy models for engagement:
 
 5. **Efficacy data is the ultimate sales tool** — ScholarAI claims 35-40% improvement; need our own case studies for school procurement decisions.
 
-6. **Knowledge graph ≠ search** — true adaptivity requires concept-level mapping (Obi: 50K nodes, Squirrel AI: 10K+ per subject). Without this, "adaptive" is just keyword matching.
+6. **Knowledge graph → GraphRAG is the next frontier** — Obi's GraphRAG with 15-hop tracing and 50K concept nodes sets a new bar. Moving from document RAG to concept-level GraphRAG is critical for true adaptivity.
 
-7. **Physical world matters in India** — PhysicsWallah's 303 offline centers, Vedantu's live classes. Hybrid models build trust in a market skeptical of pure digital learning.
+7. **PhysicsWallah has become an open-source AI player** — Aryabhata 2.0 (92.99% JEE accuracy) on HuggingFace, Microsoft Research collaboration. Their SLM strategy makes them a potential platform play across multiple edtech products.
+
+8. **New entrants are raising the bar** — Fermi.ai (ex-Flipkart founders, stylus-first STEM), Oda Class (120% CAGR, AI companionship), VedaAI (IIM-B, AI grading). The Indian edtech AI space is accelerating.
+
+9. **Child safety is becoming a procurement requirement** — SparkSchool's dedicated safety page sets the standard. Growing parent concern (86% want AI guardrails) means compliance is a competitive advantage, not just a checkbox.
+
+10. **Physical world matters in India** — PhysicsWallah's 303 offline centers, Vedantu's live classes. Hybrid models build trust in a market skeptical of pure digital learning.
