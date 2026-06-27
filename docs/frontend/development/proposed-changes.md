@@ -278,9 +278,9 @@ This document tracks completed improvements, pending work, and proposed enhancem
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| Page Load Time | <2s | Tracking TBD |
-| API Response Time | <500ms | Tracking TBD |
-| Error Rate | <1% | Tracking TBD |
+| Page Load Time | &lt;2s | Tracking TBD |
+| API Response Time | &lt;500ms | Tracking TBD |
+| Error Rate | &lt;1% | Tracking TBD |
 | Test Coverage | >70% | 0% (TBD) |
 
 ---
