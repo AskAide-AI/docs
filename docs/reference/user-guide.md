@@ -2,7 +2,7 @@
 
 Welcome to **AskAide AI**, the AI-powered education platform designed for Indian students in classes 6–12. This guide walks you through every feature based on your role.
 
-> **Tip:** Replace `PLACEHOLDER: <description>` image tags with actual screenshots once captured.
+> **Tip:** Replace `PLACEHOLDER: [description]` image tags with actual screenshots once captured.
 
 ---
 
@@ -105,7 +105,7 @@ Study sessions are the core learning experience. You practice MCQ and fill-in-th
    - **Hard** — Advanced and competitive exam-level questions
 6. Click **Start Session**
 
-> **PLACEHOLDER: <Screenshot of study session setup — class → subject → chapter → difficulty>**
+> **PLACEHOLDER: `[Screenshot of study session setup — class → subject → chapter → difficulty]`**
 
 #### During a Study Session
 
@@ -127,7 +127,7 @@ At the end of each session:
 - Breakdown by topic/difficulty
 - Points earned
 
-> **PLACEHOLDER: <Screenshot of session summary screen>**
+> **PLACEHOLDER: `[Screenshot of session summary screen]`**
 
 ---
 
@@ -147,7 +147,7 @@ Your dashboard is the home screen after login. It gives you an at-a-glance view 
 | **Mastery Overview** | Topic mastery distribution (Weak → Mastered) |
 | **Quick Actions** | Start study session, take quiz, view progress |
 
-> **PLACEHOLDER: <Screenshot of student dashboard with all widgets>**
+> **PLACEHOLDER: `[Screenshot of student dashboard with all widgets]`**
 
 #### Daily Challenges
 
@@ -175,7 +175,7 @@ Quizzes assigned by your teachers appear here.
    - 🔴 **Upcoming** — Not yet released by teacher
    - ⚪ **Completed** — Already attempted
 
-> **PLACEHOLDER: <Screenshot of quiz list with status badges>**
+> **PLACEHOLDER: `[Screenshot of quiz list with status badges]`**
 
 #### Taking a Quiz
 
@@ -225,7 +225,7 @@ Track your mastery level for every topic across subjects.
    - Accuracy trend over time
    - Suggested next steps
 
-> **PLACEHOLDER: <Screenshot of progress page showing mastery levels>**
+> **PLACEHOLDER: `[Screenshot of progress page showing mastery levels]`**
 
 #### Subject-Level Summary
 
@@ -317,7 +317,7 @@ Access via **Profile → Settings** (gear icon).
 | **Language** | English (more languages coming soon) |
 | **Public Profile** | Show / Hide |
 
-> **PLACEHOLDER: <Screenshot of settings page>**
+> **PLACEHOLDER: `[Screenshot of settings page]`**
 
 ---
 
@@ -347,7 +347,7 @@ Generate practice papers instantly — no account required.
 6. Click **Generate**
 7. Download or view the paper as a PDF
 
-> **PLACEHOLDER: <Screenshot of free paper generator UI>**
+> **PLACEHOLDER: `[Screenshot of free paper generator UI]`**
 
 > **Tip:** To access the full paper generator with more options, create a free account.
 
@@ -382,7 +382,7 @@ Generate practice papers instantly — no account required.
 | **Activity Feed** | Recent student activity in your classes |
 | **Quick Actions** | Create quiz, generate paper, view progress |
 
-> **PLACEHOLDER: <Screenshot of teacher dashboard>**
+> **PLACEHOLDER: `[Screenshot of teacher dashboard]`**
 
 ---
 
@@ -414,7 +414,7 @@ Generate practice papers instantly — no account required.
 4. **Reorder questions** by dragging (optional)
 5. Click **Save as Draft** or **Publish**
 
-> **PLACEHOLDER: <Screenshot of quiz creation form>**
+> **PLACEHOLDER: `[Screenshot of quiz creation form]`**
 
 #### Publishing a Quiz
 
@@ -458,7 +458,7 @@ Generate exam-ready question papers with a custom difficulty mix.
 4. **Preview** the generated paper
 5. Click **Download PDF** to export
 
-> **PLACEHOLDER: <Screenshot of paper generator configuration>**
+> **PLACEHOLDER: `[Screenshot of paper generator configuration]`**
 
 > **Tip:** Generated papers follow standard Indian exam formatting with sections, marks distribution, and instructions.
 
@@ -479,7 +479,7 @@ Use natural language to generate educational content.
 4. **Review** and **edit** as needed
 5. **Save** to your question bank or **publish** directly
 
-> **PLACEHOLDER: <Screenshot of AI Assistant chat interface>**
+> **PLACEHOLDER: `[Screenshot of AI Assistant chat interface]`**
 
 #### Supported Content Types
 
@@ -514,7 +514,7 @@ Monitor how your students are performing.
    - Recent sessions and quiz scores
    - Weak areas requiring attention
 
-> **PLACEHOLDER: <Screenshot of student progress view>**
+> **PLACEHOLDER: `[Screenshot of student progress view]`**
 
 ---
 
@@ -539,7 +539,7 @@ Your dashboard shows an overview of **each linked child**:
 | **Accuracy** | Average question accuracy |
 | **Last Active** | When they last used the platform |
 
-> **PLACEHOLDER: <Screenshot of parent dashboard with child cards>**
+> **PLACEHOLDER: `[Screenshot of parent dashboard with child cards]`**
 
 #### Linking a Child
 
@@ -570,7 +570,7 @@ Click on any child's card to view detailed progress.
 - Last 10 study sessions and quizzes
 - Accuracy and time spent per session
 
-> **PLACEHOLDER: <Screenshot of child progress detail page>**
+> **PLACEHOLDER: `[Screenshot of child progress detail page]`**
 
 ---
 
@@ -589,7 +589,7 @@ Go to **Profile → Notification Preferences**:
 
 Toggle each notification on/off individually.
 
-> **PLACEHOLDER: <Screenshot of notification preferences>**
+> **PLACEHOLDER: `[Screenshot of notification preferences]`**
 
 ---
 
@@ -622,7 +622,7 @@ Admins manage the entire school's data on the platform.
 2. Confirm the deletion
 3. All linked teachers, students, and sections are unlinked (not deleted)
 
-> **PLACEHOLDER: <Screenshot of school management list>**
+> **PLACEHOLDER: `[Screenshot of school management list]`**
 
 ---
 
@@ -649,7 +649,7 @@ Admins manage the entire school's data on the platform.
 6. Click **Confirm Import**
 7. All teachers are created and invite emails are sent
 
-> **PLACEHOLDER: <Screenshot of bulk import UI>**
+> **PLACEHOLDER: `[Screenshot of bulk import UI]`**
 
 #### Managing Teachers
 
@@ -682,7 +682,7 @@ Admins manage the entire school's data on the platform.
 5. Review the preview
 6. Click **Confirm Import**
 
-> **PLACEHOLDER: <Screenshot of student bulk import>**
+> **PLACEHOLDER: `[Screenshot of student bulk import]`**
 
 #### Managing Students
 
@@ -735,7 +735,7 @@ Manage teacher–student assignments.
 2. Click **Unlink**
 3. The teacher loses access to that student's data (student data is preserved)
 
-> **PLACEHOLDER: <Screenshot of link management table>**
+> **PLACEHOLDER: `[Screenshot of link management table]`**
 
 ---
 
@@ -761,7 +761,7 @@ Upload PDF textbooks for AI processing (RAG, embeddings, question generation).
    - 🟢 **Ready** — Available for quizzes and paper generation
    - 🔴 **Failed** — Check error message and retry
 
-> **PLACEHOLDER: <Screenshot of chapter upload page>**
+> **PLACEHOLDER: `[Screenshot of chapter upload page]`**
 
 #### Bulk Upload
 
@@ -800,7 +800,7 @@ Manage chapters and their topics after upload.
 - Confirm deletion
 - The associated vector embeddings are removed from the AI service
 
-> **PLACEHOLDER: <Screenshot of chapter management list>**
+> **PLACEHOLDER: `[Screenshot of chapter management list]`**
 
 ---
 
@@ -816,7 +816,7 @@ Visualize the complete school hierarchy.
 4. Click a student to see their assigned teachers
 5. Click a teacher to see their assigned students and classes
 
-> **PLACEHOLDER: <Screenshot of relation view tree>**
+> **PLACEHOLDER: `[Screenshot of relation view tree]`**
 
 This is useful for:
 - Auditing assignments
