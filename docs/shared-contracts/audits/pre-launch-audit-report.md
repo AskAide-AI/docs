@@ -57,6 +57,15 @@
 | 9 | ✅ **BE-18** — School routes (create/update) + section routes (create/bulk/update/delete) now guarded by `isPrincipal` role | Authorization |
 | 10 | ✅ **BE-03** — Student routes (create/get-all/update/delete) now guarded by `isTeacherOrPrincipal` role | Authorization |
 | 11 | ✅ **correlationHeaders()** — Now auto-injects `x-api-key` header into every AI Service request from Backend | Infrastructure |
+| 12 | ✅ **H6** — Vite `define` only exposes `VITE_`-prefixed env vars (was leaking all `process.env`) | Security |
+| 13 | ✅ **H10** — Added `unique: true` to User model email field | Data |
+| 14 | ✅ **H11** — Password validator: `min(8)` + complexity (upper, lower, number, special char) | Security |
+| 15 | ✅ **H20** — AI assistant controller uses `sendError()` instead of `sendSuccess()` with error codes | Fix |
+| 16 | ✅ **H21** — Added `logger` import from shared utils to ai-assistant controller | Fix |
+| 17 | ✅ **H22** — Removed ALL `str(e)` leaks from AI Service HTTP responses (25+ endpoints) — generic messages only | Security |
+| 18 | ✅ **H23** — Backend error format now consistently `{ success: false, message, code }` via errorHandler + sendError | Fix |
+| 19 | ✅ **Docs consolidated** — All docs moved from repos → askaide-docs (46 files), source `docs/` dirs deleted | Infrastructure |
+| 20 | ✅ **URL fixed** — All READMEs updated from `askaide-docs.vercel.app` → `askaide-ai.github.io/docs` | Config |
 ## REMAINING EXECUTIVE SUMMARY
 
 | Severity | Frontend | Backend | AI Service | Cross-Repo | Business | Infra | **TOTAL** |
@@ -67,7 +76,7 @@
 | LOW | 12 | 14 | 18 | 6 | 7 | 16 | **73** |
 | **TOTAL** | **30** | **41** | **40** | **24** | **35** | **56** | **226** |
 
-*Fixed: 42 issues resolved across 3 sessions.*
+*Fixed: 62 issues resolved across 4 sessions.*
 
 ---
 
