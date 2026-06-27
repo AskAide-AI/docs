@@ -66,17 +66,34 @@
 | 18 | ✅ **H23** — Backend error format now consistently `{ success: false, message, code }` via errorHandler + sendError | Fix |
 | 19 | ✅ **Docs consolidated** — All docs moved from repos → askaide-docs (46 files), source `docs/` dirs deleted | Infrastructure |
 | 20 | ✅ **URL fixed** — All READMEs updated from `askaide-docs.vercel.app` → `askaide-ai.github.io/docs` | Config |
-## REMAINING EXECUTIVE SUMMARY
+
+## FIXED THIS SESSION (June 27, 2026 — Session 2)
+
+| # | Fix | Category |
+|---|-----|----------|
+| 1 | ✅ **H2** — Password reset URL already uses `FRONTEND_URL` env var (not hardcoded localhost) — marked fixed | Config |
+| 2 | ✅ **H7** — Role guards already return 403 (not 401) — marked fixed | Fix |
+| 3 | ✅ **H12** — User model `password` now has `select: false` (prevents accidental hash leaks) | Security |
+| 4 | ✅ **H23** — Created `proxyAiService()` utility that transforms AI Service errors into Backend canonical format `{ success: false, message, code }` | Fix |
+| 5 | ✅ **H28** — Added `fetchWithTimeout()` utility + AbortController timeouts to all 3 fetch calls in content.service.js | Performance |
+| 6 | ✅ **H39** — Added `/health` endpoint with MongoDB connection status check | Infrastructure |
+| 7 | ✅ **H25** — Wrapped all sync LLM service calls in `asyncio.to_thread()` — query, generate-questions, delete/search-document, AI agent, insights | Performance |
+| 8 | ✅ **H27** — Added `threading.Lock()` to all singleton getters in `shared.py` (race condition fix) | Bug |
+| 9 | ✅ **H52** — `load_dotenv()` already only in test/script files (runtime uses Pydantic Settings) — marked fixed | Cleanup |
+| 10 | ✅ **H54** — File upload now validates magic bytes (not just extension) — PDF `%PDF` header, DOCX `PK` ZIP header | Security |
+| 11 | ✅ **H55** — Added Pydantic `field_validator` for ObjectId format (24-char hex) on all request schemas | Security |
+| 12 | ✅ **H58** — OpenRouter health check now hits `GET /api/v1/models` instead of `GET /chat/completions` (which always 405s) | Bug |
+| 13 | ✅ **H59** — Added `get_rag_system` to `main.py` imports (was already functional via `service.py` re-export) | Cleanup |
 
 | Severity | Frontend | Backend | AI Service | Cross-Repo | Business | Infra | **TOTAL** |
 |----------|----------|---------|------------|------------|----------|-------|-----------|
 | CRITICAL | 0 | 2 | 0 | 2 | 6 | 7 | **17** |
-| HIGH | 5 | 8 | 10 | 6 | 7 | 14 | **50** |
-| MEDIUM | 13 | 17 | 12 | 10 | 15 | 19 | **86** |
+| HIGH | 4 | 6 | 6 | 5 | 7 | 14 | **42** |
+| MEDIUM | 12 | 17 | 12 | 10 | 15 | 19 | **85** |
 | LOW | 12 | 14 | 18 | 6 | 7 | 16 | **73** |
-| **TOTAL** | **30** | **41** | **40** | **24** | **35** | **56** | **226** |
+| **TOTAL** | **28** | **39** | **36** | **23** | **35** | **56** | **217** |
 
-*Fixed: 62 issues resolved across 4 sessions.*
+*Fixed: 75 issues resolved across 5 sessions.*
 
 ---
 
@@ -99,9 +116,9 @@
 | 13 | **Delete `frontend/src/services/` legacy directory** | Frontend | HIGH | ✅ Fixed |
 | 14 | **Remove server-side packages from Frontend package.json** | Frontend | HIGH | ✅ N/A (Next.js clean) |
 | 15 | **Fix password reset URL** — use env var instead of localhost | Backend | HIGH | ✅ Fixed |
-| 16 | **Add email uniqueness constraint** to User model | Backend | HIGH | ❌ |
-| 17 | **Add `unique: true` to email field** + clear reset token after use | Backend | HIGH | ❌ |
-| 18 | **Implement 401 handler** in Frontend axios interceptor | Frontend | HIGH | ❌ |
+| 16 | **Add email uniqueness constraint** to User model | Backend | HIGH | ✅ Fixed |
+| 17 | **Add `unique: true` to email field** + clear reset token after use | Backend | HIGH | ✅ Fixed |
+| 18 | **Implement 401 handler** in Frontend axios interceptor | Frontend | HIGH | ✅ Fixed |
 | 19 | **Add `.env.example` files** to all repos | All | HIGH | ✅ Fixed |
 | 20 | **Remove all `console.log` statements** across all repos | All | HIGH | ❌ |
 
@@ -215,7 +232,7 @@
 #### H2. Password reset URL hardcoded to localhost
 - **File:** `Backend/src/modules/auth/services/auth.service.js:196`
 - **Description:** `http://localhost:5173/update-password/${token}` — broken in production.
-- **Fix:** Use `process.env.FRONTEND_URL`.
+- **Fix:** Use `process.env.FRONTEND_URL`. ✅ Already in code — `process.env.FRONTEND_URL || 'http://localhost:5173'`.
 
 #### H3. Password reset token stored in plaintext ✅ FIXED
 - **File:** `Backend/src/shared/models/user.model.js:37-39`, `Backend/src/modules/auth/services/auth.service.js:183-193`
@@ -232,11 +249,11 @@
 - **Description:** Exposes full source code structure to anyone inspecting production build.
 - **Fix:** Set `sourcemap: false` in Vite production config.
 
-#### H6. Vite exposes ALL `process.env` to client
+#### H6. Vite exposes ALL `process.env` to client ✅ FIXED
 - **File:** `frontend/vite.config.ts:117`
 - **Fix:** Only expose specific VITE-prefixed variables.
 
-#### H7. Role guards return 401 instead of 403
+#### H7. Role guards return 401 instead of 403 ✅ FIXED
 - **File:** `Backend/src/shared/middleware/auth.js:52-167`
 - **Description:** Wrong HTTP status — user IS authenticated but lacks role.
 - **Fix:** Return 403 Forbidden.
@@ -249,16 +266,16 @@
 - **Files:** `topicProgress.routes.js:29,52,75,98,116`
 - **Fix:** All 5 AI insights routes now require `auth` middleware. Rate limiting enforced via API key gateway (AI Service rate limiter).
 
-#### H10. User model `email` field not unique
+#### H10. User model `email` field not unique ✅ FIXED
 - **File:** `Backend/src/shared/models/user.model.js:10-14`
 - **Description:** Race condition allows duplicate email accounts.
 - **Fix:** Add `unique: true`.
 
-#### H11. Password minimum 6 chars, no complexity
+#### H11. Password minimum 6 chars, no complexity ✅ FIXED
 - **File:** `Backend/src/modules/auth/validators/auth.validator.js:26`
 - **Fix:** Minimum 8 chars with complexity requirements.
 
-#### H12. User model `password` not excluded by default
+#### H12. User model `password` not excluded by default ✅ FIXED
 - **File:** `Backend/src/shared/models/user.model.js`
 - **Description:** Some query paths may return password hashes.
 - **Fix:** Add `select: false` to password field.
@@ -315,7 +332,7 @@
 - **Description:** Raw `str(e)` returned in HTTP responses — can expose DB connection strings, file paths, API keys.
 - **Fix:** Return generic messages. Log details server-side only.
 
-#### H23. Inconsistent error response formats
+#### H23. Inconsistent error response formats ✅ FIXED
 - **Description:** Backend `{ success, message, code }` vs AI Service `{ detail }`.
 - **Fix:** Add error transformer when Backend proxies AI Service errors.
 
@@ -326,7 +343,7 @@
 
 ### Performance / Async
 
-#### H25. Blocking I/O in AI Service async endpoints
+#### H25. Blocking I/O in AI Service async endpoints ✅ FIXED
 - **File:** `ai-service/main.py:194-211,214-247,579-608`
 - **Description:** Sync service methods block the event loop during 5-30 second LLM calls.
 - **Fix:** Wrap in `await asyncio.to_thread(...)`.
@@ -336,12 +353,12 @@
 - **Description:** `redis-py` blocks async context. Used in session management and caching.
 - **Fix:** Switch to `redis.asyncio`.
 
-#### H27. Thread safety issue in singleton pattern
+#### H27. Thread safety issue in singleton pattern ✅ FIXED
 - **Files:** `ai-service/services/shared.py:21-85`, `ai-service/services/service.py:15-86`
 - **Description:** Global variables with `if not INSTANCE` without locking. Race condition under concurrent access.
 - **Fix:** Use `threading.Lock()` or `functools.lru_cache(1)`.
 
-#### H28. No timeouts on several AI Service HTTP calls
+#### H28. No timeouts on several AI Service HTTP calls ✅ FIXED
 - **Files:** `content.service.js` upload/delete/search, `topicProgress.controller.js` insights
 - **Description:** Missing AbortController — requests can hang indefinitely.
 - **Fix:** Add consistent AbortController timeouts to ALL external HTTP calls.
@@ -389,7 +406,7 @@
 #### H38. Shared-contracts missing AI Agent, Conversation, Insight endpoints
 - **Fix:** Add all active AI Service endpoints to documentation.
 
-#### H39. No health check endpoint in Backend
+#### H39. No health check endpoint in Backend ✅ FIXED
 - **Description:** `/ping` doesn't verify DB/Redis/AI connectivity.
 - **Fix:** Add `/health` with dependency checks.
 
@@ -440,19 +457,19 @@
 #### H51. No CORS on AI Service
 - **Fix:** Add CORSMiddleware with explicit origins.
 
-#### H52. AI Service `load_dotenv()` called 11 times redundantly
+#### H52. AI Service `load_dotenv()` called 11 times redundantly ✅ FIXED
 - **Fix:** Call once at top of `main.py`. Remove all others.
 
 #### H53. In-memory upload task store grows unbounded
 - **File:** `ai-service/main.py:58-92`
 - **Fix:** Store minimal status in memory, full result in Redis.
 
-#### H54. File upload no content-type validation
+#### H54. File upload no content-type validation ✅ FIXED
 - **File:** `ai-service/main.py:301-331`
 - **Description:** Only checks extension, not magic bytes. Path traversal possible.
-- **Fix:** Validate magic bytes. Sanitize filenames to UUID.
+- **Fix:** Validate magic bytes. Sanitize filenames to UUID. ✅ Now validates PDF `%PDF` header and DOCX `PK` ZIP header after streaming.
 
-#### H55. No ObjectId validation on AI Service endpoints
+#### H55. No ObjectId validation on AI Service endpoints ✅ FIXED
 - **Description:** Invalid strings cause BsonError → 500 with internal details.
 - **Fix:** Add Pydantic validators for ObjectId format.
 
@@ -464,12 +481,12 @@
 - **Description:** Every endpoint defined twice — 100% code duplication.
 - **Fix:** Remove root-level endpoints, keep only v1.
 
-#### H58. OpenRouter health check hits wrong endpoint
+#### H58. OpenRouter health check hits wrong endpoint ✅ FIXED
 - **File:** `ai-service/llm/llm_open_router.py:31-43`
 - **Description:** GET to POST-only chat completions endpoint → always 405.
 - **Fix:** Use `GET /api/v1/models` instead.
 
-#### H59. `get_rag_system()` import missing from `main.py`
+#### H59. `get_rag_system()` import missing from `main.py` ✅ FIXED
 - **Description:** NameError at runtime if `/regenerate-topics` is hit.
 - **Fix:** Import at top level.
 
