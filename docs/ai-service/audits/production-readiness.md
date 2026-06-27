@@ -30,17 +30,14 @@
 | Leaks Details? | ❌ **YES** | Every `raise HTTPException(status_code=500, detail=str(e))` leaks internal errors |
 | Validation | ✅ HIGH | Pydantic models for all requests/responses |
 | Logging | ✅ MEDIUM | `logger.exception()` used, but no structured logs |
-| Auth | ❌ **NONE** | No authentication on any endpoint |
-| Rate Limiting | ❌ **NONE** | No request rate limiting |
-| File Size Limit | ❌ **NONE** | Upload endpoint has no file size limits |
+| Auth | ✅ **DONE** | API key middleware (`verify_api_key`) skipping `/ping`, `/health`, `/docs` |
+| Rate Limiting | ✅ **DONE** | In-memory rate limiter (200 req/60s), skipping `/ping`, `/health` |
+| File Size Limit | ✅ **DONE** | 10 MB max enforced in `_validate_upload_file` |
 
 **Action Items:**
 | ID | Issue | Severity | Effort | Priority |
 |----|-------|----------|--------|----------|
-| AI-01 | Add authentication middleware (API key or JWT) | **CRITICAL** | 1 day | **P0** |
 | AI-02 | Replace `str(e)` with generic error messages | HIGH | 0.5 day | **P1** |
-| AI-03 | Add request rate limiting | HIGH | 0.5 day | **P1** |
-| AI-04 | Add file size validation on upload | HIGH | 0.25 day | **P1** |
 | AI-05 | Add structured JSON logging with correlation IDs | MEDIUM | 0.5 day | **P2** |
 | AI-06 | Add startup config validation (verify all env vars exist) | HIGH | 0.5 day | **P1** |
 
