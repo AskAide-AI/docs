@@ -9,7 +9,7 @@
 ## 1. Core Platform
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | B2B School Licensing Model | ✅ | ❌ | ⚡ | ❌ | ⚡ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚡ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | AI-Native Adaptive Practice | ✅ | ✅ | ❌ | ⚡ | ⚡ | ✅ | ✅ | ✅ | ✅ | ⚡ | ✅ | ✅ | ✅ | ❌ | ⚡ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Multi-Curriculum (CBSE/ICSE/State) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
@@ -24,7 +24,7 @@
 ## 2. AI Features
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | AI Question Generation | ✅ | ✅ | ❌ | ⚡ | ❌ | ⚡ | ❌ | ⚡ | ⚡ | ❌ | ✅ | ❌ | ❌ | ❌ | ⚡ | ⚡ | ⚡ | ⚡ | ✅ | ✅ |
 | RAG Document Upload + Q&A | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | GraphRAG / Concept RAG | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -40,7 +40,7 @@
 ## 3. Student Features
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Mastery-Based Progress Tracking | ✅ | ⚡ | ⚡ | ❌ | ❌ | ❌ | ✅ | ⚡ | ⚡ | ❌ | ✅ | ✅ | ⚡ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Adaptive Difficulty | ✅ | ✅ | ⚡ | ⚡ | ⚡ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | MCQ Practice | ✅ | ✅ | ✅ | ✅ | ⚡ | ❌ | ✅ | ✅ | ✅ | ⚡ | ✅ | ⚡ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -61,7 +61,7 @@
 ## 4. Teacher Features
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Teacher Dashboard (Analytics) | ✅ | ❌ | ⚡ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚡ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Student Performance Drill-Down | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Weak Topic Identification | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ⚡ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -80,7 +80,7 @@
 ## 5. School Admin Features
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | School Management (Multi-Tenant) | ✅ | ❌ | ❌ | ❌ | ⚡ | ✅ | ❌ | ❌ | ❌ | ❌ | ⚡ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Class/Section Management | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Teacher Assignment | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -94,7 +94,7 @@
 ## 6. Parent Features
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Parent Dashboard | ✅ | ⚡ | ✅ | ❌ | ⚡ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ⚡ | ❌ | ❌ | ⚡ | ⚡ | ⚡ | ❌ | ❌ |
 | Real-Time Progress Updates | ✅ | ❌ | ✅ | ❌ | ⚡ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ⚡ | ❌ | ❌ | ⚡ | ⚡ | ⚡ | ❌ | ❌ |
 | Parent-Teacher Communication | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -106,7 +106,7 @@
 ## 7. Technology & Deployment
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Mobile-First Design | ✅ | ✅ | ✅ | ✅ | ✅ | ⚡ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚡ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Stylus / Canvas Input (STEM) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Child Safety Compliance | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ⚡ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -125,7 +125,7 @@
 ## 8. Pricing
 
 | Feature | AskAide AI | PhysicsWallah | Byju's | Unacademy | Vedantu | SparkSchool AI | Vidhya AI | Edzy | Super Tutor | Doubtnut | Obi | Fermi.ai | Oda Class | VedaAI | Khan Academy | Carnegie Learning | Squirrel AI | CENTURY Tech | QuestionWell | AceQuiz / Questgen |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Freemium Model | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ |
 | Per-Student/Year Pricing | ✅ | ❌ | ⚡ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ⚡ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Per-Course Pricing | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
