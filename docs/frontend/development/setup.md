@@ -53,9 +53,9 @@ src/
 
 ## 📖 Related Documentation
 
-- [CLAUDE.md](./CLAUDE.md) - Tech overview and development commands.
-- [project_overview.md](./project_overview.md) - Detailed architecture and feature breakdown.
-- [product.md](./product.md) - Product identity, target audience, and business context.
+- CLAUDE.md - Tech overview and development commands.
+- [project_overview.md](../product/project-overview) - Detailed architecture and feature breakdown.
+- [product.md](../product/product-overview) - Product identity, target audience, and business context.
 
 ---
 *Maintained by the AskAide AI Team*

@@ -83,4 +83,4 @@
 
 ---
 
-*See [CHANGELOG.md](./CHANGELOG.md) for detailed change history.*
+*See [CHANGELOG.md](../development/changelog) for detailed change history.*

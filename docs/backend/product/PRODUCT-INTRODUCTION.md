@@ -130,10 +130,10 @@ For the technically curious:
 
 ## Quick Links
 
-- [Technical Architecture](./backend/ARCHITECTURE.md)
-- [Full Feature List](./backend/FEATURES.md)
-- [API Documentation](./backend/API-DOCUMENTATION.md)
-- [Database Schema](./backend/DATABASE-SCHEMA.md)
+- [Technical Architecture](../architecture)
+- [Full Feature List](../features/)
+- [API Documentation](../development/api-documentation)
+- [Database Schema](../reference/database-schema)
 
 ---
 

@@ -221,4 +221,4 @@ app.use(limiter);
 
 ---
 
-*See [AUTHENTICATION.md](./AUTHENTICATION.md) for auth-specific security.*
+*See [AUTHENTICATION.md](./authentication) for auth-specific security.*

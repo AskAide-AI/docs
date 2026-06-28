@@ -13,7 +13,7 @@ npm start
 ```
 
 ### Environment Setup
-Ensure all environment variables are set (see [SETUP.md](./SETUP.md)):
+Ensure all environment variables are set (see [SETUP.md](./setup)):
 - `NODE_ENV=production`
 - `DATABASE_URL` (production database)
 - `JWT_SECRET` (strong, unique secret)
@@ -345,4 +345,4 @@ if (process.env.NODE_ENV === 'production') {
 
 ---
 
-*See [SECURITY.md](./SECURITY.md) for security hardening details.*
+*See [SECURITY.md](./security) for security hardening details.*

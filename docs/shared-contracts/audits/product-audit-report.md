@@ -18,7 +18,7 @@
 7. [Customer Analysis](#7-customer-analysis)
 8. [Pricing Strategy](#8-pricing-strategy)
 9. [Landing Page & Marketing](#9-landing-page--marketing)
-10. [First 100 Users Strategy](#10-first-100-users-strategy)
+10. [First 100 Users Strategy](#10-first-100-users-strategy-zero-marketing-budget)
 11. [Failure Prediction](#11-failure-prediction)
 12. [Final Decision](#12-final-decision)
 
