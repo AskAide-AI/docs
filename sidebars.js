@@ -39,26 +39,18 @@ const sidebars = {
             'frontend/development/accessibility',
             'frontend/development/seo-checklist',
             'frontend/development/testing',
-            'frontend/development/testing-strategy',
             'frontend/development/dependencies',
             'frontend/development/deployment',
             'frontend/development/troubleshooting',
-            'frontend/development/refactoring-guide',
             'frontend/development/proposed-changes',
             'frontend/development/changelog',
           ],
         },
         {
           type: 'category',
-          label: 'Reference',
-          items: ['frontend/reference/ai-research-prompt', 'frontend/reference/progress'],
-        },
-        {
-          type: 'category',
           label: 'Audits',
           items: [
-            'frontend/audits/code-audit',
-            'frontend/audits/frontend-audit',
+            'frontend/audits/strategic-audit',
             'frontend/audits/production-readiness',
           ],
         },
@@ -86,17 +78,13 @@ const sidebars = {
           items: [
             'backend/development/setup',
             'backend/development/module-reference',
-            'backend/development/api-documentation',
             'backend/development/authentication',
             'backend/development/security',
             'backend/development/error-handling',
             'backend/development/testing',
-            'backend/development/testing-strategy',
-            'backend/development/quiz-test-cases',
             'backend/development/dependencies',
             'backend/development/deployment',
             'backend/development/troubleshooting',
-            'backend/development/api-changelog',
             'backend/development/changelog',
           ],
         },
@@ -106,7 +94,6 @@ const sidebars = {
           items: [
             'backend/reference/system-design',
             'backend/reference/database-schema',
-            'backend/reference/progress',
           ],
         },
         {
@@ -116,7 +103,6 @@ const sidebars = {
             'backend/product/pricing',
             'backend/product/growth-analysis',
             'backend/product/PRODUCT-INTRODUCTION',
-            'backend/product/backend-overview-for-pm',
           ],
         },
         {
@@ -143,7 +129,6 @@ const sidebars = {
           items: [
             'ai-service/development/setup',
             'ai-service/development/integration-plan',
-            'ai-service/development/integration-plan-full',
             'ai-service/development/eval-readme',
             'ai-service/development/troubleshooting',
             'ai-service/development/testing-strategy',
@@ -167,11 +152,10 @@ const sidebars = {
       link: {type: 'doc', id: 'shared-contracts/overview'},
       items: [
         'shared-contracts/api-definitions',
-        'shared-contracts/integration-guide',
         {
           type: 'category',
           label: 'Development',
-          items: ['shared-contracts/development/quick-start', 'shared-contracts/development/mcp-setup'],
+          items: ['shared-contracts/development/mcp-setup'],
         },
         {
           type: 'category',
@@ -199,7 +183,6 @@ const sidebars = {
         'reference/developer-guide',
         'reference/api-reference',
         'reference/integration',
-        'reference/multi-expert-team-guide',
       ],
     },
   ],

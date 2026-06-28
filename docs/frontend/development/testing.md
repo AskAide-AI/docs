@@ -7,7 +7,21 @@
 
 ## Current Status
 
-> **Note:** Automated testing is not yet implemented in this project. This document outlines the recommended testing strategy for future implementation.
+> **Note:** Automated testing is not yet implemented — the project has zero test files and all testing is currently manual. This document outlines the recommended strategy and how tests will run once introduced.
+
+---
+
+## Testing Priority Matrix
+
+| Priority | Area | Rationale |
+|----------|------|-----------|
+| P0 | Auth flows (login, signup, password reset) | Blocks all user access |
+| P0 | Study session (question load, answer submit) | Core product value |
+| P1 | Quiz attempt and submission | Student assessment flow |
+| P1 | Admin CRUD operations | Data integrity |
+| P2 | Dashboard rendering | Visual, less business-critical |
+| P2 | Blog / SEO pages | Static content |
+| P3 | UI component library | Shared primitives |
 
 ---
 
@@ -15,10 +29,10 @@
 
 | Tool | Purpose |
 |------|---------|
-| Jest | Test runner and assertion library |
+| Vitest | Test runner (native to the Vite ecosystem) |
 | React Testing Library | Component testing utilities |
-| Playwright | End-to-end testing |
 | MSW | API mocking |
+| Playwright | End-to-end testing (critical paths only) |
 
 ---
 
@@ -257,6 +271,16 @@ test.describe('Login Flow', () => {
 | Branches | 75% |
 | Functions | 80% |
 | Lines | 80% |
+
+### Phased Rollout
+
+| Phase | Target | Timeline |
+|-------|--------|----------|
+| Phase 1 | P0 areas: 70% coverage | First sprint |
+| Phase 2 | P1–P2 areas: 60% coverage | Second sprint |
+| Phase 3 | E2E for 3 critical paths | Third sprint |
+
+Priority targets for the first pass: the `useQuestionPolling` hook (loading/polling/mastered states), auth form validation + protected-route redirects, and the Axios JWT/error interceptors.
 
 ---
 

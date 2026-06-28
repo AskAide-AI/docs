@@ -1,5 +1,9 @@
 # AskAide AI — EdTech Frontend
 
+:::info Full-stack setup lives in Getting Started
+For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend), follow the canonical [Getting Started](/docs/reference/getting-started) guide. This page covers **frontend-specific** details only.
+:::
+
 A modern, high-performance EdTech platform built with React, TypeScript, and Tailwind CSS. This frontend serves as the primary interface for students, teachers, and administrators to interact with the AskAide AI ecosystem.
 
 ## 🚀 Features

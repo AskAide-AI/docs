@@ -125,3 +125,35 @@ describe('Quiz Service', () => {
 - No integration tests (API endpoint level with supertest)
 - No coverage thresholds configured
 - Tests use mocked DB — no `mongodb-memory-server` in-memory integration tests
+
+**Modules without tests:** `ai-assistant`, `goal`, `parent`, `referral` (10/14 modules = 71% have tests).
+
+---
+
+## Recommended Coverage Expansion
+
+### Phase 1 (Next Sprint)
+1. **ai-assistant** — content generation calls, clarify flow, error handling
+2. **goal** — CRUD operations and daily reset logic
+
+### Phase 2
+1. **parent** — dashboard data aggregation
+2. **referral** — code generation and redemption
+
+### Phase 3
+1. Integration tests for cross-module flows (auth → study → progress)
+2. AI Service call mocking for deterministic tests
+
+### Coverage Targets
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Modules with tests | 10/14 (71%) | 14/14 (100%) |
+| Service method coverage | ~40% | 70%+ |
+| Controller coverage | 0% | 50%+ |
+| Integration tests | 0 | 3 critical flows |
+
+### What to Test
+- **Service layer (primary):** business logic, edge cases (missing data, invalid IDs), error handling, mocked AI Service calls
+- **Controller layer:** Joi request validation, role-guard enforcement, `sendSuccess()` response format
+- **Skip:** Mongoose internals, third-party APIs (mock them), DB performance

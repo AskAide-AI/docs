@@ -239,6 +239,26 @@ This document tracks completed improvements, pending work, and proposed enhancem
 
 ---
 
+## 6a. Refactoring Backlog (Code Review Cleanup)
+
+Consolidated from the former *Refactoring Guide* (December 2025 code review). Concrete, file-level cleanup tasks:
+
+**Priority 1 — Critical cleanup**
+- [ ] **Remove duplicate service layer** — delete the legacy `src/services` directory; verify all endpoint constants/auth logic live under `src/api`, then update any `../services/...` imports to `@/api`.
+- [ ] **Fix env vars to Vite standard** — replace `process.env.REACT_APP_*` with `import.meta.env.VITE_*`; confirm `src/api/axios.js` uses `import.meta.env.VITE_API_URL`. *(Largely ✅ done — see §2.1.)*
+
+**Priority 2 — Component modularity**
+- [ ] **Refactor `QuestionPractice.jsx`** (~1000 lines) — extract `useSpeechRecognition.js` and `useSession.js` hooks; extract `Typewriter.jsx` and `study/QuestionCard.jsx`.
+- [ ] **Refactor `LandingPage.jsx`** — split into `components/pages/landing/` (`HeroSection`, `FeaturesSection`, `TestimonialsSection`, `FooterSection`).
+
+**Priority 3 — Code quality**
+- [ ] **Type safety** — incrementally rename `.jsx` → `.tsx`; define `User`, `Question`, `Session` interfaces.
+- [ ] **Linting & formatting** — clear all `npm run lint` warnings; enforce Prettier.
+
+**Verification after refactor:** `npm run build` clean · auth (login/signup) works · study session start→answer→results works · admin dashboard still loads.
+
+---
+
 ## 7. Architecture Decisions
 
 ### Completed ✅

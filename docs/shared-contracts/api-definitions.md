@@ -1,5 +1,9 @@
 # AskAide AI Platform — API Contracts
 
+:::info Internal contract reference
+This document is the **cross-repo contract** (request/response shapes, base URLs, auth) used by developers wiring Backend ↔ AI Service. For the full, browsable endpoint catalog, see the canonical [API Reference](/docs/reference/api-reference).
+:::
+
 ## Base URLs
 
 | Environment | Backend (Express) | AI Service (FastAPI) |
