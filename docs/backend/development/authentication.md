@@ -240,4 +240,4 @@ localStorage.setItem('token', token);
 
 ---
 
-*See [SECURITY.md](./SECURITY.md) for additional security measures.*
+*See [SECURITY.md](./security) for additional security measures.*

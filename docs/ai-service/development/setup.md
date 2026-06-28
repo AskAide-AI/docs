@@ -125,7 +125,7 @@ quiz = orchestrator.generate_practice(
 
 ## AI Capabilities
 
-See [AI Features Guide](docs/AI_FEATURES_QUICKREF.md) for detailed usage.
+See [AI Features Guide](../features/ai-features-quickref) for detailed usage.
 
 ### Example: Student Learning Path
 ```python
@@ -311,6 +311,6 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ## Documentation
 
-- [AI Features Guide](docs/AI_FEATURES_QUICKREF.md) - Detailed AI usage
-- [Improvement Guide](.agent/skills/ai-service-improvement/SKILL.md) - Best practices
-- [Cross-repo Integration](CROSS_REPO_MAP.md) - Backend integration
+- [AI Features Guide](../features/ai-features-quickref) - Detailed AI usage
+- Improvement Guide (internal `.agent/skills/ai-service-improvement/SKILL.md`) - Best practices
+- [Cross-repo Integration](../features/cross-repo-map) - Backend integration

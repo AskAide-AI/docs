@@ -682,5 +682,5 @@ Target metrics:
 
 *Last Updated: 2026-05-04*
 
-*See [ARCHITECTURE.md](./ARCHITECTURE.md) for how models are used in the application.*
+*See [ARCHITECTURE.md](../architecture) for how models are used in the application.*
 

@@ -239,4 +239,4 @@ const api = async (url, options = {}) => {
 
 ---
 
-*See [SECURITY.md](./SECURITY.md) for security-related error handling.*
+*See [SECURITY.md](./security) for security-related error handling.*
