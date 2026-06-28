@@ -585,7 +585,7 @@ Go to **Profile → Notification Preferences**:
 | **Weekly Report** | Weekly (e.g., Sunday) | Summary of child's weekly activity and progress |
 | **Daily Activity** | Daily | What your child studied that day |
 | **Achievement Alert** | Instant | When your child earns a badge or milestone |
-| **Low Performance Alert** | Instant | When accuracy drops below a threshold (e.g., <50%) |
+| **Low Performance Alert** | Instant | When accuracy drops below a threshold (e.g., `<50%`) |
 
 Toggle each notification on/off individually.
 
