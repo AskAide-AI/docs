@@ -44,4 +44,4 @@ cd Backend && npm install && npm run dev
 cd ai-service && pip install -r requirements.txt && uvicorn main:app --reload --port 8000
 ```
 
-See [Quick Start Guide](/docs/shared-contracts/development/quick-start) for detailed setup.
+See [Getting Started](/docs/reference/getting-started) for detailed setup.

@@ -1,5 +1,9 @@
 # AskAide AI — EdTech Backend
 
+:::info Full-stack setup lives in Getting Started
+For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend), follow the canonical [Getting Started](/docs/reference/getting-started) guide. This page covers **backend-specific** details only.
+:::
+
 Welcome to the AskAide AI Backend repository! This project provides a comprehensive EdTech platform for students, teachers, and schools, featuring AI-powered question generation, mastery-based progress tracking, automated quiz management, and teacher analytics.
 
 ## Engineering Standards (Skills)

@@ -1072,7 +1072,7 @@ try {
 
 ## Related Documentation
 
-- [API Documentation](../../backend/development/api-documentation)
+- [API Reference](/docs/reference/api-reference)
 - [Authentication](../../backend/development/authentication)
 - [Error Handling](../../backend/development/error-handling)
 

@@ -1,5 +1,9 @@
 # RAG System API
 
+:::info Full-stack setup lives in Getting Started
+For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend), follow the canonical [Getting Started](/docs/reference/getting-started) guide. This page covers **AI-service-specific** details only.
+:::
+
 A Retrieval-Augmented Generation (RAG) system with FastAPI, Qdrant, and advanced AI capabilities for educational platforms.
 
 ## Quick Start
