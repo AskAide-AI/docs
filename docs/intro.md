@@ -17,10 +17,10 @@ Frontend never calls AI Service directly — everything is proxied through Backe
 
 | Service | Stack | Purpose |
 |---------|-------|---------|
-| [Frontend](/docs/frontend/) | React 18 + Vite + Tailwind | Student, teacher & admin SPA |
-| [Backend](/docs/backend/) | Express.js + MongoDB | API server, auth, business logic |
-| [AI Service](/docs/ai-service/) | FastAPI + Python | RAG, embeddings, LLM, question gen |
-| [Shared Contracts](/docs/shared-contracts/) | TypeScript + JSON Schema | Cross-repo type & API definitions |
+| [Frontend](/docs/frontend/overview) | React 18 + Vite + Tailwind | Student, teacher & admin SPA |
+| [Backend](/docs/backend/overview) | Express.js + MongoDB | API server, auth, business logic |
+| [AI Service](/docs/ai-service/overview) | FastAPI + Python | RAG, embeddings, LLM, question gen |
+| [Shared Contracts](/docs/shared-contracts/overview) | TypeScript + JSON Schema | Cross-repo type & API definitions |
 
 ## Repository Quick Reference
 
@@ -44,4 +44,4 @@ cd Backend && npm install && npm run dev
 cd ai-service && pip install -r requirements.txt && uvicorn main:app --reload --port 8000
 ```
 
-See [Quick Start Guide](/docs/shared-contracts/development/quick-start) for detailed setup.
+See [Getting Started](/docs/reference/getting-started) for detailed setup.

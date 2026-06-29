@@ -13,9 +13,9 @@
 | **Total Modules** | 13 |
 | **HIGH Readiness** | 5 (auth, content, questions, teacher, **parent**) |
 | **MEDIUM Readiness** | 6 (user, quiz, question-paper, school, goal, referral) |
-| **LOW / CRITICAL** | 2 (progress — no auth!, supporting — no auth on API logs) |
+| **LOW / CRITICAL** | 0 (all modules have auth middleware) |
 | **Test Coverage** | 10/13 modules have tests; 3 missing (goal, referral, **parent**) |
-| **Auth Coverage Gap** | ~30 endpoints across progress + school + user are unprotected |
+| **Auth Coverage Gap** | Resolved — remaining gaps: Joi validators (6 modules) |
 | **Validation Gap** | 6/12 modules missing Joi validators |
 
 ---
@@ -82,7 +82,7 @@
 |-----------|--------|-------|
 | Error Handling | ✅ YES | `asyncHandler` + `UserError` |
 | Validation | ❌ NO | Manual validation in service only — no Joi schemas |
-| Auth Guards | ⚡ PARTIAL | Profile routes have `auth`; but **student create/get-all routes have NO auth** |
+| Auth Guards | ✅ YES | `auth` + `isTeacherOrPrincipal` on student create/get-all/update/delete |
 | Tests | ✅ 1 file (359 lines) | All 7 methods tested |
 | Logging | ❌ NO | Logger not imported |
 | Response Format | ✅ YES | `sendSuccess` used |
@@ -91,7 +91,6 @@
 | ID | Issue | Severity | Effort | Priority |
 |----|-------|----------|--------|----------|
 | BE-02 | Add Joi validators for student CRUD routes | MEDIUM | 1 day | HIGH |
-| BE-03 | Add `isTeacherOrPrincipal` auth guard to student routes | HIGH | 0.5 day | HIGH |
 | BE-04 | Add Winston logger to controllers | LOW | 0.5 day | MEDIUM |
 
 ---
@@ -133,25 +132,22 @@
 
 ---
 
-### 5. Progress Module — CRITICAL GAPS
+### 5. Progress Module — MEDIUM READINESS
 
 | Criterion | Status | Notes |
 |-----------|--------|-------|
 | Error Handling | ✅ YES | `asyncHandler` + `ProgressError` |
 | Validation | ❌ NO | No validators folder exists |
-| Auth Guards | ❌ NONE | **ALL 7 route files (~20 endpoints) have ZERO auth middleware** |
+| Auth Guards | ✅ YES | `auth` on all routes (sessions, answers, progress, streaks, daily-challenges, badges, session-feedback, dashboard, topic-progress, mastery-summary) |
+| IDOR | ✅ FIXED | `req.user.id` replaces URL `:userId` param on topic-progress routes |
 | Tests | ✅ 1 file | Sessions, answers, progress tested |
 | Logging | ✅ YES | Logger used |
 | Response Format | ✅ YES | `sendSuccess` used |
 
-**This is the most critical module** — it handles sessions, topic progress, user answers, streaks, daily challenges, badges, session feedback, and NPS. All fully public.
-
 **Action Items:**
 | ID | Issue | Severity | Effort | Priority |
 |----|-------|----------|--------|----------|
-| BE-07 | Add `auth` middleware to ALL 7 progress route files | **CRITICAL** | 1 day | **P0** |
 | BE-08 | Add Joi validators for all progress endpoints | HIGH | 1.5 days | HIGH |
-| BE-09 | Audit what data is exposed via unprotected endpoints | **CRITICAL** | 0.5 day | **P0** |
 
 ---
 
@@ -220,7 +216,7 @@
 |-----------|--------|-------|
 | Error Handling | ✅ YES | `asyncHandler` + `SchoolError` |
 | Validation | ❌ NO | No Joi validators |
-| Auth Guards | ❌ NONE | **ALL school/section CRUD routes are fully public** |
+| Auth Guards | ✅ YES | `auth` + `isPrincipal` on school create/update, section create/bulk/update/delete |
 | Tests | ✅ 1 file | Present |
 | Logging | ❌ NO | Logger not imported |
 | Response Format | ✅ YES | `sendSuccess` used |
@@ -228,7 +224,6 @@
 **Action Items:**
 | ID | Issue | Severity | Effort | Priority |
 |----|-------|----------|--------|----------|
-| BE-18 | Add `auth` + `isPrincipal` / `isSuperAdmin` guards to all school/section routes | **CRITICAL** | 1 day | **P0** |
 | BE-19 | Add Joi validators for school and section CRUD | HIGH | 1 day | HIGH |
 | BE-20 | Add Winston logger | LOW | 0.5 day | LOW |
 
@@ -240,7 +235,8 @@
 |-----------|--------|-------|
 | Error Handling | ⚡ PARTIAL | `SupportingError` exists but controllers use raw try/catch |
 | Validation | ❌ NO | No Joi validators |
-| Auth Guards | ⚡ PARTIAL | Leaderboard/feedback/stats correctly public; but **apiLog routes have swagger security tags but NO actual auth middleware** |
+| Auth Guards | ✅ YES | `auth` added to leaderboard (2 routes) + feedback (1 route) |
+| NoSQL Injection | ✅ FIXED | `$regex` input escaped in `supporting.service.js` |
 | Tests | ✅ 1 file | Present |
 | Logging | ❌ NO | Logger not imported in controllers |
 | Response Format | ❌ NO | Raw `res.json()` |
@@ -248,7 +244,6 @@
 **Action Items:**
 | ID | Issue | Severity | Effort | Priority |
 |----|-------|----------|--------|----------|
-| BE-21 | Add `auth` middleware to apiLog routes | HIGH | 0.5 day | HIGH |
 | BE-22 | Refactor controllers to use `asyncHandler` | MEDIUM | 0.5 day | MEDIUM |
 | BE-23 | Replace raw `res.json()` with `sendSuccess` / `sendError` | MEDIUM | 0.5 day | MEDIUM |
 | BE-24 | Add Joi validators for feedback and API log endpoints | MEDIUM | 0.5 day | MEDIUM |

@@ -1,7 +1,7 @@
 # AI Service — Full Documentation
 
-> **Last updated:** 2026-05-28  
-> **Version:** 1.0.0 (FastAPI)
+> **Last updated:** 2026-06-29  
+> **Version:** 1.1.0 (FastAPI)
 
 This document covers every part of the `ai-service`: what it does, how every file fits together, every API endpoint, every service class, the database layer, LLM/embedding providers, and critical operational rules.
 
@@ -151,6 +151,8 @@ ai-service/
 
 **Dependency injection flow:** All heavy objects (QdrantDB, Embedding, LLMService, MongoDB) are created once in `services/shared.py` as lazy singletons and passed into service constructors via `services/service.py`.
 
+**Thread safety:** All singleton getters (`get_embedding`, `get_mongo`, `get_qdrant`, `get_topic_search`, `get_llm_service`, `get_rag_system`, `get_redis`) use **double-checked locking** with `threading.Lock()` to prevent race conditions during lazy initialization on concurrent requests.
+
 ---
 
 ## 6. Two Core Pipelines
@@ -162,6 +164,7 @@ When a chapter PDF is uploaded, this is what happens step by step:
 ```
 1. HTTP POST /upload-document
    ├─ Validate file extension (.pdf, .docx, .txt)
+   ├─ Validate **magic bytes** — PDFs must start with `%PDF`, DOCX must start with `PK` (ZIP header)
    ├─ Validate file size (max 10 MB)
    ├─ Save file to /tmp/uploads/
    ├─ Return 202 immediately with task_id
@@ -253,6 +256,11 @@ Upload a chapter document for RAG ingestion.
 | `class_id` | string | yes | MongoDB class `_id` |
 | `chapter_id` | string | yes | MongoDB chapter `_id` |
 | `subject_id` | string | yes | MongoDB subject `_id` |
+
+**Validation:**
+- File extension must be `.pdf`, `.docx`, or `.txt`
+- File size must not exceed 10 MB
+- **Magic bytes** are validated: PDF files must start with `%PDF` bytes, DOCX files must start with `PK` (ZIP header). Invalid magic bytes return a 400 error and the temp file is cleaned up immediately.
 
 **Response (202 Accepted):**
 ```json
@@ -356,6 +364,8 @@ Ask a question about uploaded chapter content.
 
 The service embeds the query, searches Qdrant with `class_id + subject_id + chapter_ids[]` filters, builds a context string, and feeds it to the LLM. Returns `answer: "No relevant documents found"` if no matching vectors exist.
 
+**Error handling:** All 25+ endpoints now return **generic error messages** (e.g., `"Question generation failed"`, `"Internal server error"`) instead of leaking `str(e)` exception details. This is a security hardening measure — production error responses never expose internal exception text.
+
 ---
 
 ### Question Generation
@@ -380,10 +390,12 @@ Generate MCQ or subjective questions from chapter content, grounded in RAG.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `topics` | string[] | required | Topic names (matched to MongoDB `topics` collection) |
-| `n` | int | 10 | Number of questions to generate |
+| `n` | int | 10 | Number of questions to generate (1–50) |
 | `type` | string | `"mcq"` | `"mcq"` or `"subjective"` |
 | `is_distinct` | bool | false | Ensure no duplicate question styles |
 | `difficulty` | string | null | `"easy"`, `"medium"`, `"hard"`, or null |
+
+**Validation:** All `_id` fields (`class_id`, `subject_id`, `chapter_id`) are validated against `OBJECTID_PATTERN = /^[0-9a-fA-F]{24}$/`. Invalid ObjectIds return 422 with field-level validation errors. `n` is clamped to 1–50.
 
 **Response:**
 ```json
@@ -903,6 +915,8 @@ llm = LLMClass()
 | `LLM_PROVIDER` value | Class | Config vars |
 |---|---|---|
 | `openrouter` (default) | `OpenRouterLLM` | `OPENROUTER_API_KEY`, `OPEN_ROUTER_MODEL`, `OPEN_ROUTER_MAX_TOKENS`, `OPEN_ROUTER_TEMPERATURE` |
+
+**OpenRouter health check:** The health check endpoint was changed from `self.base_url` (which points to `/chat/completions`) to `{base_url.rstrip('/chat/completions')}/models` — it now calls `https://openrouter.ai/api/v1/models` instead.
 | `gemini` | `GeminiLLM` | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_MAX_TOKENS`, `GEMINI_TEMPERATURE` |
 | `openai` | `OpenAILLM` | `OPENAI_API_KEY`, `OPEN_AI_MODEL`, `OPEN_AI_MAX_TOKENS`, `OPEN_AI_TEMPERATURE` |
 | `anthropic` | `AnthropicLLM` | `ANTHROPIC_API_KEY` |

@@ -1,5 +1,9 @@
 # RAG System API
 
+:::info Full-stack setup lives in Getting Started
+For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend), follow the canonical [Getting Started](/docs/reference/getting-started) guide. This page covers **AI-service-specific** details only.
+:::
+
 A Retrieval-Augmented Generation (RAG) system with FastAPI, Qdrant, and advanced AI capabilities for educational platforms.
 
 ## Quick Start
@@ -125,7 +129,7 @@ quiz = orchestrator.generate_practice(
 
 ## AI Capabilities
 
-See [AI Features Guide](docs/AI_FEATURES_QUICKREF.md) for detailed usage.
+See [AI Features Guide](../features/ai-features-quickref) for detailed usage.
 
 ### Example: Student Learning Path
 ```python
@@ -311,6 +315,6 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ## Documentation
 
-- [AI Features Guide](docs/AI_FEATURES_QUICKREF.md) - Detailed AI usage
-- [Improvement Guide](.agent/skills/ai-service-improvement/SKILL.md) - Best practices
-- [Cross-repo Integration](CROSS_REPO_MAP.md) - Backend integration
+- [AI Features Guide](../features/ai-features-quickref) - Detailed AI usage
+- Improvement Guide (internal `.agent/skills/ai-service-improvement/SKILL.md`) - Best practices
+- [Cross-repo Integration](../features/cross-repo-map) - Backend integration

@@ -10,22 +10,49 @@ const sidebars = {
         {
           type: 'category',
           label: 'Features',
-          items: ['frontend/features/product-manual'],
+          items: [
+            'frontend/features/product-manual',
+            'frontend/features/study-session-flow',
+            'frontend/features/features',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Product',
+          items: ['frontend/product/product-overview', 'frontend/product/project-overview'],
         },
         {
           type: 'category',
           label: 'Development',
-          items: ['frontend/development/setup', 'frontend/development/conventions', 'frontend/development/troubleshooting', 'frontend/development/testing-strategy'],
-        },
-        {
-          type: 'category',
-          label: 'Reference',
-          items: ['frontend/reference/ai-research-prompt'],
+          items: [
+            'frontend/development/setup',
+            'frontend/development/conventions',
+            'frontend/development/pages-and-routes',
+            'frontend/development/component-library',
+            'frontend/development/state-management',
+            'frontend/development/forms-and-validation',
+            'frontend/development/styling-guide',
+            'frontend/development/api-integration',
+            'frontend/development/quiz-module-api',
+            'frontend/development/teacher-dashboard-api',
+            'frontend/development/performance',
+            'frontend/development/accessibility',
+            'frontend/development/seo-checklist',
+            'frontend/development/testing',
+            'frontend/development/dependencies',
+            'frontend/development/deployment',
+            'frontend/development/troubleshooting',
+            'frontend/development/proposed-changes',
+            'frontend/development/changelog',
+          ],
         },
         {
           type: 'category',
           label: 'Audits',
-          items: ['frontend/audits/code-audit', 'frontend/audits/production-readiness'],
+          items: [
+            'frontend/audits/strategic-audit',
+            'frontend/audits/production-readiness',
+          ],
         },
       ],
     },
@@ -38,17 +65,45 @@ const sidebars = {
         {
           type: 'category',
           label: 'Features',
-          items: ['backend/features/question-generation-flow', 'backend/features/quiz-implementation'],
+          items: [
+            'backend/features/question-generation-flow',
+            'backend/features/quiz-implementation',
+            'backend/features/question-selection',
+            'backend/features/features',
+          ],
         },
         {
           type: 'category',
           label: 'Development',
-          items: ['backend/development/setup', 'backend/development/module-reference', 'backend/development/troubleshooting', 'backend/development/testing-strategy', 'backend/development/api-changelog'],
+          items: [
+            'backend/development/setup',
+            'backend/development/module-reference',
+            'backend/development/authentication',
+            'backend/development/security',
+            'backend/development/error-handling',
+            'backend/development/testing',
+            'backend/development/dependencies',
+            'backend/development/deployment',
+            'backend/development/troubleshooting',
+            'backend/development/changelog',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Reference',
+          items: [
+            'backend/reference/system-design',
+            'backend/reference/database-schema',
+          ],
         },
         {
           type: 'category',
           label: 'Product',
-            items: ['backend/product/pricing', 'backend/product/growth-analysis', 'backend/product/PRODUCT-INTRODUCTION'],
+          items: [
+            'backend/product/pricing',
+            'backend/product/growth-analysis',
+            'backend/product/PRODUCT-INTRODUCTION',
+          ],
         },
         {
           type: 'category',
@@ -71,7 +126,13 @@ const sidebars = {
         {
           type: 'category',
           label: 'Development',
-          items: ['ai-service/development/setup', 'ai-service/development/integration-plan', 'ai-service/development/integration-plan-full', 'ai-service/development/troubleshooting', 'ai-service/development/testing-strategy'],
+          items: [
+            'ai-service/development/setup',
+            'ai-service/development/integration-plan',
+            'ai-service/development/eval-readme',
+            'ai-service/development/troubleshooting',
+            'ai-service/development/testing-strategy',
+          ],
         },
         {
           type: 'category',
@@ -91,11 +152,10 @@ const sidebars = {
       link: {type: 'doc', id: 'shared-contracts/overview'},
       items: [
         'shared-contracts/api-definitions',
-        'shared-contracts/integration-guide',
         {
           type: 'category',
           label: 'Development',
-          items: ['shared-contracts/development/quick-start', 'shared-contracts/development/mcp-setup'],
+          items: ['shared-contracts/development/mcp-setup'],
         },
         {
           type: 'category',
@@ -112,6 +172,17 @@ const sidebars = {
           label: 'Audits',
           items: ['shared-contracts/audits/pre-launch-audit-report', 'shared-contracts/audits/product-audit-report'],
         },
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Guides & Reference',
+      items: [
+        'reference/getting-started',
+        'reference/user-guide',
+        'reference/developer-guide',
+        'reference/api-reference',
+        'reference/integration',
       ],
     },
   ],

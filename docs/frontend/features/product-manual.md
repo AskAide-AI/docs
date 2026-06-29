@@ -1,7 +1,11 @@
 # AskAide AI - Product Manual
 
+:::info Canonical end-user guide
+The complete, role-by-role end-user walkthrough (Student / Teacher / Parent / Admin) lives in the canonical [User Guide](/docs/reference/user-guide). This page is a product/functional overview for stakeholders and AI agents — use the User Guide for step-by-step usage.
+:::
+
 > **Product Guide & Context for AI Agents and Stakeholders**
-> This document provides a functional overview of the AskAide AI platform, explaining its capabilities, user roles, and core workflows. Use this as the "Source of Truth" for what the product does.
+> This document provides a functional overview of the AskAide AI platform, explaining its capabilities, user roles, and core workflows.
 
 ---
 

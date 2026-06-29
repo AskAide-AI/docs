@@ -1,5 +1,9 @@
 # AskAide AI — EdTech Frontend
 
+:::info Full-stack setup lives in Getting Started
+For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend), follow the canonical [Getting Started](/docs/reference/getting-started) guide. This page covers **frontend-specific** details only.
+:::
+
 A modern, high-performance EdTech platform built with React, TypeScript, and Tailwind CSS. This frontend serves as the primary interface for students, teachers, and administrators to interact with the AskAide AI ecosystem.
 
 ## 🚀 Features
@@ -45,6 +49,8 @@ src/
    Create a `.env` file with:
    ```env
    VITE_API_URL=http://localhost:4000/api/v1
+   VITE_SITE_URL=http://localhost:5173
+   VITE_CONTACT_EMAIL=hello@askaide.in
    ```
 3. **Run Development Mode**:
    ```bash
@@ -53,9 +59,9 @@ src/
 
 ## 📖 Related Documentation
 
-- [CLAUDE.md](./CLAUDE.md) - Tech overview and development commands.
-- [project_overview.md](./project_overview.md) - Detailed architecture and feature breakdown.
-- [product.md](./product.md) - Product identity, target audience, and business context.
+- CLAUDE.md - Tech overview and development commands.
+- [project_overview.md](../product/project-overview) - Detailed architecture and feature breakdown.
+- [product.md](../product/product-overview) - Product identity, target audience, and business context.
 
 ---
 *Maintained by the AskAide AI Team*
