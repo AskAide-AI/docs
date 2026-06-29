@@ -2,13 +2,14 @@
 
 > All notable changes to the AskAideAI frontend will be documented in this file.
 > Format: [Semantic Versioning](https://semver.org/)
-> Last Updated: April 17, 2026
+> Last Updated: June 29, 2026
 
 ---
 
 ## [Unreleased]
 
 ### Added
+- **Progress → Study navigation** — clicking a chapter's "Start Learning" on the Progress page now navigates to StudyConfig with the class/subject/chapter pre-selected, letting the user choose question type and difficulty before starting instead of using hardcoded defaults (`Progress.jsx`, `Home.jsx`, `StudyConfig.jsx`)
 - **`useQuestionPolling` hook rewrite** — normalized response handling, proper polling loop, retry bounds with max 30 attempts
 - **Mastered state** — positive terminal state for fully mastered topics; auto-resets on session configuration change
 - **Dedup + yield-based mastery integration** — deduplication of mastered topics and early-exit yield when all topics are mastered
