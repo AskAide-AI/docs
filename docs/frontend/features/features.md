@@ -1,7 +1,7 @@
 # Features
 
 > Complete list of all user-facing features in the AskAideAI frontend application.
-> Last Updated: June 25, 2026
+> Last Updated: June 29, 2026
 
 ---
 
@@ -65,15 +65,13 @@
 
 ### Study Configuration
 **Status:** ✅ Completed
-**Description:** Users select class, subject, chapter, question type, and difficulty before starting a practice session
+**Description:** Users select class, subject, chapter, question type, and difficulty before starting a practice session. Can also be pre-populated from the Progress page ("Start Learning" button navigates here with class/subject/chapter pre-selected)
 **Pages:** /study
 **Components:** 
 - `Home.jsx`
 - `StudyConfig.jsx`
 **API Dependencies:** 
-- GET `/study/configuration/classes`
-- GET `/study/configuration/subjects`
-- GET `/study/configuration/chapters/:subjectId`
+- GET `/study/configuration?classIds=`
 **Added:** Initial release
 
 ---
@@ -90,7 +88,7 @@
 **API Dependencies:** 
 - GET `/questions/batch/chapter/:chapterId/type/:type/difficulty/:difficulty/session/:sessionId`
 - POST `/sessions` (start session)
-- PUT `/sessions/:id` (end session)
+- PATCH `/sessions/:id/end` (end session)
 - POST `/answers/batch`
 **Polling Mechanism:** When questions are being generated, the frontend polls the question batch endpoint every 5 seconds (up to 30 retries). The response includes a `status` field with possible values:
   - `generating` — AI is still generating questions, retry later
