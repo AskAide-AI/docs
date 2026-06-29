@@ -1,6 +1,6 @@
 # AskAide AI - Features
 
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-06-29
 
 ---
 
@@ -328,9 +328,30 @@
 
 ---
 
+## Health Check
+**Status:** ✅ Completed  
+**Description:** Deep health check for monitoring — reports server and database connectivity. Excluded from rate limiting.  
+**Endpoints:**
+- `GET /health` - Health check
+
+**Response (200):**
+```json
+{ "status": "healthy", "server": "ok", "database": "ok", "timestamp": "..." }
+```
+
+**Response (503):**
+```json
+{ "status": "degraded", "server": "ok", "database": "disconnected", "timestamp": "..." }
+```
+
+**Dependencies:** MongoDB connection status  
+**Added:** 2026-06-29
+
+---
+
 ## API Logging & Stats
 **Status:** ✅ Completed  
-**Description:** Request/response logging to MongoDB with statistical analysis.  
+**Description:** Request/response logging to MongoDB with statistical analysis. Log level changed from `http` to `info` to ensure logs ship reliably to Loki transport.  
 **Endpoints:**
 - `GET /api/v1/logs` - Get API logs
 - `DELETE /api/v1/logs` - Clear logs

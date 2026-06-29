@@ -49,6 +49,8 @@ src/
    Create a `.env` file with:
    ```env
    VITE_API_URL=http://localhost:4000/api/v1
+   VITE_SITE_URL=http://localhost:5173
+   VITE_CONTACT_EMAIL=hello@askaide.in
    ```
 3. **Run Development Mode**:
    ```bash

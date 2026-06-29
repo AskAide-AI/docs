@@ -272,6 +272,8 @@ Create `frontend/.env`:
 
 ```env
 VITE_API_URL=http://localhost:4000/api/v1
+VITE_SITE_URL=http://localhost:5173
+VITE_CONTACT_EMAIL=hello@askaide.in
 ```
 
 Start the dev server:
@@ -328,6 +330,8 @@ The app opens at **http://localhost:5173**.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `VITE_API_URL` | Yes | — | Backend API base URL (e.g. `http://localhost:4000/api/v1`) |
+| `VITE_SITE_URL` | Yes | — | Site URL for SEO, share links, sitemap, and OG tags (e.g. `http://localhost:5173`) |
+| `VITE_CONTACT_EMAIL` | Yes | — | Contact email shown in Legal Policy and Terms of Service (e.g. `hello@askaide.in`) |
 
 ---
 
@@ -368,8 +372,8 @@ Open **http://localhost:5173** in your browser.
 
 ```bash
 curl http://localhost:5173       # Frontend
-curl http://localhost:4000/ping  # Backend health
-curl http://localhost:8000/healthz # AI Service health
+curl http://localhost:4000/health  # Backend health (deep check: server + DB)
+curl http://localhost:8000/health  # AI Service health
 ```
 
 ---

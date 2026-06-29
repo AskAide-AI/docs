@@ -1,6 +1,6 @@
 # AskAide AI - Authentication
 
-**Last Updated:** 2026-01-11
+**Last Updated:** 2026-06-29
 
 ---
 
@@ -195,7 +195,11 @@ router.post('/school', auth, requireRole('admin'), createSchool);
 
 ### Password Requirements
 - Minimum 8 characters
-- (Future: Add complexity requirements)
+- Must include at least one uppercase letter, one lowercase letter, one number, and one special character (`!@#$%^&*`)
+
+### Password Field Behavior
+- `password` has `select: false` on the Mongoose schema — it is **not returned** by default in queries. Any code reading the password field must use `.select('+password')`.
+- `email` has `unique: true` — duplicate email registration returns a 409 conflict error.
 
 ---
 

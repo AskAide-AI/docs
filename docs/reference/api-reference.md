@@ -40,7 +40,7 @@
 
 | Service | Base URL | Protocol | Auth |
 |---------|----------|----------|------|
-| **Backend** | `http://localhost:4000/api/v1` | REST | JWT Bearer Token |
+| **Backend** | `http://localhost:4000` | REST | JWT Bearer Token |
 | **AI Service** | `http://localhost:8000` | REST | None (internal) |
 
 **Frontend never calls AI Service directly.** All AI calls are proxied through the Backend.
@@ -126,6 +126,32 @@ Login with email and password.
 
 ---
 
+#### GET `/health`
+
+Backend health check (excluded from rate limiting).
+
+**Response (200):**
+```json
+{
+  "status": "healthy",
+  "server": "ok",
+  "database": "ok",
+  "timestamp": "2026-06-29T12:00:00.000Z"
+}
+```
+
+**Response (503):**
+```json
+{
+  "status": "degraded",
+  "server": "ok",
+  "database": "disconnected",
+  "timestamp": "2026-06-29T12:00:00.000Z"
+}
+```
+
+---
+
 #### POST `/signup`
 
 Register a new user.
@@ -135,10 +161,14 @@ Register a new user.
 {
   "userName": "john",
   "email": "john@example.com",
-  "password": "secret123",
+  "password": "Secret@123",
   "accountType": "Student"
 }
 ```
+
+**Password requirements:**
+- Minimum 8 characters
+- Must include uppercase, lowercase, number, and special character (`!@#$%^&*`)
 
 **Response (201):**
 ```json
@@ -159,10 +189,12 @@ Change password for logged-in user.
 **Request:**
 ```json
 {
-  "oldPassword": "oldSecret123",
-  "newPassword": "newSecret456"
+  "oldPassword": "OldSecret@123",
+  "newPassword": "NewSecret@456"
 }
 ```
+
+**Password requirements** (same as signup): minimum 8 characters, must include uppercase, lowercase, number, and special character.
 
 **Response (200):**
 ```json
@@ -206,10 +238,12 @@ Reset password with token from email.
 **Request:**
 ```json
 {
-  "password": "newSecret456",
+  "password": "NewSecret@456",
   "token": "abc123def456"
 }
 ```
+
+**Password requirements** (same as signup): minimum 8 characters, must include uppercase, lowercase, number, and special character.
 
 **Response (200):**
 ```json
@@ -3087,6 +3121,8 @@ http_requests_total{method="POST",endpoint="/query"} 1520
 | `422` | Unprocessable Entity — validation error |
 | `429` | Too Many Requests — rate limit exceeded |
 | `500` | Internal Server Error |
+| `502` | Bad Gateway — AI Service error (proxied) |
+| `504` | Gateway Timeout — AI Service timeout |
 
 ### AI Service Error Responses
 
@@ -3096,7 +3132,9 @@ http_requests_total{method="POST",endpoint="/query"} 1520
 | `404` | Not Found — task/document not found |
 | `422` | Unprocessable Entity — processing failed |
 | `500` | Internal Server Error — LLM/embedding failure |
+| `502` | Bad Gateway — upstream provider error (OpenRouter, etc.) |
 | `503` | Service Unavailable — Qdrant/Redis/MongoDB down |
+| `504` | Gateway Timeout — upstream provider timed out |
 
 ### Error Response Format
 
