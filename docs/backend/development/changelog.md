@@ -59,6 +59,26 @@ All notable changes to this project are documented in this file.
 
 ---
 
+## [v1.2.0] - 2026-06-29
+
+### Added
+- **Health Check Endpoint**: `GET /health` — deep health check reporting server and database connectivity. Excluded from rate limiting. Returns 200 (healthy) or 503 (degraded).
+- **`fetchWithTimeout` utility**: Wraps `fetch` with `AbortController` timeout (default 30s). Cleans up timer in `.finally()`.
+- **`proxyAiService` utility**: Calls `fetchWithTimeout`, parses AI Service error responses, throws `AppError` with status 502 (AI_SERVICE_ERROR) or 504 (AI_TIMEOUT).
+
+### Changed
+- **AI Service calls**: `content.service.js` now uses `fetchWithTimeout` with 120s timeout for document uploads; `topicProgress.controller.js` uses `proxyAiService` for AI insights.
+- **AI Assistant error responses**: Changed from `sendSuccess(res, errorMessage, {...}, 400)` to `sendError(res, errorMessage, 400, {...})`. Response shape is now `{ success: false, message: "...", error: "..." }` instead of `{ success: true, data: { error: "..." } }`.
+- **Logging level**: Successful request logs changed from `logger.http(...)` to `logger.info(...)` for reliable Loki shipping.
+- **Password policy**: Minimum length increased from 6 to 8 characters. New complexity requirement: must include uppercase, lowercase, number, and special character.
+- **User model**: `email` field is now `unique: true` (duplicate registration returns 409). `password` field has `select: false` — queries must use `.select('+password')` to access the password field.
+
+### Security
+- Password field excluded from default query results (`select: false`).
+- AI Service proxy errors no longer leak internal details (generic error messages forwarded).
+
+---
+
 ## [Unreleased]
 
 ### Added

@@ -31,6 +31,8 @@ All API errors follow this structure:
 | `409` | Conflict | Duplicate resource (e.g., email exists) |
 | `429` | Too Many Requests | Rate limit exceeded |
 | `500` | Internal Server Error | Unexpected server errors |
+| `502` | Bad Gateway | AI Service returned an error (proxied via AppError) |
+| `504` | Gateway Timeout | AI Service did not respond within timeout (AbortController) |
 
 ---
 
@@ -100,6 +102,20 @@ All API errors follow this structure:
 ## Current Error Handling Implementation
 
 The project uses a centralized error handling system with three components:
+
+### 0. `fetchWithTimeout` & `proxyAiService` Utilities
+Located in `src/shared/utils/requestContext.js`:
+```javascript
+fetchWithTimeout(url, options, timeoutMs)
+// Wraps fetch with AbortController timeout (default 30s).
+// Clears timer in .finally() to prevent lingering listeners.
+
+proxyAiService(url, options, timeoutMs)
+// Calls fetchWithTimeout, then on non-ok response attempts to
+// parse { detail } from the AI Service error body. Throws AppError
+// with status 502 (AI_SERVICE_ERROR) or 504 (AI_TIMEOUT).
+```
+These are used by `content.service.js` (AI Service calls with 120s timeout for uploads) and `topicProgress.controller.js` (AI insights calls).
 
 ### 1. `AppError` Custom Class
 Located in `src/shared/middleware/errorHandler.js`:

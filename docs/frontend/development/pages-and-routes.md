@@ -39,6 +39,7 @@
 | `/parent/*` | ParentDashboard | Protected | SuperAdmin, Parent, Teacher | Parent oversight |
 | `/teacher` | TeacherDashboard | Protected | SuperAdmin, Teacher, Parent | Teacher analytics |
 | `/admin` | AdminDashboard | Protected | SuperAdmin | Admin panel |
+| `*` | NotFound | Public | All | 404 catch-all — compass icon + contextual links |
 | `/feedback` | FeedbackForm | Public | All | User feedback form |
 | `/privacy-policy` | LegalPolicy | Public | All | Privacy policy |
 | `/terms-of-service` | TermsOfService | Public | All | Terms of service |
@@ -489,6 +490,17 @@
 - Chapter details
 - Topic preview
 - SEO structured data
+
+---
+
+### `*` (404 Catch-All)
+**Component:** `src/components/pages/NotFound.jsx`
+**Description:** Catch-all route for undefined paths. Shows a compass icon with "404 — page not found" and contextual links back to dashboard (if logged in) or home (if not). Uses `<SEOHead noindex={true} />` to prevent search indexing.
+**Authentication:** Public
+**Features:**
+- Compass icon with 404 message
+- Contextual navigation based on auth state
+- noindex SEO meta tag
 
 ---
 

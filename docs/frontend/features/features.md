@@ -9,7 +9,7 @@
 
 ### Login
 **Status:** ✅ Completed
-**Description:** Users can log in with email and password using JWT authentication
+**Description:** Users can log in with email and password using JWT authentication. On session expiry, the system stores `auth:sessionExpired` + `auth:returnTo` flags in sessionStorage, redirects to `/login`, and shows a toast: "Your session expired. Please sign in again to continue." After login, the user is returned to their original destination.
 **Pages:** /login
 **Components:** 
 - `Login.jsx`
@@ -259,10 +259,12 @@
 
 ### Student Dashboard
 **Status:** 🚧 In Progress (Mock Data)
-**Description:** Personalized dashboard with streaks, badges, and activity
+**Description:** Personalized dashboard with streaks, badges, and activity. DailyGoalCard includes `minHeight: 104px` on skeleton and loaded states to prevent CLS (layout shift). Onboarding overlay has a persistent escape hatch (X button + Escape key) so it never traps the user.
 **Pages:** /dashboard
 **Components:** 
 - `Dashboard.jsx`
+- `DailyGoalCard.jsx`
+- `OnboardingOverlay.jsx`
 **API Dependencies:** 
 - Currently uses mock data
 **Added:** Initial release
@@ -334,7 +336,7 @@
 
 ### Student Quiz Experience
 **Status:** ✅ Completed
-**Description:** Students can view available quizzes, take timed attempts, submit answers, and view detailed results with explanations.
+**Description:** Students can view available quizzes, take timed attempts, submit answers, and view detailed results with explanations. Includes offline answer safety net — answers that fail to save are queued in localStorage (`pendingQuizAnswers:<attemptId>`) and retried on reconnect + before final submit.
 **Pages:** /student/quizzes, /quiz/:quizId/attempt, /quiz/result/:attemptId
 **Components:** 
 - `StudentQuizList.jsx`
@@ -398,12 +400,33 @@
 
 ---
 
+### Error Boundary
+**Status:** ✅ Completed
+**Description:** Catch-all error boundary with two recovery options: "Try again" (retries in-place) and "Go to dashboard" (navigates to `/dashboard`).
+**Pages:** All pages
+**Components:**
+- `ErrorBoundary.jsx`
+**Added:** Initial release
+
+---
+
+### 404 Page
+**Status:** ✅ Completed
+**Description:** Catch-all route for undefined paths. Shows a compass icon with contextual links — dashboard if logged in, home if not. Uses `<SEOHead noindex={true} />`.
+**Pages:** `*` (catch-all)
+**Components:**
+- `NotFound.jsx`
+**Added:** June 2026
+
+---
+
 ### Offline Detection
 **Status:** ✅ Completed
-**Description:** App detects and displays network status
+**Description:** App detects and displays network status. Session `blur` listener was removed (was causing false "leave session?" prompts from innocuous focus loss); only `visibilitychange` is kept for genuine tab-switch detection.
 **Pages:** All pages (App.jsx)
 **Components:** 
 - `App.jsx` (online/offline event listeners)
+- `useSessionEvents.js` (visibility-only session tracking)
 **Added:** Initial release
 
 ---
