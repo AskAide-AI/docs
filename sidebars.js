@@ -142,7 +142,7 @@ const sidebars = {
         {
           type: 'category',
           label: 'Audits',
-          items: ['ai-service/audits/dataset-audit', 'ai-service/audits/production-readiness'],
+          items: ['ai-service/audits/dataset-audit', 'ai-service/audits/performance-issues', 'ai-service/audits/production-readiness'],
         },
       ],
     },
@@ -183,6 +183,17 @@ const sidebars = {
         'reference/developer-guide',
         'reference/api-reference',
         'reference/integration',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Learning Resources',
+      link: {type: 'doc', id: 'learning-resources/README'},
+      items: [
+        'learning-resources/frontend-learning-guide',
+        'learning-resources/backend-learning-guide',
+        'learning-resources/ai-service-learning-guide',
+        'learning-resources/shared-contracts-learning-guide',
       ],
     },
   ],
