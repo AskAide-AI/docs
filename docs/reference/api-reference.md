@@ -2937,6 +2937,8 @@ Base: `http://localhost:8000`
 
 All AI Service endpoints are **internal only** — called by the Backend, not the Frontend directly.
 
+> **Integration legend:** `✅` = Backend caller exists (fully wired). `⚠️` = documented but no Backend caller (gap).
+
 ---
 
 ### 1. Document Management
@@ -2965,6 +2967,8 @@ Async PDF ingestion into vector DB (Qdrant). Returns task ID for polling.
 ```
 
 **Poll status with:** `GET /upload-status/{task_id}`
+
+> ⚠️ **Integration gap:** Backend never polls this endpoint — treats any 202 as success without checking actual completion.
 
 ---
 
@@ -3002,11 +3006,15 @@ Poll upload processing status.
 }
 ```
 
+> ⚠️ **Integration gap:** Backend never calls this endpoint — treats any 202 as success.
+
 ---
 
 #### POST `/delete-document`
 
 Remove document from Qdrant vector DB.
+
+✅ **Integration:** Backend calls this from `content.service.js` on chapter delete.
 
 **Request:**
 ```json
@@ -3021,6 +3029,32 @@ Remove document from Qdrant vector DB.
   "success": true,
   "message": "Document deleted from vector DB",
   "points_removed": 156
+}
+```
+
+---
+
+#### POST `/search-documents/batch`
+
+Batch check if multiple chapters have indexed documents.
+
+> ⚠️ **Integration gap:** No Backend caller exists. The Backend calls individual `/search-document` in a loop instead.
+
+**Request:**
+```json
+[
+  { "class_id": "64f1...", "subject_id": "64f3...", "chapter_id": "64c1..." },
+  { "class_id": "64f1...", "subject_id": "64f3...", "chapter_id": "64c2..." }
+]
+```
+
+**Response (200):**
+```json
+{
+  "results": [
+    { "found": true, "metadata": { "chapter_id": "64c1...", "points_count": 156 } },
+    { "found": false, "metadata": { "chapter_id": "64c2..." } }
+  ]
 }
 ```
 
@@ -3055,6 +3089,8 @@ Check if a document is indexed.
 #### POST `/query`
 
 RAG-based semantic search across indexed documents.
+
+> ⚠️ **Integration gap:** No Backend caller exists. This endpoint provides the core "Ask AI about chapter content" capability but is not wired through the stack. To use it, create a Backend route + service that proxies to this endpoint.
 
 **Request:**
 ```json
@@ -3303,6 +3339,117 @@ AI agent health check.
 
 ---
 
+#### POST `/ai-agent/stream`
+
+Streaming AI content generation (SSE, token-by-token).
+
+✅ **Integration:** Backend proxies this from `ai-assistant.service.js` → `POST /api/v1/ai-assistant/stream`.
+
+**Request:**
+```json
+{
+  "teacher_id": "64f1...",
+  "prompt": "Generate a quiz on fractions",
+  "session_id": "optional-session-id",
+  "class_id": "64f1...",
+  "subject_id": "64f3..."
+}
+```
+
+**Response:** SSE stream of token-by-token content.
+
+---
+
+#### GET `/ai-agent/chapters`
+
+Get chapters available to a teacher, optionally filtered by subject.
+
+✅ **Integration:** Backend proxies this from `ai-assistant.service.js` → `GET /api/v1/ai-assistant/classes` (populates the chapter picker).
+
+**Query params:** `teacher_id`, `subject_id?`
+
+**Response (200):**
+```json
+{
+  "chapters": [
+    {
+      "chapter_id": "64c1...",
+      "chapter_name": "Newton's Laws",
+      "has_rag_content": true,
+      "class_name": "Class 9",
+      "subject_name": "Physics"
+    }
+  ]
+}
+```
+
+---
+
+#### POST `/ai-agent/modify`
+
+Modify a previously generated piece of content. Re-executes the original task with merged parameters.
+
+✅ **Integration:** Backend proxies this from `ai-assistant.service.js` → `POST /api/v1/ai-assistant/modify` (not yet exposed as a Frontend-facing route).
+
+**Request:**
+```json
+{
+  "teacher_id": "64f1...",
+  "generation_id": "abc123def456",
+  "difficulty": "hard",
+  "num_questions": 15,
+  "question_type": "MCQ"
+}
+```
+
+**Response:** Same `AgentResponse` shape as `/ai-agent`, with a new `generation_id`.
+
+---
+
+#### GET `/ai-agent/history`
+
+Retrieve past generations for a teacher, newest first. Paginated.
+
+✅ **Integration:** Backend proxies this from `ai-assistant.service.js` → `GET /api/v1/ai-assistant/history` (not yet exposed as a Frontend-facing route).
+
+**Query params:** `teacher_id`, `limit` (default 20), `offset` (default 0)
+
+**Response (200):**
+```json
+{
+  "generations": [
+    {
+      "generation_id": "abc...",
+      "task_type": "quiz",
+      "difficulty": "medium",
+      "created_at": "2026-06-01T12:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+#### GET `/ai-agent/generation/{generation_id}`
+
+Get a single generation by ID.
+
+✅ **Integration:** Backend proxies this from `ai-assistant.service.js` → `GET /api/v1/ai-assistant/export/:generationId`.
+
+**Response (200):**
+```json
+{
+  "generation": {
+    "generation_id": "abc...",
+    "task_type": "quiz",
+    "content": { ... },
+    "metadata": { ... }
+  }
+}
+```
+
+---
+
 ### 5. Topic Management
 
 ---
@@ -3310,6 +3457,8 @@ AI agent health check.
 #### POST `/regenerate-topics`
 
 Regenerate topic breakdown for a chapter using AI.
+
+> ⚠️ **Integration gap:** No Backend caller exists. This endpoint is only accessible directly (not through the proxy stack).
 
 **Request:**
 ```json
@@ -3336,6 +3485,8 @@ Regenerate topic breakdown for a chapter using AI.
 
 Sync topics from AI service to the backend database.
 
+> ⚠️ **Integration gap:** No Backend caller exists. This is a manual recovery tool for backfilling topics from Qdrant into MongoDB.
+
 **Request:**
 ```json
 {
@@ -3357,6 +3508,19 @@ Sync topics from AI service to the backend database.
 ---
 
 ### 6. Health & Monitoring
+
+---
+
+#### GET `/ping`
+
+Keep-alive endpoint. Exempt from auth and rate limiting.
+
+**Response (200):**
+```json
+{
+  "status": "alive"
+}
+```
 
 ---
 
