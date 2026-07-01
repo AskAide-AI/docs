@@ -230,7 +230,36 @@ All role guards also allow `SuperAdmin`.
 | GET | `/stats` | |
 | GET | `/nps/stats` | |
 
-### 1.16 Badges (`/api/v1/badges`)
+### 1.16 Inline Feedback (`/api/v1/inline-feedback`)
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| POST | `/` | Auth | `{ feature, reaction, context? }` — rate-limited 10/min |
+| GET | `/sentiment/:feature` | Teacher/Principal | |
+| GET | `/sentiment` | SuperAdmin | All features |
+
+### 1.17 Behavioral Prompt (`/api/v1/behavioral-prompt`)
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/check` | Auth | Returns `{ shouldPrompt, signalScore, reason }` |
+| POST | `/dismiss` | Auth | Records prompt dismissal |
+| GET | `/trend/:userId` | Auth | Satisfaction trend |
+
+### 1.18 Suggestions / Feature Requests (`/api/v1/suggestions`)
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| POST | `/` | Auth | `{ title, description, category }` |
+| POST | `/:id/upvote` | Auth | Toggle upvote |
+| GET | `/` | Auth | Paginated, filterable by `?status=&category=` |
+| GET | `/mine` | Auth | User's own suggestions |
+| GET | `/recently-shipped` | Auth | Last 30 days — includes `upvotedByMe`, `submittedByMe` flags |
+| GET | `/user-impact` | Auth | Returns `{ suggestionsShipped, upvotesShipped }` |
+| PUT | `/:id/respond` | Teacher/Principal | `{ status, response? }` |
+| PUT | `/:id/hide` | SuperAdmin | |
+
+### 1.19 Badges (`/api/v1/badges`)
 
 | Method | Path |
 |--------|------|
@@ -336,6 +365,7 @@ All require `auth, isTeacher` (applied at router level).
 | Feedback | `/api/v1/feedback` | `POST /` |
 | API Logs | `/api/v1/logs` | `GET /`, `DELETE /`, `GET /stats` |
 | Stats | `/api/v1/stats` | `GET /public` |
+| Admin Metrics | `/api/v1/admin/metrics` | `GET /overview`, `GET /users`, `GET /content`, `GET /engagement`, `GET /question-jobs`, `GET /new-users`, `GET /feedback-insights` (all SuperAdmin) |
 | Referral | `/api/v1/referral` | `GET /my-code` (auth), `POST /redeem/:code` (auth) |
 | Goals | `/api/v1/goals` | `GET /` (auth), `PUT /` (auth) |
 
@@ -380,12 +410,12 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
-| POST | `/upload-document` | Multipart: `file` + `class_id`, `chapter_id`, `subject_id` | `202` + `UploadStatusResponse` | Async — returns immediately; poll `/upload-status/{task_id}` for result |
+| POST | `/upload-document` | Multipart: `file` + `class_id`, `chapter_id`, `subject_id` | `202` + `UploadStatusResponse` | Async — returns immediately; poll `/upload-status/{task_id}` for result. Max file: 10 MB |
 | GET | `/upload-status/{task_id}` | Path param | `UploadStatusResponse` | Poll upload task status; `status` is `queued`, `processing`, `completed`, or `failed` |
 | POST | `/delete-document` | `{ class_id, chapter_id, subject_id }` | `DocumentDeleteResponse` | Removes from Qdrant |
 | POST | `/search-document` | `{ class_id, chapter_id, subject_id }` | `DocumentSearchResponse` | Check existence |
 | POST | `/query` | `{ query, class_id, subject_id, chapter_ids, stream? }` | `QueryResponse` | RAG semantic search |
-| POST | `/generate-questions` | `{ class_id, subject_id, chapter_id, topics, n, type, is_distinct?, difficulty? }` | `GenerateQuestionsResponse` | AI question gen |
+| POST | `/generate-questions` | `{ class_id, subject_id, chapter_id, topics, n, type, is_distinct?, difficulty?, max_retries? }` | `GenerateQuestionsResponse` | AI question gen (`max_retries` caps LLM attempts for latency-sensitive first-batch calls) |
 | GET | `/ai-insights/chapter` | Query: `chapter_id`, `user_id` | `{ insight: string }` | Student progress analysis |
 | GET | `/ai-insights/subject` | Query: `subject_id`, `user_id` | `{ insight: string }` | Subject-level analysis |
 | POST | `/ai-agent/stream` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | SSE stream | Streaming AI content generation (quiz, paper, notes, etc.) |

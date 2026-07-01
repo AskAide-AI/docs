@@ -775,15 +775,33 @@ This document outlines the Question and Session API endpoints available in the a
 npm install
 ```
 
+### Key Environment Variables
+
+| Variable | Description |
+|---|---|
+| `AI_ENDPOINT` | AI Service base URL (e.g. `http://localhost:8000`) — paths appended in code |
+| `AI_QUESTION_REQ_URL` | Full AI question generation URL (legacy, overrides AI_ENDPOINT for questions) |
+| `AI_SERVICE_API_KEY` | Shared API key for AI Service `x-api-key` header |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web client ID |
+| `GOOGLE_CLIENT_ID_ANDROID` | Google OAuth Android client ID |
+| `GOOGLE_CLIENT_ID_IOS` | Google OAuth iOS client ID |
+| `JWT_SECRET` | Secret for signing JWT tokens |
+
 ### Question Generation Configuration
 The following environment variables control the non-blocking question generation pipeline:
 
 | Variable | Default | Description |
 |---|---|---|
 | `QUESTION_PREFETCH_AHEAD` | `10` | Warm next batch when this many questions remain |
+| `QUESTION_FIRST_BATCH_SIZE` | `5` | Small fast first batch so the poller serves questions in one cycle |
+| `QUESTION_BATCH_SIZE` | `30` | Total pool per generation run (first + remainder) |
+| `QUESTION_FIRST_BATCH_MAX_RETRIES` | `1` | LLM attempts for first batch (1 = no retry, avoids time-to-first-question delay) |
 | `QUESTION_MIN_NEW_PER_RUN` | `3` | Minimum new questions per AI run to avoid low-yield flag |
 | `QUESTION_LOW_YIELD_LIMIT` | `2` | Consecutive low-yield runs before marking chapter as mastered |
 | `QUESTION_HARD_CAP` | `300` | Absolute ceiling — total questions per chapter-selection before forced mastery |
+| `QUESTION_PREWARM_ON_UPLOAD` | `false` | Set to `true` to pre-warm question pool on chapter PDF upload |
+| `QUESTION_PREWARM_TYPES` | `mcq` | CSV of question types to pre-warm |
+| `QUESTION_PREWARM_DIFFICULTIES` | `Easy,Medium,Hard` | CSV of difficulties to pre-warm |
 
 ### Development
 Run the server in development mode with auto-reload:

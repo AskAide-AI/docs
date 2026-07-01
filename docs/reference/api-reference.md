@@ -2617,6 +2617,320 @@ Get public platform stats.
 
 ---
 
+### 16. Inline Feedback
+
+Base: `/api/v1/inline-feedback/`
+
+---
+
+#### POST `/`
+
+Submit inline feedback (thumbs up/down with optional context).
+
+**Request:**
+```json
+{
+  "feature": "question-generation",
+  "reaction": "thumbs_up",
+  "context": {
+    "questionId": "64f1...",
+    "type": "mcq",
+    "difficulty": "hard"
+  }
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Feedback recorded"
+}
+```
+
+**Errors:** 429 (rate limited — 10/min)
+
+---
+
+#### GET `/sentiment/:feature`
+
+Get sentiment breakdown for a feature (Teacher/Principal).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "feature": "question-generation",
+    "thumbs_up": 142,
+    "thumbs_down": 18,
+    "total": 160
+  }
+}
+```
+
+---
+
+#### GET `/sentiment`
+
+Get sentiment across all features (SuperAdmin).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "question-generation": { "thumbs_up": 142, "thumbs_down": 18 },
+    "ai-agent": { "thumbs_up": 89, "thumbs_down": 5 }
+  }
+}
+```
+
+---
+
+### 17. Behavioral Prompt
+
+Base: `/api/v1/behavioral-prompt/`
+
+---
+
+#### GET `/check`
+
+Check if user should receive a behavioral prompt. Returns signal score and reason.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "shouldPrompt": true,
+  "signalScore": 0.72,
+  "reason": "rapid_skipping"
+}
+```
+
+---
+
+#### POST `/dismiss`
+
+Record that a behavioral prompt was dismissed.
+
+**Request:**
+```json
+{
+  "promptId": "64f1..."
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Dismissal recorded"
+}
+```
+
+---
+
+### 18. Suggestions / Feature Requests
+
+Base: `/api/v1/suggestions/`
+
+---
+
+#### POST `/`
+
+Submit a feature request.
+
+**Request:**
+```json
+{
+  "title": "Dark mode",
+  "description": "Add a dark mode toggle",
+  "category": "ui"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "64f1...",
+    "title": "Dark mode",
+    "upvotes": 0,
+    "status": "new"
+  }
+}
+```
+
+---
+
+#### POST `/:id/upvote`
+
+Toggle upvote on a suggestion.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "upvoted": true
+}
+```
+
+---
+
+#### GET `/`
+
+List suggestions (paginated, filterable).
+
+**Query params:** `?status=new&category=ui&page=1&limit=20`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "64f1...",
+      "title": "Dark mode",
+      "description": "Add a dark mode toggle",
+      "category": "ui",
+      "status": "planned",
+      "upvotes": 12,
+      "upvotedByMe": false
+    }
+  ],
+  "total": 45,
+  "page": 1
+}
+```
+
+---
+
+#### GET `/mine`
+
+Get the current user's own suggestions.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [ ... ]
+}
+```
+
+---
+
+### 19. Admin Metrics
+
+Base: `/api/v1/admin/metrics/`
+
+All endpoints require **SuperAdmin** role.
+
+---
+
+#### GET `/overview`
+
+Platform-wide summary stats.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "totalUsers": 12500,
+    "totalSchools": 48,
+    "totalQuestions": 45000,
+    "activeToday": 350,
+    "paidUsers": 2100
+  }
+}
+```
+
+---
+
+#### GET `/users`
+
+User growth metrics.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "total": 12500,
+    "newToday": 42,
+    "newThisWeek": 280,
+    "byAccountType": {
+      "Student": 10000,
+      "Teacher": 1800,
+      "Parent": 700
+    }
+  }
+}
+```
+
+---
+
+#### GET `/content`
+
+Content metrics.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "totalClasses": 12,
+    "totalSubjects": 48,
+    "totalChapters": 240,
+    "totalTopics": 1800,
+    "chaptersWithDocuments": 180
+  }
+}
+```
+
+---
+
+#### GET `/engagement`
+
+Engagement metrics.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "avgSessionsPerUser": 8.5,
+    "avgTimePerSession": 480,
+    "retentionDay7": 0.42,
+    "retentionDay30": 0.28
+  }
+}
+```
+
+---
+
+#### GET `/feedback-insights`
+
+Feedback sentiment insights.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "overallNPS": 42,
+    "featureSentiments": {
+      "question-generation": { "positive": 0.88, "negative": 0.12 },
+      "ai-agent": { "positive": 0.94, "negative": 0.06 }
+    }
+  }
+}
+```
+
+---
+
 ## AI Service API
 
 Base: `http://localhost:8000`
