@@ -38,7 +38,7 @@ All endpoints return:
 
 Errors use `AppError` class with global error handler.
 
-## Modules (14 total)
+## Modules (16 total)
 
 | Module | Purpose |
 |--------|---------|
@@ -46,16 +46,20 @@ Errors use `AppError` class with global error handler.
 | `content` | Classes, subjects, chapters, topics, PDF upload |
 | `questions` | CRUD, batch fetching, AI generation trigger |
 | `quiz` | Full quiz lifecycle (CRUD, attempts, scoring, analytics) |
-| `progress` | Topic progress, AI insights, streaks, badges |
+| `progress` | Topic progress, AI insights, streaks, badges, session feedback |
 | `teacher` | Teacher CRUD, dashboard, student management |
-| `school` | School management, sections |
+| `teacher-dashboard` | Teacher analytics, student progress views |
+| `school` | School management |
+| `sections` | Section management within schools |
 | `question-paper` | Board-style paper generation |
 | `ai-assistant` | Teacher AI content generation |
 | `user` | User/profile management |
-| `parent` | Parent dashboard |
+| `parent` | Parent dashboard, parent-student linking |
+| `principal` | Principal dashboard |
 | `goal` | Daily student goal management |
 | `referral` | Invite/referral system |
-| `supporting` | Leaderboard, feedback, background jobs |
+| `feedback` | Inline feedback, behavioral prompts, suggestions |
+| `supporting` | Leaderboard, admin metrics, background jobs |
 
 ## AI Integration
 
@@ -71,3 +75,4 @@ The backend acts as a proxy between Frontend and AI Service:
 | `topicProgress.controller.js` | `GET /ai-insights/subject` | Subject learning insights |
 | `topicProgress.controller.js` | `GET /ai-insights/teacher/class` | Teacher class insight |
 | `ai-assistant/` | `POST /ai-agent` | Teacher content generation |
+| `ai-assistant/` | `POST /ai-agent/stream` | Teacher content generation (SSE streaming) |

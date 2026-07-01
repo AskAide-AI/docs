@@ -40,8 +40,8 @@
 
 | Service | Base URL | Protocol | Auth |
 |---------|----------|----------|------|
-| **Backend** | `http://localhost:4000` | REST | JWT Bearer Token |
-| **AI Service** | `http://localhost:8000` | REST | None (internal) |
+| **Backend** | `http://localhost:4000` | REST | JWT Bearer (via Cookie, Header, or Body) |
+| **AI Service** | `http://localhost:8000` | REST | `x-api-key` header (shared secret) |
 
 **Frontend never calls AI Service directly.** All AI calls are proxied through the Backend.
 
@@ -72,9 +72,9 @@ All Backend endpoints return responses wrapped in:
 ### JWT Token
 
 - Obtained via `POST /authenticate/login` or `POST /authenticate/signup`
-- Include as `Authorization: Bearer <token>` header
-- Tokens expire after 3 days by default
-- Admin-protected endpoints require `accountType: "Admin"`
+- Accepted via Cookie (`token=<jwt>`), Header (`Authorization: Bearer <jwt>`), or Body (`{ token }`)
+- **accessToken** expires after 2 hours; **refreshToken** expires after 7 days (rotated on use)
+- Admin-protected endpoints require `accountType: "SuperAdmin"`
 
 ### Role-Based Access
 
@@ -408,7 +408,7 @@ Get public profile for any user (no sensitive data).
 
 ### 3. Content
 
-Base: `/api/v1/content/`
+Base: `/api/v1/`
 
 ---
 
@@ -660,7 +660,7 @@ Base: `/api/v1/questions/`
 
 ---
 
-#### POST `/questions`
+#### POST `/`
 
 Create a single question.
 
@@ -1056,7 +1056,7 @@ Get all answers for a user (across sessions).
 
 ### 7. Progress
 
-Base: `/api/v1/progress/`
+Base: `/api/v1/` (routes use topic-progress path)
 
 ---
 
