@@ -388,6 +388,7 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 | POST | `/generate-questions` | `{ class_id, subject_id, chapter_id, topics, n, type, is_distinct?, difficulty? }` | `GenerateQuestionsResponse` | AI question gen |
 | GET | `/ai-insights/chapter` | Query: `chapter_id`, `user_id` | `{ insight: string }` | Student progress analysis |
 | GET | `/ai-insights/subject` | Query: `subject_id`, `user_id` | `{ insight: string }` | Subject-level analysis |
+| POST | `/ai-agent/stream` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | SSE stream | Streaming AI content generation (quiz, paper, notes, etc.) |
 | POST | `/ai-agent` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | `AgentResponse` (contains `generation_id`) | AI content generation (quiz, paper, notes, etc.) |
 | POST | `/ai-agent/modify` | `{ teacher_id, generation_id, difficulty?, num_questions?, question_type?, sections?, duration_minutes? }` | `AgentResponse` | Modify existing generation — re-executes with merged params |
 | GET | `/ai-agent/chapters` | Query: `teacher_id`, `subject_id?` | `{ chapters: [...] }` | Teacher's chapters with topics, RAG status, class/subject info |
@@ -399,6 +400,13 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 | GET | `/ai-insights/teacher/class` | Query: `class_id`, `teacher_id` | `AITeacherClassInsightResponse` | Teacher class-level analysis |
 | GET | `/upload-status/{task_id}` | — | `AIUploadStatusResponse` | Async upload task status |
 | POST | `/sync-chapter-topics` | `{ chapter_id }` | `{ synced: number }` | Sync Qdrant→MongoDB topics |
+| POST | `/regenerate-topics` | `{ class_id, subject_id, chapter_id }` | Async — returns task_id | Async topic regeneration |
+| POST | `/search-documents/batch` | `[{ class_id, subject_id, chapter_id }]` | `{ results: [{ found, metadata }] }` | Batch check multiple chapters |
+| POST | `/conversations` | `{ user_id }` | `{ conversation_id }` | Create conversation |
+| GET | `/conversations` | Query: `user_id` | `{ conversations: [] }` | List conversations |
+| GET | `/conversations/{id}/messages` | Path param | `{ messages: [] }` | Get conversation messages |
+| POST | `/conversations/{id}/messages` | `{ role, content }` | `{ message: {...} }` | Add message to conversation |
+| DELETE | `/conversations/{id}` | Path param | `{ deleted: true }` | Delete conversation |
 | GET | `/ping` | — | `{ status: "alive" }` | Health ping |
 | GET | `/health` | — | `{ status: "healthy" }` | Full health check |
 | GET | `/health/live` | — | `{ status: "alive" }` | Liveness probe |

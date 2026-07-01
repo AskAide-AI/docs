@@ -77,11 +77,14 @@ Implemented but not yet exposed via HTTP endpoints:
 ### Core
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /upload-document` | Ingest chapter PDF |
+| `POST /upload-document` | Ingest chapter PDF (async, returns task_id) |
 | `POST /delete-document` | Delete chapter vectors |
 | `POST /search-document` | RAG status check |
+| `POST /search-documents/batch` | Batch check multiple chapters |
+| `POST /regenerate-topics` | Regenerate topics from Qdrant (async) |
 | `POST /generate-questions` | Question generation |
 | `POST /sync-chapter-topics` | Sync Qdrant→MongoDB topics |
+| `POST /query` | RAG semantic search |
 
 ### AI Insights
 | Endpoint | Purpose |
@@ -94,6 +97,20 @@ Implemented but not yet exposed via HTTP endpoints:
 | Endpoint | Purpose |
 |----------|---------|
 | `POST /ai-agent` | Teacher content generation |
+| `POST /ai-agent/stream` | Teacher content generation (SSE streaming) |
+| `POST /ai-agent/modify` | Modify existing generation |
 | `GET /ai-agent/classes` | Agent-accessible classes |
+| `GET /ai-agent/chapters` | Chapters with topics and RAG status |
 | `GET /ai-agent/tasks` | Active agent tasks |
+| `GET /ai-agent/history` | Past generations |
+| `GET /ai-agent/generation/{id}` | Single generation by ID |
 | `GET /ai-agent/health` | Agent health |
+
+### Conversations
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /conversations` | Create conversation |
+| `GET /conversations` | List conversations |
+| `GET /conversations/{id}/messages` | Get messages |
+| `POST /conversations/{id}/messages` | Add message |
+| `DELETE /conversations/{id}` | Delete conversation |

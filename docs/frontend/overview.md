@@ -9,7 +9,7 @@
 | Framework | React 18 + Vite |
 | Styling | Tailwind CSS (utility-first, no MUI) |
 | State | Redux Toolkit (global) + React Context (UI/theme) |
-| Routing | React Router v6 with lazy-loaded routes |
+| Routing | React Router v7 with lazy-loaded routes |
 | HTTP | Axios with JWT interceptor, 30s timeout |
 | Forms | React Hook Form + Zod |
 | Analytics | Microsoft Clarity |
@@ -58,7 +58,10 @@ All AI features are proxied through the Backend — never call AI Service direct
 
 ```
 VITE_API_URL=http://localhost:4000/api/v1
+VITE_SITE_URL=https://askaide.in
+VITE_GOOGLE_CLIENT_ID=<google_oauth_client_id>
 VITE_CLARITY_PROJECT_ID=<project_id>
+VITE_CONTACT_EMAIL=hello@askaide.in
 ```
 
 Production API defaults to `https://askaideaibackend.onrender.com/api/v1`.
