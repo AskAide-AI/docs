@@ -408,7 +408,7 @@ Get public profile for any user (no sensitive data).
 
 ### 3. Content
 
-Base: `/api/v1/`
+Base: `/api/v1/` (routes mounted at `/classes`, `/subjects`, `/chapters`, `/topic`, `/study` — no `/content` prefix)
 
 ---
 
@@ -1056,7 +1056,7 @@ Get all answers for a user (across sessions).
 
 ### 7. Progress
 
-Base: `/api/v1/` (routes use topic-progress path)
+Base: `/api/v1/` (routes mounted at `/topic-progress`, `/sessions`, `/user-answers`, `/progress`, `/streaks`, `/daily-challenge`, `/session-feedback`, `/badges` — no single `/progress` prefix)
 
 ---
 
