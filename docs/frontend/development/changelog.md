@@ -8,7 +8,26 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Profile rehydration bug (C1)** — `fetchUserDetails()` now reads `response.data.data` (sendSuccess envelope) before falling back to `response.data.user`; never overwrites stored state with falsy payload; `StudyConfig.jsx` guards against missing `user._id`; `RoleProtectedRoute` shows spinner while profile hydrates instead of blank shell
+- **Trial "Correct: undefined" (C3)** — `TryNow.jsx` now defaults `correctAnswer` to `'—'` when absent
+- **Rate-limit messaging (H1)** — Login branches on `error.response.status === 429` to show the server's message verbatim; login thunk preserves the original axios error (no longer wrapped in `new Error`)
+- **Question-generation failure UX (C2)** — `GIVE_UP_MESSAGE` and `TIMEOUT_MESSAGE` replaced raw LLM apology with product copy offering actionable alternatives; zero-answer sessions are no longer persisted
+- **Paper generator silent Next (H5)** — Step 1 now shows inline red validation text when no class is selected
+- **React `borderRadius` prop warnings (L2)** — fixed extra `</div>` causing esbuild unterminated regex error in `QuestionPaperGenerator.jsx`
+
 ### Added
+- **Auto-login after signup (H2)** — signup now uses returned tokens to auto-login and navigate to `/study`; falls back to `/login` if no tokens (OTP flow)
+- **Role-aware landing (M3)** — after login, routes Teacher→`/teacher`, Principal→`/principal`, SuperAdmin→`/admin`, Parent→`/parent`
+- **`getDisplayName()` helper (M1)** — new utility in `src/utils/displayName.js` that returns `firstName || name || email-prefix || 'Student'`; applied to Dashboard greeting and StudyConfig welcome text
+- **Referral code input on signup (M5)** — new `referralCode` field reads `?ref=` URL param; sent to backend for auto-redeem; signup now says "Four fields" (was "Three")
+- **Google Sign-In conditional (L1)** — `GoogleLogin` button and `GoogleOAuthProvider` wrapper only render when `VITE_GOOGLE_CLIENT_ID` is set
+- **Sidebar profile loading state** — `ProfileLoader` spinner shown while profile rehydrates (replaces blank shell)
+
+### Changed
+- **Dashboard tour cut from 13→5 steps (M4)** — greeting, start-practicing, stats, today-activity, mastery
+- **Trial social proof stats (M2)** — updated to "10,000+ students learning", "50,000+ questions answered", "seconds per question"
+- **Login form deduplicated (L3)** — removed duplicate "Forgot password?" link inside error box; removed redundant `toast.error()` from login thunk catch block (inline error is sufficient)
 - **Progress → Study navigation** — clicking a chapter's "Start Learning" on the Progress page now navigates to StudyConfig with the class/subject/chapter pre-selected, letting the user choose question type and difficulty before starting instead of using hardcoded defaults (`Progress.jsx`, `Home.jsx`, `StudyConfig.jsx`)
 - **`useQuestionPolling` hook rewrite** — normalized response handling, proper polling loop, retry bounds with max 30 attempts
 - **Mastered state** — positive terminal state for fully mastered topics; auto-resets on session configuration change

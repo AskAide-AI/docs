@@ -82,6 +82,8 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Added
+- **Chapter `hidden` field** — `chapter.model.js` now has `hidden: Boolean, default: false` to mark test/internal chapters without deleting them; all user-facing queries filter with `hidden: { $ne: true }`
+- **Referral code on signup** — `auth.service.js` now accepts `referralCode`, calls `referralService.redeemReferral()` after user creation (non-blocking); `auth.validator.js` accepts optional `referralCode` string; `auth.controller.js` passes it through
 - Comprehensive backend documentation system (14 files)
 - Chapter bulk deletion API: `DELETE /api/v1/chapters`
 - Chapter RAG status API: `POST /api/v1/chapters/check-rag-status`
@@ -95,6 +97,8 @@ All notable changes to this project are documented in this file.
 - **Structured logging** for generation lifecycle (job creation, AI call, dedup, mastery decisions)
 
 ### Changed
+- **Signup returns tokens** — `auth.service.js` `signup()` now generates access + refresh tokens and returns them (enables auto-login; matches login response shape)
+- **Content queries filter hidden chapters** — `content.service.js` aggregates now include `hidden: { $ne: true }` pipeline stage; `isStartable` computed from `ragIndexed && topics.length > 0`
 - Chapter and study responses now include `isStartable` flag based on chapter topic availability
 - Chapter PDF ingestion now uses `AI_ENDPOINT` and calls `${AI_ENDPOINT}/upload-document`
 
