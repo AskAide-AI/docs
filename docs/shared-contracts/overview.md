@@ -14,12 +14,6 @@ When a change affects a request/response shape crossing the Backend ↔ AI Servi
 | `integration-guide.md` | Cross-repo contract documentation and setup workflows |
 | `development/quick-start.md` | One-command setup guide for all three repos |
 | `development/mcp-setup.md` | MCP server configuration for Cursor/WindSurf/Cline |
-| `product/competitor-feature-matrix.md` | Feature comparison across 8 EdTech competitors |
-| `product/competitor-research.md` | In-depth competitor research and gap analysis |
-| `product/duplicate-questions-investigation.md` | Root cause analysis of duplicate question generation |
-| `product/growth-strategy.md` | SEO, partnerships, and market penetration strategy |
-| `audits/pre-launch-audit-report.md` | Pre-launch security and readiness audit |
-| `audits/product-audit-report.md` | Comprehensive product audit with fix status |
 
 ## API Response Envelope
 

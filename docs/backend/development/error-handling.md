@@ -255,4 +255,3 @@ const api = async (url, options = {}) => {
 
 ---
 
-*See [SECURITY.md](./security) for security-related error handling.*

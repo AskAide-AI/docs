@@ -238,7 +238,7 @@ Uses ESLint 9 with the new flat config format (`eslint.config.js`). It ensures c
 | API Reference (Shared) | AskAide Docs: `docs/shared-contracts/api-definitions.md` |
 | Backend Testing Strategy | AskAide Docs: `docs/backend/development/testing.md` |
 | Error Handling | AskAide Docs: `docs/backend/development/error-handling.md` |
-| Security | AskAide Docs: `docs/backend/development/security.md` |
+| Security | AskAide Docs: `docs/backend/development/authentication.md` |
 
 ### Recommended Learning Path
 1. **Learn Node.js + Express** (GET/POST, middleware, routing)

@@ -46,14 +46,6 @@ const sidebars = {
             'frontend/development/changelog',
           ],
         },
-        {
-          type: 'category',
-          label: 'Audits',
-          items: [
-            'frontend/audits/strategic-audit',
-            'frontend/audits/production-readiness',
-          ],
-        },
       ],
     },
     {
@@ -79,7 +71,6 @@ const sidebars = {
             'backend/development/setup',
             'backend/development/module-reference',
             'backend/development/authentication',
-            'backend/development/security',
             'backend/development/error-handling',
             'backend/development/testing',
             'backend/development/dependencies',
@@ -100,15 +91,8 @@ const sidebars = {
           type: 'category',
           label: 'Product',
           items: [
-            'backend/product/pricing',
-            'backend/product/growth-analysis',
             'backend/product/PRODUCT-INTRODUCTION',
           ],
-        },
-        {
-          type: 'category',
-          label: 'Audits',
-          items: ['backend/audits/audit-report', 'backend/audits/data-gap-analysis', 'backend/audits/production-readiness'],
         },
       ],
     },
@@ -139,11 +123,6 @@ const sidebars = {
           label: 'Reference',
           items: ['ai-service/reference/documentation'],
         },
-        {
-          type: 'category',
-          label: 'Audits',
-          items: ['ai-service/audits/dataset-audit', 'ai-service/audits/performance-issues', 'ai-service/audits/production-readiness'],
-        },
       ],
     },
     {
@@ -156,21 +135,6 @@ const sidebars = {
           type: 'category',
           label: 'Development',
           items: ['shared-contracts/development/mcp-setup'],
-        },
-        {
-          type: 'category',
-          label: 'Product',
-          items: [
-            'shared-contracts/product/competitor-feature-matrix',
-            'shared-contracts/product/competitor-research',
-            'shared-contracts/product/duplicate-questions-investigation',
-            'shared-contracts/product/growth-strategy',
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Audits',
-          items: ['shared-contracts/audits/pre-launch-audit-report', 'shared-contracts/audits/product-audit-report'],
         },
       ],
     },

@@ -200,4 +200,3 @@ All under `/api/v1/authenticate/`:
 
 ---
 
-*See [Security doc](./security) for additional security measures.*

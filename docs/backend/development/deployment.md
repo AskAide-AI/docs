@@ -345,4 +345,3 @@ if (process.env.NODE_ENV === 'production') {
 
 ---
 
-*See [SECURITY.md](./security) for security hardening details.*
