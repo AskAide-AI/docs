@@ -32,9 +32,9 @@ Common issues and solutions when working with the AskAideAI backend.
 ### Rate limiting blocks requests
 **Symptoms:** 429 Too Many Requests
 **Solutions:**
-1. Rate limit is 100 req/5min (configurable in `index.js`)
+1. Global rate limit is 500 req/5min (configurable in `index.js`); login is stricter at 10 req/15min
 2. Check if you're hitting the limit during testing
-3. `localhost` requests skip rate limiting
+3. `localhost` requests skip the global rate limiter (but **not** the login limiter)
 
 ### JWT authentication fails
 **Symptoms:** 401 Unauthorized on protected routes

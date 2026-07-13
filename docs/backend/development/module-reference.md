@@ -50,6 +50,9 @@ All modules follow `src/modules/<name>/` with `controller`, `service`, `validato
 | `/questions/chapter/:chapterId` | GET | auth | All questions for chapter |
 | `/questions/batch/chapter/:chapterId/type/:questionType/difficulty/:difficulty/session/:sessionId` | GET | auth | Batched — calls AI if insufficient |
 | `/questions/public-batch/chapter/:chapterId` | GET | none | Public (Try Now) |
+| `/questions/public-preview/class/:classSlug/subject/:subjectSlug/chapter/:chapterSlug` | GET | none | Public SEO preview by slug (incl. explanations) |
+| `/questions/generate/chapter/:chapterId` | POST | teacher | Admin fire-and-forget generation trigger |
+| `/questions/counts` | POST | teacher | Batch question counts for admin chapter list |
 
 **Batch response statuses:**
 - `generating` — AI job in flight; poll again

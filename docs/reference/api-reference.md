@@ -750,6 +750,69 @@ Smart batch fetch — returns questions **not yet answered** in the given sessio
 
 ---
 
+#### GET `/questions/public-preview/class/:classSlug/subject/:subjectSlug/chapter/:chapterSlug`
+
+**No auth.** Powers the prerendered public chapter pages (SEO). Resolves the class/subject/chapter slugs to a chapter and returns a deterministic, limited preview of questions **including explanations**. Always returns `200` — chapters with no question bank yet return an empty `questions` array.
+
+**Params:** `classSlug` (e.g. `10th`), `subjectSlug` (e.g. `mathematics`), `chapterSlug` (e.g. `real-numbers`)
+
+**Query:** `?limit=12` (default 12, min 1, max 20)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Public chapter preview fetched successfully",
+  "data": {
+    "chapterId": "64c1...",
+    "chapterName": "Real Numbers",
+    "totalAvailable": 42,
+    "questions": [
+      {
+        "questionText": "What is the HCF of 12 and 18?",
+        "options": ["2", "3", "4", "6"],
+        "correctAnswer": "6",
+        "explanation": "...",
+        "questionType": "MCQ",
+        "difficulty": "medium"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### POST `/questions/generate/chapter/:chapterId`
+
+**Auth: Teacher/Admin.** Fire-and-forget trigger from the admin panel to generate questions for a chapter (MCQ × Easy/Medium/Hard) in the background. Requires the chapter to already have topics.
+
+**Params:** `chapterId` — MongoDB ObjectId
+
+**Response (200):** generation started (or already running). Returns `409` if the chapter has no topics yet.
+
+---
+
+#### POST `/questions/counts`
+
+**Auth: Teacher/Admin.** Returns a map of `chapterId → question count` for a set of chapters — used by the admin chapter list.
+
+**Request:**
+```json
+{ "chapterIds": ["64c1...", "64c2..."] }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Question counts fetched successfully",
+  "data": { "64c1...": 42, "64c2...": 0 }
+}
+```
+
+---
+
 ### 5. Sessions
 
 Base: `/api/v1/sessions/`

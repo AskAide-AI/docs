@@ -783,8 +783,15 @@ Manage chapters and their topics after upload.
 3. View:
    - Chapter name and status
    - Number of topics extracted
+   - **Question count** per chapter (red when `0`, green when questions exist)
    - Upload date
    - Processing status
+
+#### Generating Questions
+
+- Each chapter has a **Generate Questions** button that triggers AI question generation in the background (fire-and-forget).
+- The button is **disabled until the chapter has topics** — upload and ingest the chapter PDF first.
+- After triggering, refresh to watch the question count grow as questions are generated.
 
 #### Editing Chapters
 

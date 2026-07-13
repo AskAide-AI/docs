@@ -61,8 +61,8 @@ All role guards also allow `SuperAdmin`.
 
 | Scope | Limit |
 |-------|-------|
-| Backend Global | 100 req / 5 min per IP |
-| Backend Login | 5 req / 15 min |
+| Backend Global | 500 req / 5 min per IP (skip: `/api-docs`, `/ping`, localhost) |
+| Backend Login | 10 req / 15 min |
 | Backend Signup | 3 req / hour |
 | AI Service | 200 req / 60s per IP (skip: `/ping`, `/health`) |
 
@@ -150,6 +150,9 @@ All role guards also allow `SuperAdmin`.
 | GET | `/chapter/:chapterId/type/:questionType/difficulty/:difficulty` | auth | Filtered by type + difficulty |
 | GET | `/batch/chapter/:chapterId/type/:questionType/difficulty/:difficulty/session/:sessionId` | auth | Batched — calls AI if not enough in DB; see response details below |
 | GET | `/public-batch/chapter/:chapterId` | none | Public (Try Now) |
+| GET | `/public-preview/class/:classSlug/subject/:subjectSlug/chapter/:chapterSlug` | none | Public SEO preview by slug; deterministic sample incl. explanations; always 200 |
+| POST | `/generate/chapter/:chapterId` | auth, isTeacher | Admin fire-and-forget generation trigger; 409 if chapter has no topics |
+| POST | `/counts` | auth, isTeacher | Batch question counts: `{ chapterIds: [] }` → `{ chapterId: count }` |
 
 **Batch response** (`GET /batch/…`) — wrapped in standard `ApiResponse` envelope:
 ```json

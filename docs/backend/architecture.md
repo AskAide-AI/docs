@@ -3,7 +3,7 @@
 ## Request Lifecycle
 
 ```
-Request → helmet → rateLimiter (100 req/5min, skip /api-docs /ping)
+Request → helmet → rateLimiter (500 req/5min, skip /api-docs /ping localhost)
   → cors (origin:true, credentials:true)
   → compression (level 6, threshold 10KB)
   → apiLogger (Winston, custom — not morgan)
