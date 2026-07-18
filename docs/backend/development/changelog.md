@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Registration rate limit raised 3 → 10 req/hour** (2026-07-14) — `registerLimiter` in `src/modules/auth/routes/auth.routes.js`. The old 3/hour was too tight for classroom onboarding and shared-IP schools; the message copy is unchanged.
+- **Login rate limit raised 5 → 10 req/15min** (2026-07-05) — `loginLimiter` in the same file; still returns the server message verbatim on 429.
+
+### Added
+- **Public question preview + chapter counts** (2026-07-12) — question module now exposes a public preview endpoint and per-chapter question counts consumed by the admin Chapter Management screen.
+- **Admin "Generate Questions" trigger** (2026-07-12) — admins can trigger question generation for a chapter on demand from the admin UI.
+- **`correctAnswer` in `getPublicQuestionsBatch`** (2026-07-10) — the public questions batch response now includes `correctAnswer` (tests updated accordingly).
+
+---
+
 ## [v1.1.0] - 2026-05-04
 
 ### Performance Optimizations

@@ -196,7 +196,7 @@ All under `/api/v1/authenticate/`:
 2. **Use HTTPS** in production
 3. **Short access token expiry** (2h) with refresh token rotation
 4. **Password change/reset revokes all sessions**
-5. **Rate limiting:** login 10 req/15min, signup 3 req/hour
+5. **Rate limiting:** login 10 req/15min, signup 10 req/hour
 
 ---
 

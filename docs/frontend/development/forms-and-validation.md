@@ -130,8 +130,11 @@ const signupSchema = z.object({
     .email('Invalid email address'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
+    .max(128, 'Password must be at most 128 characters')
+    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
     .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number'),
+    .regex(/[0-9]/, 'Must contain at least one number')
+    .regex(/[!@#$%^&*]/, 'Must contain at least one symbol (!@#$%^&*)'),
   confirmPassword: z.string()
     .min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -139,6 +142,11 @@ const signupSchema = z.object({
   path: ['confirmPassword'],
 });
 ```
+
+> **Live requirements checklist:** `Signup.jsx` renders a below-field checklist (8+ chars,
+> uppercase, lowercase, number, symbol) that ticks each rule green as it is met, alongside the
+> existing strength meter. The enforced rule is min 8 / max 128 chars with all four character
+> classes (`/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/`).
 
 ### Profile Update Schema
 ```javascript

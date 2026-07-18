@@ -2,11 +2,26 @@
 
 > All notable changes to the AskAideAI frontend will be documented in this file.
 > Format: [Semantic Versioning](https://semver.org/)
-> Last Updated: June 29, 2026
+> Last Updated: July 18, 2026
 
 ---
 
 ## [Unreleased]
+
+### July 2026 (mid-month)
+
+#### Added
+- **Guest mobile CTA bar (`GuestMobileCTA.jsx`)** — persistent fixed bottom bar on phones for logged-out visitors on public marketing pages, keeping a one-tap "Start free — no signup" path to `/try` visible after the top nav collapses to a hamburger. Hidden on `/try`, `/login`, `/signup`; desktop unaffected (`md:hidden`). Mounted from `App.jsx` only when `isPublicRoute && !user`.
+- **Compact "Log in" in mobile navbar** — returning guests get a top-right "Log in" pill on small screens instead of it being buried in the hamburger drawer (`Navbar.jsx`, `md:hidden`).
+- **Password requirements checklist on Signup** — live checklist (8+ chars, uppercase, lowercase, number, symbol `!@#$%^&*`) below the password field, each item ticking green (`✓`) as met; complements the existing strength meter (`Signup.jsx`).
+- **Landing role-card CTAs** — "For Students" and "For Parents" role cards now link to `/try`; "For Teachers"/"For Schools" retain their existing CTAs (`LandingPage.jsx`).
+
+#### Changed
+- **Trial social-proof stats now live** — `TryNow.jsx` fetches `statsApi.getPublicStats()` and renders real `totalStudents` / `totalQuestionsAnswered`, matching the landing page so `/` and `/try` never show contradictory numbers (fallbacks: 63 students / 10,000 questions).
+- **Trial empty-state turned into a conversion moment** — when a chapter has no pre-built questions, `TryNow.jsx` now prompts creating a free account (AI generates fresh questions) instead of a dead-end "No questions available" message.
+- **Subject range copy updated to Class 6–12** — landing FAQ, SEO `description`/`keywords` updated from "Class 9–12" to "Class 6–12" to match marketed coverage (`LandingPage.jsx`, `TermsOfService.jsx`). Note: SEO subject/chapter static pages + sitemap still only cover 9–12 pending real 6–8 chapter data.
+- **Stronger signup password rule** — minimum raised 6 → 8 chars with a complexity pattern (upper + lower + digit + symbol) and 128-char max (`Signup.jsx`).
+- **Collapsed-sidebar hover tooltips** — `AppSidebar.jsx` replaces native `title` tooltips with styled hover tooltips (fixed-positioned to avoid overflow clipping) on the collapse, theme, and sign-out buttons plus collapsed nav items.
 
 ### Fixed
 - **Profile rehydration bug (C1)** — `fetchUserDetails()` now reads `response.data.data` (sendSuccess envelope) before falling back to `response.data.user`; never overwrites stored state with falsy payload; `StudyConfig.jsx` guards against missing `user._id`; `RoleProtectedRoute` shows spinner while profile hydrates instead of blank shell

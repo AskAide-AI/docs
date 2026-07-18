@@ -270,7 +270,24 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 - Logo with link to home
 - Navigation links (Dashboard, Study, Progress)
 - User avatar with dropdown (Profile, Settings, Logout)
+- Compact top-right "Log in" pill for logged-out visitors on mobile (`md:hidden`) — desktop shows the full Sign in / Try a session block
 - Hidden on login/signup pages
+
+---
+
+### GuestMobileCTA
+
+**Location:** `/src/components/layout/GuestMobileCTA.jsx`
+
+**Purpose:** Persistent bottom call-to-action bar for logged-out visitors on mobile, keeping a one-tap path to the no-signup trial (`/try`) on screen after the top nav collapses to a hamburger.
+
+**Props:** None (reads route via `useLocation`)
+
+**Features:**
+- Fixed to viewport bottom, mobile only (`md:hidden`); respects `env(safe-area-inset-bottom)`
+- Single full-width "Start free — no signup →" CTA to `/try`
+- Auto-hides on `/try`, `/login`, `/signup`
+- Mounted from `App.jsx` only when `isPublicRoute && !user`
 
 ---
 
