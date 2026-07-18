@@ -11,12 +11,15 @@
 ### July 2026 (mid-month)
 
 #### Added
+- **App-level first-run onboarding gate (`FirstRunGate.jsx`)** — the welcome-wizard decision moved out of `Dashboard.jsx` to a lazy app-level component mounted in `App.jsx` for authenticated non-public routes, so the wizard fires wherever a new student lands (signup drops them on `/study`, not `/dashboard`). Student-only; confirms no session history via `studyApi.fetchSessionsByUserId` when the `onboarding_<userId>` flag is unset (guards returning users with cleared storage); falls back to showing on network error.
 - **Guest mobile CTA bar (`GuestMobileCTA.jsx`)** — persistent fixed bottom bar on phones for logged-out visitors on public marketing pages, keeping a one-tap "Start free — no signup" path to `/try` visible after the top nav collapses to a hamburger. Hidden on `/try`, `/login`, `/signup`; desktop unaffected (`md:hidden`). Mounted from `App.jsx` only when `isPublicRoute && !user`.
 - **Compact "Log in" in mobile navbar** — returning guests get a top-right "Log in" pill on small screens instead of it being buried in the hamburger drawer (`Navbar.jsx`, `md:hidden`).
 - **Password requirements checklist on Signup** — live checklist (8+ chars, uppercase, lowercase, number, symbol `!@#$%^&*`) below the password field, each item ticking green (`✓`) as met; complements the existing strength meter (`Signup.jsx`).
 - **Landing role-card CTAs** — "For Students" and "For Parents" role cards now link to `/try`; "For Teachers"/"For Schools" retain their existing CTAs (`LandingPage.jsx`).
 
 #### Changed
+- **Onboarding carries selection into study** — completing the welcome wizard now navigates to `/study` with `location.state.preselectConfig` (class/subject/chapter + `mcq`/`Medium` defaults) instead of a blank config, so the student doesn't re-pick everything (`OnboardingOverlay.jsx`).
+- **Onboarding/tour de-confliction** — `Dashboard.jsx` no longer owns the onboarding overlay; its tour auto-starts only for established users (question count > 0), and the study config tour is suppressed when arriving with a preselected config or while first-run onboarding is pending (`Home.jsx`), so no tour renders behind the modal.
 - **Trial social-proof stats now live** — `TryNow.jsx` fetches `statsApi.getPublicStats()` and renders real `totalStudents` / `totalQuestionsAnswered`, matching the landing page so `/` and `/try` never show contradictory numbers (fallbacks: 63 students / 10,000 questions).
 - **Trial empty-state turned into a conversion moment** — when a chapter has no pre-built questions, `TryNow.jsx` now prompts creating a free account (AI generates fresh questions) instead of a dead-end "No questions available" message.
 - **Subject range copy updated to Class 6–12** — landing FAQ, SEO `description`/`keywords` updated from "Class 9–12" to "Class 6–12" to match marketed coverage (`LandingPage.jsx`, `TermsOfService.jsx`). Note: SEO subject/chapter static pages + sitemap still only cover 9–12 pending real 6–8 chapter data.

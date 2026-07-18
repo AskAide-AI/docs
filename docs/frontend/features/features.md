@@ -263,10 +263,18 @@
 - `Dashboard.jsx`
 - `DailyGoalCard.jsx`
 - `OnboardingOverlay.jsx`
+- `FirstRunGate.jsx`
 **API Dependencies:** 
 - Currently uses mock data
 **Added:** Initial release
 **Notes:** Gamification elements pending backend implementation
+
+#### First-Run Onboarding (`FirstRunGate`)
+The welcome wizard decision is owned by `FirstRunGate.jsx`, mounted **app-level** in `App.jsx` for any authenticated, non-public route — not by the dashboard. This fires the wizard wherever a new student first lands (signup drops students on `/study`, not `/dashboard`). Behavior:
+- **Student-only** — staff roles (Teacher/Principal/Parent/SuperAdmin) never see the practice wizard; a missing `accountType` is treated as `Student`.
+- **localStorage flag + history fallback** — if `onboarding_<userId>` is unset, it confirms the student has no session history via `studyApi.fetchSessionsByUserId` before showing, so a returning user with cleared storage (new device/cleared cache) isn't re-onboarded; a network failure falls back to showing (the escape hatch makes a false positive harmless).
+- **Selection carried into study** — on completion, `OnboardingOverlay` navigates to `/study` with `location.state.preselectConfig` (class/subject/chapter + `mcq`/`Medium` defaults), so the student doesn't re-pick everything.
+- **Tour de-confliction** — the dashboard tour now auto-starts only for established users (question count > 0); the study config tour is suppressed when arriving with a preselected config or while onboarding is still pending, so no tour renders behind the modal.
 
 ---
 
