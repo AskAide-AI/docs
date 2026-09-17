@@ -197,8 +197,8 @@ All role guards also allow `SuperAdmin`.
 |--------|------|-------|
 | GET | `/progress/chapter/:chapterId` | `auth` | userId from JWT |
 | GET | `/progress/subject/:subjectId` | `auth` | userId from JWT |
-| GET | `/ai-insights/chapter/:chapterId` | `auth` | Proxies to AI Service `/ai-insights/chapter` |
-| GET | `/ai-insights/subject/:subjectId` | `auth` | Proxies to AI Service `/ai-insights/subject` |
+| GET | `/v1/ai-insights/chapter/:chapterId` | `auth` | Proxies to AI Service `/v1/ai-insights/chapter` |
+| GET | `/v1/ai-insights/subject/:subjectId` | `auth` | Proxies to AI Service `/v1/ai-insights/subject` |
 | GET | `/mastery-summary` | `auth` | userId from JWT |
 | GET | `/teacher/class-insights` | `auth` + `isTeacher` | teacherId from JWT |
 
@@ -413,27 +413,27 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
-| POST | `/upload-document` | Multipart: `file` + `class_id`, `chapter_id`, `subject_id` | `202` + `UploadStatusResponse` | Async — returns immediately; poll `/upload-status/{task_id}` for result. Max file: 10 MB |
-| GET | `/upload-status/{task_id}` | Path param | `UploadStatusResponse` | Poll upload task status; `status` is `queued`, `processing`, `completed`, or `failed` |
-| POST | `/delete-document` | `{ class_id, chapter_id, subject_id }` | `DocumentDeleteResponse` | Removes from Qdrant |
-| POST | `/search-document` | `{ class_id, chapter_id, subject_id }` | `DocumentSearchResponse` | Check existence |
+| POST | `/v1/upload-document` | Multipart: `file` + `class_id`, `chapter_id`, `subject_id` | `202` + `UploadStatusResponse` | Async — returns immediately; poll `/v1/upload-status/{task_id}` for result. Max file: 10 MB |
+| GET | `/v1/upload-status/{task_id}` | Path param | `UploadStatusResponse` | Poll upload task status; `status` is `queued`, `processing`, `completed`, or `failed` |
+| POST | `/v1/delete-document` | `{ class_id, chapter_id, subject_id }` | `DocumentDeleteResponse` | Removes from Qdrant |
+| POST | `/v1/search-document` | `{ class_id, chapter_id, subject_id }` | `DocumentSearchResponse` | Check existence |
 | POST | `/query` | `{ query, class_id, subject_id, chapter_ids, stream? }` | `QueryResponse` | RAG semantic search |
-| POST | `/generate-questions` | `{ class_id, subject_id, chapter_id, topics, n, type, is_distinct?, difficulty?, max_retries? }` | `GenerateQuestionsResponse` | AI question gen (`max_retries` caps LLM attempts for latency-sensitive first-batch calls) |
-| GET | `/ai-insights/chapter` | Query: `chapter_id`, `user_id` | `{ insight: string }` | Student progress analysis |
-| GET | `/ai-insights/subject` | Query: `subject_id`, `user_id` | `{ insight: string }` | Subject-level analysis |
-| POST | `/ai-agent/stream` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | SSE stream | Streaming AI content generation (quiz, paper, notes, etc.) |
-| POST | `/ai-agent` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | `AgentResponse` (contains `generation_id`) | AI content generation (quiz, paper, notes, etc.) |
-| POST | `/ai-agent/modify` | `{ teacher_id, generation_id, difficulty?, num_questions?, question_type?, sections?, duration_minutes? }` | `AgentResponse` | Modify existing generation — re-executes with merged params |
-| GET | `/ai-agent/chapters` | Query: `teacher_id`, `subject_id?` | `{ chapters: [...] }` | Teacher's chapters with topics, RAG status, class/subject info |
-| GET | `/ai-agent/classes` | Query: `teacher_id` | `{ classes: [] }` | Teacher's accessible classes |
-| GET | `/ai-agent/tasks` | — | `{ tasks: [] }` | Available AI tasks |
-| GET | `/ai-agent/history` | Query: `teacher_id`, `limit?`, `offset?` | `{ generations: [...] }` | Past generations, newest first |
-| GET | `/ai-agent/generation/{generation_id}` | Path param | `{ generation: { ... } }` | Single generation by ID |
-| GET | `/ai-agent/health` | — | `{ status: "healthy" }` | AI Agent health |
-| GET | `/ai-insights/teacher/class` | Query: `class_id`, `teacher_id` | `AITeacherClassInsightResponse` | Teacher class-level analysis |
-| GET | `/upload-status/{task_id}` | — | `AIUploadStatusResponse` | Async upload task status |
-| POST | `/sync-chapter-topics` | `{ chapter_id }` | `{ synced: number }` | Sync Qdrant→MongoDB topics |
-| POST | `/regenerate-topics` | `{ class_id, subject_id, chapter_id }` | Async — returns task_id | Async topic regeneration |
+| POST | `/v1/generate-questions` | `{ class_id, subject_id, chapter_id, topics, n, type, is_distinct?, difficulty?, max_retries? }` | `GenerateQuestionsResponse` | AI question gen (`max_retries` caps LLM attempts for latency-sensitive first-batch calls) |
+| GET | `/v1/ai-insights/chapter` | Query: `chapter_id`, `user_id` | `{ insight: string }` | Student progress analysis |
+| GET | `/v1/ai-insights/subject` | Query: `subject_id`, `user_id` | `{ insight: string }` | Subject-level analysis |
+| POST | `/v1/ai-agent/stream` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | SSE stream | Streaming AI content generation (quiz, paper, notes, etc.) |
+| POST | `/v1/ai-agent` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | `AgentResponse` (contains `generation_id`) | AI content generation (quiz, paper, notes, etc.) |
+| POST | `/v1/ai-agent/modify` | `{ teacher_id, generation_id, difficulty?, num_questions?, question_type?, sections?, duration_minutes? }` | `AgentResponse` | Modify existing generation — re-executes with merged params |
+| GET | `/v1/ai-agent/chapters` | Query: `teacher_id`, `subject_id?` | `{ chapters: [...] }` | Teacher's chapters with topics, RAG status, class/subject info |
+| GET | `/v1/ai-agent/classes` | Query: `teacher_id` | `{ classes: [] }` | Teacher's accessible classes |
+| GET | `/v1/ai-agent/tasks` | — | `{ tasks: [] }` | Available AI tasks |
+| GET | `/v1/ai-agent/history` | Query: `teacher_id`, `limit?`, `offset?` | `{ generations: [...] }` | Past generations, newest first |
+| GET | `/v1/ai-agent/generation/{generation_id}` | Path param | `{ generation: { ... } }` | Single generation by ID |
+| GET | `/v1/ai-agent/health` | — | `{ status: "healthy" }` | AI Agent health |
+| GET | `/v1/ai-insights/teacher/class` | Query: `class_id`, `teacher_id` | `AITeacherClassInsightResponse` | Teacher class-level analysis |
+| GET | `/v1/upload-status/{task_id}` | — | `AIUploadStatusResponse` | Async upload task status |
+| POST | `/v1/sync-chapter-topics` | `{ chapter_id }` | `{ synced: number }` | Sync Qdrant→MongoDB topics |
+| POST | `/v1/regenerate-topics` | `{ class_id, subject_id, chapter_id }` | Async — returns task_id | Async topic regeneration |
 | POST | `/search-documents/batch` | `[{ class_id, subject_id, chapter_id }]` | `{ results: [{ found, metadata }] }` | Batch check multiple chapters |
 | POST | `/conversations` | `{ user_id }` | `{ conversation_id }` | Create conversation |
 | GET | `/conversations` | Query: `user_id` | `{ conversations: [] }` | List conversations |
@@ -449,19 +449,19 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 ### AI Service Data Flow
 
 ```
-Backend → POST /upload-document (multipart)
+Backend → POST /v1/upload-document (multipart)
    → Parse document (PDF/TXT/DOCX)
    → Chunk → LLM summarize → Extract topics
    → Chunk (512 words) → Embed → Store in Qdrant
    → Return { success, metadata, topics, summary }
 
-Backend → POST /generate-questions
+Backend → POST /v1/generate-questions
    → Fetch topics from MongoDB
    → Search Qdrant by topic filter
    → Build LLM context → Generate questions
    → Return { questions[], count }
 
-Backend → GET /ai-insights/{chapter,subject}
+Backend → GET /v1/ai-insights/{chapter,subject}
    → Fetch StudentTopicProgress from MongoDB
    → Aggregate by chapter/topic
    → LLM analyzes → Return insight string

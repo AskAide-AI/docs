@@ -148,7 +148,7 @@ JWT_SECRET=your-secure-random-string-here
 
 # AI Service (proxied calls)
 AI_ENDPOINT=http://localhost:8000
-AI_QUESTION_REQ_URL=http://localhost:8000/generate-questions
+AI_SERVICE_API_KEY=your_shared_ai_key
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -158,10 +158,9 @@ CLOUD_NAME=your_cloud_name
 API_KEY=your_api_key
 API_SECRET=your_api_secret
 
-# Email
-MAIL_HOST=smtp.gmail.com
-MAIL_USER=your_email@gmail.com
-MAIL_PASS=your_app_password
+# Email (SendGrid HTTPS API — not SMTP; Render blocks ports 25/465/587)
+SENDGRID_API_KEY=your_sendgrid_api_key
+EMAIL=verified_sender@yourdomain.com
 
 # Razorpay (payments)
 RAZORPAY_KEY=your_razorpay_key
@@ -296,14 +295,14 @@ The app opens at **http://localhost:5173**.
 | `DATABASE_URL` | Yes | — | MongoDB connection string |
 | `JWT_SECRET` | Yes | — | Secret for signing JWTs |
 | `AI_ENDPOINT` | Yes | — | Base URL of the AI service |
-| `AI_QUESTION_REQ_URL` | Yes | — | Full URL for question generation |
+| `AI_SERVICE_API_KEY` | Yes | — | Shared secret sent as `x-api-key` on every AI call; must match the AI service |
 | `REDIS_URL` | No | — | Redis connection string |
 | `CLOUD_NAME` | No | — | Cloudinary cloud name |
 | `API_KEY` | No | — | Cloudinary API key |
 | `API_SECRET` | No | — | Cloudinary API secret |
-| `MAIL_HOST` | No | `smtp.gmail.com` | SMTP host |
-| `MAIL_USER` | No | — | SMTP username |
-| `MAIL_PASS` | No | — | SMTP password / app password |
+| `SENDGRID_API_KEY` | Yes | — | SendGrid API key (needs Mail Send permission) |
+| `EMAIL` | Yes | — | "From" address — must be a SendGrid Verified Sender |
+| `FRONTEND_URL` | Yes | — | Base URL for links inside emails (unsubscribe, password reset) |
 | `NODE_ENV` | No | `development` | `development` or `production` |
 
 ### AI Service (.env)
@@ -394,7 +393,7 @@ curl http://localhost:8000/health  # AI Service health
 
 ```bash
 # Generate questions
-curl -X POST http://localhost:8000/generate-questions \
+curl -X POST http://localhost:8000/v1/generate-questions \
   -H "Content-Type: application/json" \
   -d '{"chapterId": "test", "count": 5}'
 ```

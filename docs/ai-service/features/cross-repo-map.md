@@ -54,7 +54,7 @@ User's Browser
 │  Env:                                                        │
 │    PORT = 4000                                               │
 │    AI_ENDPOINT = http://localhost:8000                       │
-│    AI_QUESTION_REQ_URL = http://localhost:8000/generate-questions │
+│    AI_SERVICE_API_KEY = <shared secret, sent as x-api-key>   │
 └───────────┬──────────────────────────────────────┬──────────┘
             │  HTTP calls to AI Service             │  MongoDB
             ▼                                       ▼
@@ -98,27 +98,27 @@ User's Browser
 
 | Backend Endpoint | AI Service Endpoint | Method | Purpose |
 |-----------------|---------------------|--------|---------|
-| `POST /chapters/create-with-pdf` | `POST /upload-document` | FormData (file + metadata) | Upload PDF for RAG |
-| `DELETE /chapters` | `POST /delete-document` | JSON `{ class_id, subject_id, chapter_id }` | Delete from RAG |
-| `POST /chapters/check-rag-status` | `POST /search-document` | JSON | Check RAG existence |
+| `POST /chapters/create-with-pdf` | `POST /v1/upload-document` | FormData (file + metadata) | Upload PDF for RAG |
+| `DELETE /chapters` | `POST /v1/delete-document` | JSON `{ class_id, subject_id, chapter_id }` | Delete from RAG |
+| `POST /chapters/check-rag-status` | `POST /v1/search-document` | JSON | Check RAG existence |
 | `POST /questions/batch/:chapterId/...` | — | Calls AI when DB has insufficient questions | Internal _callAIService() |
-| `GET /topic-progress/ai-insights/:userId/subject/:subjectId` | `GET /ai-insights/subject` | Query params | AI learning insights |
-| `GET /topic-progress/ai-insights/:userId/chapter/:chapterId` | `GET /ai-insights/chapter` | Query params | AI learning insights |
-| `POST /api/v1/ai-assistant` | `POST /ai-agent` | JSON | AI content generation — returns `generation_id` |
-| `POST /api/v1/ai-assistant/continue` | `POST /ai-agent` | JSON (with `session_id`) | Continue clarification session |
-| `GET /api/v1/ai-assistant/export/:generationId` | `GET /ai-agent/generation/{generationId}` (lookup) + backend generates PDF | — | PDF export via Puppeteer |
-| — (called from backend controller) | `POST /ai-agent/modify` | JSON | Modify existing generation |
-| — (called from backend controller) | `GET /ai-agent/history` | Query params | Generation history |
-| — (called from backend controller) | `GET /ai-agent/generation/{id}` | Path param | Single generation lookup |
+| `GET /topic-progress/ai-insights/:userId/subject/:subjectId` | `GET /v1/ai-insights/subject` | Query params | AI learning insights |
+| `GET /topic-progress/ai-insights/:userId/chapter/:chapterId` | `GET /v1/ai-insights/chapter` | Query params | AI learning insights |
+| `POST /api/v1/ai-assistant` | `POST /v1/ai-agent` | JSON | AI content generation — returns `generation_id` |
+| `POST /api/v1/ai-assistant/continue` | `POST /v1/ai-agent` | JSON (with `session_id`) | Continue clarification session |
+| `GET /api/v1/ai-assistant/export/:generationId` | `GET /v1/ai-agent/generation/{generationId}` (lookup) + backend generates PDF | — | PDF export via Puppeteer |
+| — (called from backend controller) | `POST /v1/ai-agent/modify` | JSON | Modify existing generation |
+| — (called from backend controller) | `GET /v1/ai-agent/history` | Query params | Generation history |
+| — (called from backend controller) | `GET /v1/ai-agent/generation/{id}` | Path param | Single generation lookup |
 
-**Key cross-repo contract:** The AI Service returns `generation_id` in every successful `/ai-agent` response. The Backend forwards this as `generationId` to the Frontend. The Frontend uses it to display a "Download PDF" button and (in future) a "Modify" button.
+**Key cross-repo contract:** The AI Service returns `generation_id` in every successful `/v1/ai-agent` response. The Backend forwards this as `generationId` to the Frontend. The Frontend uses it to display a "Download PDF" button and (in future) a "Modify" button.
 
 ### AI Service `_callAIService()` (Questions Service)
 
-The question generation AI call uses `AI_QUESTION_REQ_URL` env var (not `AI_ENDPOINT`):
+The question generation AI call is built from the `AI_ENDPOINT` base URL:
 - Payload: `{ class_id, subject_id, chapter_id, topics, is_distinct, n, type, difficulty }`
-- Endpoint: `POST {AI_QUESTION_REQ_URL}` (default: `http://localhost:8000/generate-questions`)
-- Timeout: 600 seconds (10 min)
+- Endpoint: `POST {AI_ENDPOINT}/v1/generate-questions` (default base: `http://localhost:8000`)
+- Timeout: 240 seconds (4 min) — `AI_REQUEST_TIMEOUT_MS = 4 * 60 * 1000`
 - **Non-blocking:** The Backend calls this via `_startBackgroundGeneration()` which never `await`s the result — the request returns immediately, and the AI call runs fire-and-forget in the background.
 - **Deduplication is the Backend's responsibility:** The AI service returns all generated questions; the Backend's `_dedupeNewQuestions()` compares normalized text against existing docs before inserting, so the AI service doesn't need to track what was already generated.
 
@@ -131,7 +131,7 @@ The question generation AI call uses `AI_QUESTION_REQ_URL` env var (not `AI_ENDP
 Frontend (multipart upload)
   → Backend POST /chapters/create-with-pdf
     → Backend saves chapter to MongoDB
-    → Backend POSTs file + metadata to AI Service /upload-document
+    → Backend POSTs file + metadata to AI Service /v1/upload-document
       → AI Service extracts text → chunks → summarizes → extracts topics
       → AI Service embeds chunks → stores in Qdrant
       → AI Service returns { topics, summary }
@@ -153,7 +153,7 @@ Student drains question pool in session
                 → return { status: "generating" }
 
 Background (_startBackgroundGeneration → _generateQuestionsBackground)
-  → Backend POSTs to AI Service /generate-questions  (fire-and-forget)
+  → Backend POSTs to AI Service /v1/generate-questions  (fire-and-forget)
     → AI Service fetches topics from MongoDB
     → AI Service searches Qdrant by topic filter
       → **Context rotation:** `QG_CANDIDATE_POOL=200` chunks sampled from
@@ -178,7 +178,7 @@ Background (_startBackgroundGeneration → _generateQuestionsBackground)
 ```
 Frontend requests insights
   → Backend GET /topic-progress/ai-insights/userid/:userId/chapter/:chapterId
-    → Backend proxies to AI Service GET /ai-insights/chapter?chapter_id=...&user_id=...
+    → Backend proxies to AI Service GET /v1/ai-insights/chapter?chapter_id=...&user_id=...
       → AI Service fetches StudentTopicProgress from MongoDB
       → AI Service aggregates by topic, identifies gaps
       → AI Service calls LLM for analysis (~50 words)
@@ -196,7 +196,7 @@ Frontend requests insights
 | — | `DATABASE_URL` | `MONGO_URI` | MongoDB connection |
 | — | `JWT_SECRET` | — | JWT signing key |
 | — | `AI_ENDPOINT` | `SELF_API_URL` | AI Service base URL |
-| — | `AI_QUESTION_REQ_URL` | — | Question generation endpoint |
+| — | `AI_SERVICE_API_KEY` | `AI_SERVICE_API_KEY` | Shared secret sent as `x-api-key`; must match on both sides |
 | — | — | `QDRANT_HOST` | Qdrant vector DB host |
 | — | — | `REDIS_HOST` | Redis cache host |
 | — | — | `LLM_PROVIDER` | LLM backend selector |

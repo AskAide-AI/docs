@@ -53,7 +53,7 @@ Browser
 
 ```
 AI_ENDPOINT=http://localhost:8000        (upload, delete, search, insights)
-AI_QUESTION_REQ_URL=http://localhost:8000/generate-questions
+AI_SERVICE_API_KEY=<shared secret; sent as x-api-key on every call>
 ```
 
 ---
@@ -162,7 +162,7 @@ ai-service/
 When a chapter PDF is uploaded, this is what happens step by step:
 
 ```
-1. HTTP POST /upload-document
+1. HTTP POST /v1/upload-document
    ├─ Validate file extension (.pdf, .docx, .txt)
    ├─ Validate **magic bytes** — PDFs must start with `%PDF`, DOCX must start with `PK` (ZIP header)
    ├─ Validate file size (max 10 MB)
@@ -196,7 +196,7 @@ When a chapter PDF is uploaded, this is what happens step by step:
    │
    └─ Cleanup: del topic_keys_embeddings, gc.collect(), remove temp file
 
-3. Client polls GET /upload-status/{task_id} until status = "completed" or "failed"
+3. Client polls GET /v1/upload-status/{task_id} until status = "completed" or "failed"
 ```
 
 ### Query Pipeline
@@ -245,7 +245,7 @@ Prometheus-style metrics — request counts, latencies, etc.
 
 ### Document Management
 
-#### `POST /upload-document`  ← also at `/v1/upload-document`
+#### `POST /v1/upload-document`  ← also at `/v1/upload-document`
 Upload a chapter document for RAG ingestion.
 
 **Content-Type:** `multipart/form-data`
@@ -269,11 +269,11 @@ Upload a chapter document for RAG ingestion.
   "status": "queued"
 }
 ```
-Poll `/upload-status/{task_id}` for the result. Only one upload runs at a time (serialized by `UPLOAD_SEMAPHORE`).
+Poll `/v1/upload-status/{task_id}` for the result. Only one upload runs at a time (serialized by `UPLOAD_SEMAPHORE`).
 
 ---
 
-#### `GET /upload-status/{task_id}`
+#### `GET /v1/upload-status/{task_id}`
 Poll the status of a background upload.
 
 **Response:**
@@ -305,7 +305,7 @@ Completed tasks are cleaned up automatically after 1 hour.
 
 ---
 
-#### `POST /delete-document`
+#### `POST /v1/delete-document`
 Remove all Qdrant vectors for a chapter.
 
 **Request body:**
@@ -320,7 +320,7 @@ Remove all Qdrant vectors for a chapter.
 
 ---
 
-#### `POST /search-document`
+#### `POST /v1/search-document`
 Check whether a chapter has already been indexed in Qdrant (used by Backend before deciding to upload).
 
 **Request body:**
@@ -370,7 +370,7 @@ The service embeds the query, searches Qdrant with `class_id + subject_id + chap
 
 ### Question Generation
 
-#### `POST /generate-questions`  ← also at `/v1/generate-questions`
+#### `POST /v1/generate-questions`  ← also at `/v1/generate-questions`
 Generate MCQ or subjective questions from chapter content, grounded in RAG.
 
 **Request body:**
@@ -428,7 +428,7 @@ Generate MCQ or subjective questions from chapter content, grounded in RAG.
 
 ### Learning Insights
 
-#### `GET /ai-insights/subject?subject_id=...&user_id=...`
+#### `GET /v1/ai-insights/subject?subject_id=...&user_id=...`
 Generate AI-written feedback about a student's progress across a whole subject.
 
 **Query params:** `subject_id` (MongoDB `_id`), `user_id` (MongoDB `_id`)
@@ -442,7 +442,7 @@ Generate AI-written feedback about a student's progress across a whole subject.
 
 ---
 
-#### `GET /ai-insights/chapter?chapter_id=...&user_id=...`
+#### `GET /v1/ai-insights/chapter?chapter_id=...&user_id=...`
 Generate AI-written feedback about a student's progress in a single chapter, including uncovered topics.
 
 **Query params:** `chapter_id`, `user_id`
@@ -458,7 +458,7 @@ Generate AI-written feedback about a student's progress in a single chapter, inc
 
 ### AI Agent
 
-#### `POST /ai-agent`  ← also at `/v1/ai-agent`
+#### `POST /v1/ai-agent`  ← also at `/v1/ai-agent`
 The teacher AI assistant. Accepts natural language prompts and generates educational content.
 
 **Request body:**
@@ -497,7 +497,7 @@ The teacher AI assistant. Accepts natural language prompts and generates educati
 }
 ```
 
-`generation_id` is a unique MongoDB ObjectId hex string. Use it to download PDFs (`/api/v1/ai-assistant/export/:generationId`), modify the generation (`/ai-agent/modify`), or retrieve it later (`/ai-agent/generation/{id}`).
+`generation_id` is a unique MongoDB ObjectId hex string. Use it to download PDFs (`/api/v1/ai-assistant/export/:generationId`), modify the generation (`/v1/ai-agent/modify`), or retrieve it later (`/v1/ai-agent/generation/{id}`).
 
 **Response (clarification needed):**
 ```json
@@ -536,7 +536,7 @@ To resume after clarification, send the same request with `session_id` and `resp
 
 ---
 
-#### `POST /ai-agent/modify`  ← also at `/v1/ai-agent/modify`
+#### `POST /v1/ai-agent/modify`  ← also at `/v1/ai-agent/modify`
 Modify a previously generated piece of content. Re-executes the original task with merged parameters.
 
 **Request body:**
@@ -553,18 +553,18 @@ Modify a previously generated piece of content. Re-executes the original task wi
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `teacher_id` | string | yes | MongoDB teacher `_id` |
-| `generation_id` | string | yes | ID returned from original `/ai-agent` response |
+| `generation_id` | string | yes | ID returned from original `/v1/ai-agent` response |
 | `difficulty` | string | no | `"easy"`, `"medium"`, or `"hard"` |
 | `num_questions` | int | no | Number of questions |
 | `question_type` | string | no | `"MCQ"`, `"True/False"`, `"Fill in Blank"`, `"Mixed"` |
 | `sections` | int | no | Number of sections (paper only) |
 | `duration_minutes` | int | no | Duration in minutes (paper only) |
 
-**Response:** Same `AgentResponse` shape as `/ai-agent`, with a new `generation_id`. The modification is saved as a **new** generation record — the original is preserved.
+**Response:** Same `AgentResponse` shape as `/v1/ai-agent`, with a new `generation_id`. The modification is saved as a **new** generation record — the original is preserved.
 
 ---
 
-#### `GET /ai-agent/chapters?teacher_id=...&subject_id=...`  ← also at `/v1/ai-agent/chapters`
+#### `GET /v1/ai-agent/chapters?teacher_id=...&subject_id=...`  ← also at `/v1/ai-agent/chapters`
 Get chapters available to a teacher, optionally filtered by subject. Returns chapters with their associated topics, RAG content status, and class/subject display info.
 
 **Response:**
@@ -589,7 +589,7 @@ Get chapters available to a teacher, optionally filtered by subject. Returns cha
 
 ---
 
-#### `GET /ai-agent/history?teacher_id=...&limit=20&offset=0`  ← also at `/v1/ai-agent/history`
+#### `GET /v1/ai-agent/history?teacher_id=...&limit=20&offset=0`  ← also at `/v1/ai-agent/history`
 Retrieve past generations for a teacher, newest first. Paginated with `limit` (default 20) and `offset` (default 0).
 
 **Response:**
@@ -610,7 +610,7 @@ Retrieve past generations for a teacher, newest first. Paginated with `limit` (d
 
 ---
 
-#### `GET /ai-agent/generation/{generation_id}`  ← also at `/v1/ai-agent/generation/{generation_id}`
+#### `GET /v1/ai-agent/generation/{generation_id}`  ← also at `/v1/ai-agent/generation/{generation_id}`
 Retrieve a single generation by its ID, including full content. Returns 404 if not found.
 
 **Response:**
@@ -631,13 +631,13 @@ Retrieve a single generation by its ID, including full content. Returns 404 if n
 
 ---
 
-#### `GET /ai-agent/classes?teacher_id=...`
+#### `GET /v1/ai-agent/classes?teacher_id=...`
 Returns the list of classes and subjects a teacher has access to (from MongoDB `teacherstudents`).
 
-#### `GET /ai-agent/tasks`
+#### `GET /v1/ai-agent/tasks`
 Returns the list of task types the agent can perform (quiz, paper, notes, etc.).
 
-#### `GET /ai-agent/health`
+#### `GET /v1/ai-agent/health`
 Health check for the agent service.
 
 ---
@@ -653,7 +653,7 @@ Health check for the agent service.
 
 ### Topic Sync
 
-#### `POST /sync-chapter-topics`
+#### `POST /v1/sync-chapter-topics`
 Backfill MongoDB `chaptertopics` for a chapter that was already indexed in Qdrant but whose topics were never written to MongoDB (e.g., uploaded before topic sync was implemented).
 
 **Request body:**
@@ -1238,8 +1238,8 @@ ModifyRequest:  teacher_id, generation_id, num_questions?, difficulty?,
 ```
 
 **`generation_id`** is a MongoDB ObjectId hex string returned by every successful generation. It is the primary key for:
-- `GET /ai-agent/generation/{id}` — single generation lookup
-- `POST /ai-agent/modify` — modify existing generation
+- `GET /v1/ai-agent/generation/{id}` — single generation lookup
+- `POST /v1/ai-agent/modify` — modify existing generation
 - `GET /api/v1/ai-assistant/export/:generationId` — download PDF (via Backend)
 
-**Modification flow:** `POST /ai-agent/modify` loads the original generation, merges new parameters with originals, re-executes the task, and saves as a new record. The original is never overwritten.
+**Modification flow:** `POST /v1/ai-agent/modify` loads the original generation, merges new parameters with originals, re-executes the task, and saves as a new record. The original is never overwritten.

@@ -22,7 +22,7 @@
 ### User Registration
 **Status:** ✅ Completed
 **Description:** New users can sign up with email, which triggers OTP verification
-**Pages:** /signup, /verify-email
+**Pages:** /signup
 **Components:** 
 - `Signup.jsx`
 - `VerifyEmail.jsx`

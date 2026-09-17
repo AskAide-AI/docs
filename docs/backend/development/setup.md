@@ -780,7 +780,7 @@ npm install
 | Variable | Description |
 |---|---|
 | `AI_ENDPOINT` | AI Service base URL (e.g. `http://localhost:8000`) — paths appended in code |
-| `AI_QUESTION_REQ_URL` | Full AI question generation URL (legacy, overrides AI_ENDPOINT for questions) |
+| `AI_SERVICE_API_KEY` | Shared secret sent as the `x-api-key` header on every AI Service call |
 | `AI_SERVICE_API_KEY` | Shared API key for AI Service `x-api-key` header |
 | `GOOGLE_CLIENT_ID` | Google OAuth Web client ID |
 | `GOOGLE_CLIENT_ID_ANDROID` | Google OAuth Android client ID |

@@ -216,7 +216,7 @@ docker-compose logs -f api
 - [ ] MongoDB production database accessible
 - [ ] JWT_SECRET is unique and secret
 - [ ] MAIL_* and EMAIL credentials configured for email features
-- [ ] AI_ENDPOINT and AI_QUESTION_REQ_URL configured
+- [ ] AI_ENDPOINT (base URL only) and AI_SERVICE_API_KEY configured
 - [ ] QUESTION_PREFETCH_AHEAD, QUESTION_MIN_NEW_PER_RUN, QUESTION_LOW_YIELD_LIMIT, QUESTION_HARD_CAP configured for question generation
 - [ ] Rate limiting configured appropriately
 - [ ] CORS origins updated for production domains

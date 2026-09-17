@@ -204,7 +204,7 @@
 
 ## AI Assistant (Teacher Content Generation)
 **Status:** ✅ Completed  
-**Description:** Teachers can generate lesson content (quizzes, notes, worksheets, assignments, question papers) via AI prompts with follow-up clarifications. Proxied through Backend to AI Service `/ai-agent` endpoint.  
+**Description:** Teachers can generate lesson content (quizzes, notes, worksheets, assignments, question papers) via AI prompts with follow-up clarifications. Proxied through Backend to AI Service `/v1/ai-agent` endpoint.  
 **Endpoints:**
 - `POST /api/v1/ai-assistant` - Generate content from prompt
 - `POST /api/v1/ai-assistant/continue` - Follow-up clarification

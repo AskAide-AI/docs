@@ -67,12 +67,12 @@ The backend acts as a proxy between Frontend and AI Service:
 
 | Backend | AI Service Endpoint | Purpose |
 |---------|-------------------|---------|
-| `content.service.js` | `POST /upload-document` | Chapter PDF ingestion |
-| `content.service.js` | `POST /delete-document` | Chapter deletion |
-| `content.service.js` | `POST /search-document` | RAG status check |
-| `questions.service.js` | `POST /generate-questions` | AI question generation |
-| `topicProgress.controller.js` | `GET /ai-insights/chapter` | Chapter learning insights |
-| `topicProgress.controller.js` | `GET /ai-insights/subject` | Subject learning insights |
-| `topicProgress.controller.js` | `GET /ai-insights/teacher/class` | Teacher class insight |
-| `ai-assistant/` | `POST /ai-agent` | Teacher content generation |
-| `ai-assistant/` | `POST /ai-agent/stream` | Teacher content generation (SSE streaming) |
+| `content.service.js` | `POST /v1/upload-document` | Chapter PDF ingestion |
+| `content.service.js` | `POST /v1/delete-document` | Chapter deletion |
+| `content.service.js` | `POST /v1/search-document` | RAG status check |
+| `questions.service.js` | `POST /v1/generate-questions` | AI question generation |
+| `topicProgress.controller.js` | `GET /v1/ai-insights/chapter` | Chapter learning insights |
+| `topicProgress.controller.js` | `GET /v1/ai-insights/subject` | Subject learning insights |
+| `topicProgress.controller.js` | `GET /v1/ai-insights/teacher/class` | Teacher class insight |
+| `ai-assistant/` | `POST /v1/ai-agent` | Teacher content generation |
+| `ai-assistant/` | `POST /v1/ai-agent/stream` | Teacher content generation (SSE streaming) |

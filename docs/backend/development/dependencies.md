@@ -49,7 +49,7 @@
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| **nodemailer** | ^6.10.1 | Email sending (OTP, notifications) |
+| **@sendgrid/mail** | ^8.x | Email sending over the SendGrid HTTPS API (OTP, notifications, campaigns) — replaced `nodemailer`, because Render blocks outbound SMTP ports |
 
 ---
 
