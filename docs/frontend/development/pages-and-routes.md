@@ -13,7 +13,6 @@
 | `/free-paper-generator` | PublicPaperGenerator | Public | All | Free paper generation (Lead magnet) |
 | `/login` | Login | Public | All | User login |
 | `/signup` | Signup | Public | All | User registration |
-| `/verify-email` | VerifyEmail | Public | All | Email OTP verification |
 | `/forgot-password` | ForgotPassword | Public | All | Request password reset |
 | `/update-password/:id` | UpdatePassword | Public | All | Reset password with token |
 | `/try` | TryNow | Public | All | Try before signup |
@@ -104,19 +103,6 @@
 
 ---
 
-### /verify-email
-**Component:** `src/components/auth/VerifyEmail.jsx`
-**Description:** Email verification with OTP code
-**Authentication:** Public
-**API Calls:**
-- POST `/auth/verifyOtp`
-- POST `/auth/sendOtp` (resend)
-**Features:**
-- 6-digit OTP input
-- Resend OTP button
-- Timer for resend cooldown
-
----
 
 ### /forgot-password
 **Component:** `src/components/auth/ForgotPassword.jsx`

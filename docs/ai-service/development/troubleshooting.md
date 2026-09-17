@@ -84,7 +84,7 @@ Common issues and solutions when working with the AskAideAI AI Service.
 ### Upload succeeds but processing fails
 **Symptoms:** Task status shows "failed"
 **Solutions:**
-1. Check task status: `GET /upload-status/{task_id}`
+1. Check task status: `GET /v1/upload-status/{task_id}`
 2. Look for chunking or LLM errors in logs
 3. Try re-uploading the document
 
@@ -92,7 +92,7 @@ Common issues and solutions when working with the AskAideAI AI Service.
 **Solutions:**
 1. Check if LLM summarization step succeeded
 2. Verify topic extraction ran in the pipeline
-3. Use `POST /sync-chapter-topics` to sync Qdrant → MongoDB
+3. Use `POST /v1/sync-chapter-topics` to sync Qdrant → MongoDB
 
 ## Search & Query Issues
 

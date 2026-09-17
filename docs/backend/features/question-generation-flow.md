@@ -4,7 +4,7 @@ Cross-service reference for how study-session questions are served, generated,
 and "run out" gracefully. Touches all three repos:
 
 ```
-Frontend (useQuestionPolling) ─▶ Backend (questions.service) ─▶ AI Service (/generate-questions)
+Frontend (useQuestionPolling) ─▶ Backend (questions.service) ─▶ AI Service (/v1/generate-questions)
 ```
 
 Owner of the logic: `Backend/src/modules/questions/services/questions.service.js`.

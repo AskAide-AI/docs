@@ -542,7 +542,7 @@ Upload a chapter with a PDF for RAG indexing (multipart/form-data).
 }
 ```
 
-Use `POST /chapters/check-rag-status` or `GET /upload-status/{task_id}` to poll processing status.
+Use `POST /chapters/check-rag-status` or `GET /v1/upload-status/{task_id}` to poll processing status.
 
 ---
 
@@ -3008,7 +3008,7 @@ All AI Service endpoints are **internal only** — called by the Backend, not th
 
 ---
 
-#### POST `/upload-document`
+#### POST `/v1/upload-document`
 
 Async PDF ingestion into vector DB (Qdrant). Returns task ID for polling.
 
@@ -3029,13 +3029,13 @@ Async PDF ingestion into vector DB (Qdrant). Returns task ID for polling.
 }
 ```
 
-**Poll status with:** `GET /upload-status/{task_id}`
+**Poll status with:** `GET /v1/upload-status/{task_id}`
 
 > ⚠️ **Integration gap:** Backend never polls this endpoint — treats any 202 as success without checking actual completion.
 
 ---
 
-#### GET `/upload-status/{task_id}`
+#### GET `/v1/upload-status/{task_id}`
 
 Poll upload processing status.
 
@@ -3073,7 +3073,7 @@ Poll upload processing status.
 
 ---
 
-#### POST `/delete-document`
+#### POST `/v1/delete-document`
 
 Remove document from Qdrant vector DB.
 
@@ -3101,7 +3101,7 @@ Remove document from Qdrant vector DB.
 
 Batch check if multiple chapters have indexed documents.
 
-> ⚠️ **Integration gap:** No Backend caller exists. The Backend calls individual `/search-document` in a loop instead.
+> ⚠️ **Integration gap:** No Backend caller exists. The Backend calls individual `/v1/search-document` in a loop instead.
 
 **Request:**
 ```json
@@ -3123,7 +3123,7 @@ Batch check if multiple chapters have indexed documents.
 
 ---
 
-#### POST `/search-document`
+#### POST `/v1/search-document`
 
 Check if a document is indexed.
 
@@ -3192,7 +3192,7 @@ RAG-based semantic search across indexed documents.
 
 ---
 
-#### POST `/generate-questions`
+#### POST `/v1/generate-questions`
 
 AI-powered question generation.
 
@@ -3233,7 +3233,7 @@ AI-powered question generation.
 
 ---
 
-#### GET `/ai-insights/chapter`
+#### GET `/v1/ai-insights/chapter`
 
 Generate chapter-level learning insights.
 
@@ -3257,7 +3257,7 @@ Generate chapter-level learning insights.
 
 ---
 
-#### GET `/ai-insights/subject`
+#### GET `/v1/ai-insights/subject`
 
 Generate subject-level learning insights.
 
@@ -3291,7 +3291,7 @@ Generate subject-level learning insights.
 
 ---
 
-#### GET `/ai-insights/teacher/class`
+#### GET `/v1/ai-insights/teacher/class`
 
 Generate teacher-specific class insights.
 
@@ -3325,7 +3325,7 @@ Generate teacher-specific class insights.
 
 ---
 
-#### POST `/ai-agent`
+#### POST `/v1/ai-agent`
 
 AI content generation agent.
 
@@ -3353,7 +3353,7 @@ AI content generation agent.
 
 ---
 
-#### GET `/ai-agent/classes`
+#### GET `/v1/ai-agent/classes`
 
 Get available classes for AI agent.
 
@@ -3369,7 +3369,7 @@ Get available classes for AI agent.
 
 ---
 
-#### GET `/ai-agent/tasks`
+#### GET `/v1/ai-agent/tasks`
 
 Get available task types.
 
@@ -3387,7 +3387,7 @@ Get available task types.
 
 ---
 
-#### GET `/ai-agent/health`
+#### GET `/v1/ai-agent/health`
 
 AI agent health check.
 
@@ -3402,7 +3402,7 @@ AI agent health check.
 
 ---
 
-#### POST `/ai-agent/stream`
+#### POST `/v1/ai-agent/stream`
 
 Streaming AI content generation (SSE, token-by-token).
 
@@ -3423,7 +3423,7 @@ Streaming AI content generation (SSE, token-by-token).
 
 ---
 
-#### GET `/ai-agent/chapters`
+#### GET `/v1/ai-agent/chapters`
 
 Get chapters available to a teacher, optionally filtered by subject.
 
@@ -3448,7 +3448,7 @@ Get chapters available to a teacher, optionally filtered by subject.
 
 ---
 
-#### POST `/ai-agent/modify`
+#### POST `/v1/ai-agent/modify`
 
 Modify a previously generated piece of content. Re-executes the original task with merged parameters.
 
@@ -3465,11 +3465,11 @@ Modify a previously generated piece of content. Re-executes the original task wi
 }
 ```
 
-**Response:** Same `AgentResponse` shape as `/ai-agent`, with a new `generation_id`.
+**Response:** Same `AgentResponse` shape as `/v1/ai-agent`, with a new `generation_id`.
 
 ---
 
-#### GET `/ai-agent/history`
+#### GET `/v1/ai-agent/history`
 
 Retrieve past generations for a teacher, newest first. Paginated.
 
@@ -3493,7 +3493,7 @@ Retrieve past generations for a teacher, newest first. Paginated.
 
 ---
 
-#### GET `/ai-agent/generation/{generation_id}`
+#### GET `/v1/ai-agent/generation/{generation_id}`
 
 Get a single generation by ID.
 
@@ -3517,7 +3517,7 @@ Get a single generation by ID.
 
 ---
 
-#### POST `/regenerate-topics`
+#### POST `/v1/regenerate-topics`
 
 Regenerate topic breakdown for a chapter using AI.
 
@@ -3544,7 +3544,7 @@ Regenerate topic breakdown for a chapter using AI.
 
 ---
 
-#### POST `/sync-chapter-topics`
+#### POST `/v1/sync-chapter-topics`
 
 Sync topics from AI service to the backend database.
 

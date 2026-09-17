@@ -96,7 +96,7 @@
 | mongoose | ^8.2.0 | MongoDB ODM |
 | bcryptjs | ^2.4.3 | Password hashing |
 | jsonwebtoken | ^9.0.2 | JWT authentication |
-| nodemailer | ^6.10.1 | Email sending |
+| @sendgrid/mail | ^8.x | Email sending (SendGrid HTTPS API) |
 | cors | ^2.8.5 | CORS middleware |
 | dotenv | ^16.4.5 | Environment variables |
 | express-list-endpoints | ^7.1.1 | List API endpoints |

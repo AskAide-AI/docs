@@ -80,7 +80,7 @@ Common issues and solutions when working with the AskAideAI backend.
 **Symptoms:** Question generation requests hang or timeout after 600s
 **Solutions:**
 1. Check AI Service logs for LLM errors
-2. Verify `AI_QUESTION_REQ_URL` is set correctly
+2. Verify `AI_ENDPOINT` is set to the AI service base URL (no `/v1` suffix) and `AI_SERVICE_API_KEY` matches
 3. Check if LLM provider API key is valid
 4. Reduce `QUESTION_HARD_CAP` (currently 300)
 

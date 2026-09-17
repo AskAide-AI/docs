@@ -83,7 +83,7 @@ Then, in another shell:
 python -m eval.benchmark --endpoint /query --payloads eval/payloads.example.json -n 100 -c 10
 
 # streaming endpoint: measure time-to-first-token
-python -m eval.benchmark --endpoint /ai-agent/stream --payloads eval/agent_payloads.json --stream -n 50 -c 5
+python -m eval.benchmark --endpoint /v1/ai-agent/stream --payloads eval/agent_payloads.json --stream -n 50 -c 5
 
 # save raw numbers for CI trend tracking
 python -m eval.benchmark --endpoint /query --payloads eval/payloads.example.json -n 100 -c 10 --out eval/bench.json

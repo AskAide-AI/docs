@@ -31,7 +31,7 @@ This document covers how the three services (Frontend, Backend, AI Service) inte
 │                           Port 4000                                      │
 │                                                                          │
 │  AI_ENDPOINT = http://localhost:8000                                     │
-│  AI_QUESTION_REQ_URL = http://localhost:8000/generate-questions          │
+│  AI_SERVICE_API_KEY = <shared secret, sent as x-api-key>                 │
 │                                                                          │
 │  ┌────────────────┐ ┌──────────────┐ ┌────────────┐ ┌───────────────┐  │
 │  │  content/       │ │  questions/  │ │  progress/ │ │  ai-assistant/│  │
@@ -82,16 +82,16 @@ This document covers how the three services (Frontend, Backend, AI Service) inte
 
 | # | Backend File | AI Endpoint | Method | Purpose | Timeout |
 |---|---|---|---|---|---|
-| 1 | `src/modules/content/services/content.service.js` | `POST /upload-document` | POST (FormData) | Chapter PDF ingestion | 30s |
-| 2 | `src/modules/content/services/content.service.js` | `POST /delete-document` | POST (JSON) | Chapter deletion | 30s |
-| 3 | `src/modules/content/services/content.service.js` | `POST /search-document` | POST (JSON) | RAG status check | 30s |
-| 4 | `src/modules/questions/services/questions.service.js` | `POST /generate-questions` | POST (JSON) | AI question generation | 600s |
-| 5 | `src/modules/progress/controllers/topicProgress.controller.js` | `GET /ai-insights/chapter` | GET | Chapter learning insights | 30s |
-| 6 | `src/modules/progress/controllers/topicProgress.controller.js` | `GET /ai-insights/subject` | GET | Subject learning insights | 30s |
-| 7 | `src/modules/progress/controllers/topicProgress.controller.js` | `GET /ai-insights/teacher/class` | GET | Teacher class insights | 30s |
-| 8 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `POST /ai-agent` | POST (JSON) | Teacher AI content generation | 600s |
-| 9 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /ai-agent/classes` | GET | Teacher accessible classes | 30s |
-| 10 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /ai-agent/tasks` | GET | Available AI tasks | 30s |
+| 1 | `src/modules/content/services/content.service.js` | `POST /v1/upload-document` | POST (FormData) | Chapter PDF ingestion | 30s |
+| 2 | `src/modules/content/services/content.service.js` | `POST /v1/delete-document` | POST (JSON) | Chapter deletion | 30s |
+| 3 | `src/modules/content/services/content.service.js` | `POST /v1/search-document` | POST (JSON) | RAG status check | 30s |
+| 4 | `src/modules/questions/services/questions.service.js` | `POST /v1/generate-questions` | POST (JSON) | AI question generation | 600s |
+| 5 | `src/modules/progress/controllers/topicProgress.controller.js` | `GET /v1/ai-insights/chapter` | GET | Chapter learning insights | 30s |
+| 6 | `src/modules/progress/controllers/topicProgress.controller.js` | `GET /v1/ai-insights/subject` | GET | Subject learning insights | 30s |
+| 7 | `src/modules/progress/controllers/topicProgress.controller.js` | `GET /v1/ai-insights/teacher/class` | GET | Teacher class insights | 30s |
+| 8 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `POST /v1/ai-agent` | POST (JSON) | Teacher AI content generation | 600s |
+| 9 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /v1/ai-agent/classes` | GET | Teacher accessible classes | 30s |
+| 10 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /v1/ai-agent/tasks` | GET | Available AI tasks | 30s |
 
 ---
 
@@ -111,7 +111,7 @@ Backend (content.service.js)
   ├─ 2. Create Chapter doc in MongoDB
   ├─ 3. Upload PDF to Cloudinary
   ├─ 4. Call AI Service
-  │     POST {AI_ENDPOINT}/upload-document
+  │     POST {AI_ENDPOINT}/v1/upload-document
   │     Body: multipart FormData
   │       - file: Blob (PDF)
   │       - chapter_id: string
@@ -143,7 +143,7 @@ AI Service (upload_service.py)
   ├─ 10. Store vectors in Qdrant
   ├─ 11. Store metadata in MongoDB
   │
-  └─ (Async) Client can poll /upload-status/{task_id} for completion
+  └─ (Async) Client can poll /v1/upload-status/{task_id} for completion
 ```
 
 **Backend request format:**
@@ -159,7 +159,7 @@ formData.append('class_name', classDoc.name);
 formData.append('subject_id', subjectDoc._id.toString());
 formData.append('subject_name', subjectDoc.name);
 
-const response = await fetch(`${process.env.AI_ENDPOINT}/upload-document`, {
+const response = await fetch(`${process.env.AI_ENDPOINT}/v1/upload-document`, {
   method: 'POST',
   body: formData
 });
@@ -184,7 +184,7 @@ Backend (content.service.js)
   │
   ├─ 1. Validate chapters belong to class/subject
   ├─ 2. Call AI Service (parallel, one per chapter)
-  │     POST {AI_ENDPOINT}/delete-document
+  │     POST {AI_ENDPOINT}/v1/delete-document
   │     Body (JSON):
   │       {
   │         "class_id": "string",
@@ -213,7 +213,7 @@ Frontend
 Backend (content.service.js)
   │
   ├─ For each chapterId:
-  │     POST {AI_ENDPOINT}/search-document
+  │     POST {AI_ENDPOINT}/v1/search-document
   │     Body (JSON):
   │       {
   │         "class_id": "string",
@@ -246,7 +246,7 @@ Backend (questions.service.js)
   │
   ├─ 1. Fetch chapter + topics from MongoDB
   ├─ 2. Build payload:
-  │     POST {AI_QUESTION_REQ_URL}
+  │     POST {AI_ENDPOINT}/v1/generate-questions
   │     Body (JSON):
   │       {
   │         "class_id": "string",
@@ -293,9 +293,9 @@ Frontend (Progress pages)
   ▼
 Backend (topicProgress.controller.js)
   │
-  ├─ GET {AI_ENDPOINT}/ai-insights/chapter?chapter_id=X&user_id=Y
-  ├─ GET {AI_ENDPOINT}/ai-insights/subject?subject_id=X&user_id=Y
-  ├─ GET {AI_ENDPOINT}/ai-insights/teacher/class?teacher_id=X&subject_id=Y
+  ├─ GET {AI_ENDPOINT}/v1/ai-insights/chapter?chapter_id=X&user_id=Y
+  ├─ GET {AI_ENDPOINT}/v1/ai-insights/subject?subject_id=X&user_id=Y
+  ├─ GET {AI_ENDPOINT}/v1/ai-insights/teacher/class?teacher_id=X&subject_id=Y
   │
   │ Response:
   │   {
@@ -321,7 +321,7 @@ Frontend (TeacherAIGenerator.jsx)
   ▼
 Backend (ai-assistant.service.js)
   │
-  ├─ POST {AI_ENDPOINT}/ai-agent
+  ├─ POST {AI_ENDPOINT}/v1/ai-agent
   │     Body (JSON):
   │       {
   │         "teacher_id": "string",
@@ -363,11 +363,11 @@ Backend (ai-assistant.service.js)
 
 ```javascript
 // Get teacher's accessible classes
-GET {AI_ENDPOINT}/ai-agent/classes?teacher_id=XXX
+GET {AI_ENDPOINT}/v1/ai-agent/classes?teacher_id=XXX
 Response: { "classes": [{ "id": "...", "name": "..." }] }
 
 // Get available AI task types
-GET {AI_ENDPOINT}/ai-agent/tasks
+GET {AI_ENDPOINT}/v1/ai-agent/tasks
 Response: { "tasks": ["quiz", "paper", "notes", "assignment", "worksheet"] }
 ```
 
@@ -494,14 +494,14 @@ class ContentError extends AppError {
 
 | Endpoint | Timeout | Implementation |
 |---|---|---|
-| `/upload-document` | 30s | Default `fetch()` timeout |
-| `/delete-document` | 30s | Default `fetch()` timeout |
-| `/search-document` | 30s | Default `fetch()` timeout |
-| `/generate-questions` | 600s (10 min) | `AbortController` with `setTimeout` |
-| `/ai-insights/*` | 30s | Default `fetch()` timeout |
-| `/ai-agent` | 600s (10 min) | `AbortController` with `setTimeout` |
-| `/ai-agent/classes` | 30s | Default `fetch()` timeout |
-| `/ai-agent/tasks` | 30s | Default `fetch()` timeout |
+| `/v1/upload-document` | 30s | Default `fetch()` timeout |
+| `/v1/delete-document` | 30s | Default `fetch()` timeout |
+| `/v1/search-document` | 30s | Default `fetch()` timeout |
+| `/v1/generate-questions` | 600s (10 min) | `AbortController` with `setTimeout` |
+| `/v1/ai-insights/*` | 30s | Default `fetch()` timeout |
+| `/v1/ai-agent` | 600s (10 min) | `AbortController` with `setTimeout` |
+| `/v1/ai-agent/classes` | 30s | Default `fetch()` timeout |
+| `/v1/ai-agent/tasks` | 30s | Default `fetch()` timeout |
 
 ### 6.2 Timeout Implementation Pattern
 
@@ -558,7 +558,7 @@ try {
 **Eventual Consistency (Upload → Process):**
 1. Backend creates Chapter in MongoDB immediately
 2. PDF sent to AI Service for async processing
-3. AI returns `task_id`; client polls `/upload-status/{task_id}`
+3. AI returns `task_id`; client polls `/v1/upload-status/{task_id}`
 4. Embeddings become available in Qdrant after processing completes
 5. Topics extracted and upserted from AI response `topic_keys`
 
@@ -692,11 +692,11 @@ export interface NewAIResponse {
 | `AI_NOT_CONFIGURED` error | Missing `AI_ENDPOINT` in Backend `.env` | Add `AI_ENDPOINT=http://localhost:8000` to Backend `.env` |
 | `AI_TIMEOUT` (504) | AI Service took > 600s | Check AI Service logs; increase timeout if needed |
 | `AI_SERVICE_ERROR` (502) | AI Service returned non-200 | Check AI Service logs for exception |
-| Chapter upload succeeds but no embeddings | AI processing failed silently | Check AI Service logs; poll `/upload-status/{task_id}` |
+| Chapter upload succeeds but no embeddings | AI processing failed silently | Check AI Service logs; poll `/v1/upload-status/{task_id}` |
 | `fetch failed` network error | AI Service not running or wrong port | Verify AI Service is running on port 8000; check firewall |
 | Topics not extracted from AI response | `topic_keys` missing or `is_reuploaded: true` | Check AI Service response; verify PDF parsing |
 | AI Agent returns empty content | Session expired (30-min Redis TTL) | Frontend should handle session expiry gracefully |
-| Questions not generated | `AI_QUESTION_REQ_URL` misconfigured | Verify env var points to `http://localhost:8000/generate-questions` |
+| Questions not generated | `AI_ENDPOINT` misconfigured | Verify it is the base URL only (`http://localhost:8000`) — the code appends `/v1/generate-questions` |
 
 ### 10.2 Debugging Tools
 
@@ -704,7 +704,7 @@ export interface NewAIResponse {
 ```bash
 curl http://localhost:8000/health
 # or
-curl http://localhost:8000/ai-agent/health
+curl http://localhost:8000/v1/ai-agent/health
 ```
 
 **Check Backend → AI connectivity:**
@@ -768,7 +768,7 @@ curl http://localhost:4000/ping
 ```bash
 curl http://localhost:8000/health
 # or
-curl http://localhost:8000/ai-agent/health
+curl http://localhost:8000/v1/ai-agent/health
 ```
 
 ### 11.3 Backend → AI Service Health Check
@@ -776,7 +776,7 @@ curl http://localhost:8000/ai-agent/health
 ```javascript
 // ai-assistant.service.js — checkHealth()
 async checkHealth() {
-  const res = await fetch(`${aiEndpoint}/ai-agent/health`, { timeout: 5000 });
+  const res = await fetch(`${aiEndpoint}/v1/ai-agent/health`, { timeout: 5000 });
   return await res.json();
 }
 ```
@@ -812,7 +812,7 @@ PORT=4000
 DATABASE_URL=mongodb://...
 JWT_SECRET=...
 AI_ENDPOINT=http://localhost:8000
-AI_QUESTION_REQ_URL=http://localhost:8000/generate-questions
+AI_SERVICE_API_KEY=your_shared_ai_key
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...

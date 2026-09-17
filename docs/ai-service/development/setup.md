@@ -87,25 +87,25 @@ quiz = orchestrator.generate_practice(
 ## API Endpoints
 
 ### Core RAG
-- `POST /upload-document` - Upload document (PDF, DOCX, TXT)
-- `POST /upload-status/{task_id}` - Poll document ingestion status
+- `POST /v1/upload-document` - Upload document (PDF, DOCX, TXT)
+- `POST /v1/upload-status/{task_id}` - Poll document ingestion status
 - `POST /query` - Search documents with RAG
-- `POST /search-document` - Check if document exists in vector store
-- `POST /generate-questions` - Generate AI-powered questions from chapter content
-- `POST /delete-document` - Delete document and its embeddings
-- `POST /regenerate-topics` - Regenerate topics from uploaded documents
-- `POST /sync-chapter-topics` - Sync chapter topics with MongoDB
+- `POST /v1/search-document` - Check if document exists in vector store
+- `POST /v1/generate-questions` - Generate AI-powered questions from chapter content
+- `POST /v1/delete-document` - Delete document and its embeddings
+- `POST /v1/regenerate-topics` - Regenerate topics from uploaded documents
+- `POST /v1/sync-chapter-topics` - Sync chapter topics with MongoDB
 
 ### AI Agent
-- `POST /ai-agent` - Non-streaming AI agent response
-- `POST /ai-agent/stream` - Streaming AI agent response (SSE)
-- `GET /ai-agent/classes` - List classes for agent context
-- `GET /ai-agent/chapters` - List chapters for agent context
-- `GET /ai-agent/tasks` - List pending agent tasks
-- `GET /ai-agent/health` - Agent subsystem health
-- `POST /ai-agent/modify` - Modify agent generation parameters
-- `GET /ai-agent/history` - Get agent generation history
-- `GET /ai-agent/generation/{generation_id}` - Get specific generation details
+- `POST /v1/ai-agent` - Non-streaming AI agent response
+- `POST /v1/ai-agent/stream` - Streaming AI agent response (SSE)
+- `GET /v1/ai-agent/classes` - List classes for agent context
+- `GET /v1/ai-agent/chapters` - List chapters for agent context
+- `GET /v1/ai-agent/tasks` - List pending agent tasks
+- `GET /v1/ai-agent/health` - Agent subsystem health
+- `POST /v1/ai-agent/modify` - Modify agent generation parameters
+- `GET /v1/ai-agent/history` - Get agent generation history
+- `GET /v1/ai-agent/generation/{generation_id}` - Get specific generation details
 
 ### Conversations
 - `POST /conversations` - Create a new conversation
@@ -115,9 +115,9 @@ quiz = orchestrator.generate_practice(
 - `DELETE /conversations/{conversation_id}` - Delete a conversation
 
 ### AI Insights
-- `GET /ai-insights/subject` - Subject-level learning insights
-- `GET /ai-insights/chapter` - Chapter-level learning insights
-- `GET /ai-insights/teacher/class` - Teacher class insights
+- `GET /v1/ai-insights/subject` - Subject-level learning insights
+- `GET /v1/ai-insights/chapter` - Chapter-level learning insights
+- `GET /v1/ai-insights/teacher/class` - Teacher class insights
 
 ### Monitoring
 - `GET /health` - Health check with details

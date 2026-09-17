@@ -72,39 +72,39 @@ Implemented but not yet exposed via HTTP endpoints:
 |----------|---------|
 | `/ping`, `/health`, `/health/live`, `/health/ready` | Health checks |
 | `/metrics` | Service metrics |
-| `/upload-status/{task_id}` | Poll upload status |
+| `/v1/upload-status/{task_id}` | Poll upload status |
 
 ### Core
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /upload-document` | Ingest chapter PDF (async, returns task_id) |
-| `POST /delete-document` | Delete chapter vectors |
-| `POST /search-document` | RAG status check |
+| `POST /v1/upload-document` | Ingest chapter PDF (async, returns task_id) |
+| `POST /v1/delete-document` | Delete chapter vectors |
+| `POST /v1/search-document` | RAG status check |
 | `POST /search-documents/batch` | Batch check multiple chapters |
-| `POST /regenerate-topics` | Regenerate topics from Qdrant (async) |
-| `POST /generate-questions` | Question generation |
-| `POST /sync-chapter-topics` | Sync Qdrant→MongoDB topics |
+| `POST /v1/regenerate-topics` | Regenerate topics from Qdrant (async) |
+| `POST /v1/generate-questions` | Question generation |
+| `POST /v1/sync-chapter-topics` | Sync Qdrant→MongoDB topics |
 | `POST /query` | RAG semantic search |
 
 ### AI Insights
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /ai-insights/chapter` | Student chapter insight |
-| `GET /ai-insights/subject` | Student subject insight |
-| `GET /ai-insights/teacher/class` | Teacher class insight |
+| `GET /v1/ai-insights/chapter` | Student chapter insight |
+| `GET /v1/ai-insights/subject` | Student subject insight |
+| `GET /v1/ai-insights/teacher/class` | Teacher class insight |
 
 ### AI Agent
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /ai-agent` | Teacher content generation |
-| `POST /ai-agent/stream` | Teacher content generation (SSE streaming) |
-| `POST /ai-agent/modify` | Modify existing generation |
-| `GET /ai-agent/classes` | Agent-accessible classes |
-| `GET /ai-agent/chapters` | Chapters with topics and RAG status |
-| `GET /ai-agent/tasks` | Active agent tasks |
-| `GET /ai-agent/history` | Past generations |
-| `GET /ai-agent/generation/{id}` | Single generation by ID |
-| `GET /ai-agent/health` | Agent health |
+| `POST /v1/ai-agent` | Teacher content generation |
+| `POST /v1/ai-agent/stream` | Teacher content generation (SSE streaming) |
+| `POST /v1/ai-agent/modify` | Modify existing generation |
+| `GET /v1/ai-agent/classes` | Agent-accessible classes |
+| `GET /v1/ai-agent/chapters` | Chapters with topics and RAG status |
+| `GET /v1/ai-agent/tasks` | Active agent tasks |
+| `GET /v1/ai-agent/history` | Past generations |
+| `GET /v1/ai-agent/generation/{id}` | Single generation by ID |
+| `GET /v1/ai-agent/health` | Agent health |
 
 ### Conversations
 | Endpoint | Purpose |

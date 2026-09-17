@@ -113,7 +113,7 @@ All notable changes to this project are documented in this file.
 - **Signup returns tokens** — `auth.service.js` `signup()` now generates access + refresh tokens and returns them (enables auto-login; matches login response shape)
 - **Content queries filter hidden chapters** — `content.service.js` aggregates now include `hidden: { $ne: true }` pipeline stage; `isStartable` computed from `ragIndexed && topics.length > 0`
 - Chapter and study responses now include `isStartable` flag based on chapter topic availability
-- Chapter PDF ingestion now uses `AI_ENDPOINT` and calls `${AI_ENDPOINT}/upload-document`
+- Chapter PDF ingestion now uses `AI_ENDPOINT` and calls `${AI_ENDPOINT}/v1/upload-document`
 
 ### Documentation
 - Updated `API-DOCUMENTATION.md` with chapter lifecycle and question paper endpoints
