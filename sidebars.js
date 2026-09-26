@@ -7,6 +7,7 @@ const sidebars = {
       link: {type: 'doc', id: 'frontend/overview'},
       items: [
         'frontend/architecture',
+        'frontend/lld',
         {
           type: 'category',
           label: 'Features',
@@ -54,6 +55,7 @@ const sidebars = {
       link: {type: 'doc', id: 'backend/overview'},
       items: [
         'backend/architecture',
+        'backend/lld',
         {
           type: 'category',
           label: 'Features',
@@ -102,6 +104,7 @@ const sidebars = {
       link: {type: 'doc', id: 'ai-service/overview'},
       items: [
         'ai-service/architecture',
+        'ai-service/lld',
         {
           type: 'category',
           label: 'Features',
@@ -142,6 +145,7 @@ const sidebars = {
       type: 'category',
       label: 'Guides & Reference',
       items: [
+        'reference/hld',
         'reference/getting-started',
         'reference/user-guide',
         'reference/developer-guide',
