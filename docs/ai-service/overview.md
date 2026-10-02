@@ -10,7 +10,7 @@
 | Vector DB | Qdrant |
 | Document DB | MongoDB |
 | Cache / Pub-Sub | Redis |
-| LLM Providers | OpenRouter, Gemini, OpenAI, Anthropic |
+| LLM Providers | OpenRouter, Gemini, OpenAI, Anthropic (one live at a time, switchable from /admin → AI System without a restart) |
 | Embeddings | Ollama, Google, OpenAI, External (fallback chain) |
 
 ## Architecture
@@ -114,3 +114,14 @@ Implemented but not yet exposed via HTTP endpoints:
 | `GET /conversations/{id}/messages` | Get messages |
 | `POST /conversations/{id}/messages` | Add message |
 | `DELETE /conversations/{id}` | Delete conversation |
+
+### Admin: live LLM switching
+SuperAdmin-only, proxied by the Backend's `/api/v1/admin/system/llm/*` (the /admin **AI System** tab).
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /v1/admin/llm/status` | Live provider/model, whether it came from the admin panel or env default, recent switches, which providers have a key |
+| `POST /v1/admin/llm/test` | Plain / JSON / MCQ-schema checks on a model (empty body = live model); never changes anything |
+| `POST /v1/admin/llm/active` | Re-run the checks; only if all pass, save and switch the live model instantly (no restart) |
+| `POST /v1/admin/llm/reset` | Back to the env default (`LLM_PROVIDER`) |
+| `GET /v1/admin/llm/models` | Live model listing per provider (cached 10 min, curated fallback) |

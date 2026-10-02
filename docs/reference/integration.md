@@ -92,6 +92,8 @@ This document covers how the three services (Frontend, Backend, AI Service) inte
 | 8 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `POST /v1/ai-agent` | POST (JSON) | Teacher AI content generation | 600s |
 | 9 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /v1/ai-agent/classes` | GET | Teacher accessible classes | 30s |
 | 10 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /v1/ai-agent/tasks` | GET | Available AI tasks | 30s |
+| 11 | `src/modules/supporting/services/llmSystem.service.js` | `GET /v1/admin/llm/status`, `GET /v1/admin/llm/models` | GET | SuperAdmin AI System tab: live LLM status, model suggestions | 20s / 30s |
+| 12 | `src/modules/supporting/services/llmSystem.service.js` | `POST /v1/admin/llm/test`, `/active`, `/reset` | POST (JSON) | Test a model; switch the live LLM instantly (or back to env default) | 100s test / 110s activate / 20s reset |
 
 ---
 
@@ -502,6 +504,8 @@ class ContentError extends AppError {
 | `/v1/ai-agent` | 600s (10 min) | `AbortController` with `setTimeout` |
 | `/v1/ai-agent/classes` | 30s | Default `fetch()` timeout |
 | `/v1/ai-agent/tasks` | 30s | Default `fetch()` timeout |
+| `/v1/admin/llm/status`, `/models` | 20s, 30s | `AbortController` with `setTimeout` |
+| `/v1/admin/llm/test`, `/active`, `/reset` | 100s (test), 110s (activate), 20s (reset) | `AbortController`; test/activate sit above the ai-service's own `LLM_TEST_TIMEOUT` (90s) cap |
 
 ### 6.2 Timeout Implementation Pattern
 
@@ -827,7 +831,9 @@ VITE_API_URL=http://localhost:4000/api/v1
 ### AI Service (`.env`)
 
 ```env
-LLM_PROVIDER=openrouter          # openrouter | gemini | openai | anthropic
+LLM_PROVIDER=openrouter          # default only: openrouter | gemini | openai | anthropic; overridable live from /admin → AI System
+LLM_TEST_TIMEOUT=90              # cap (s) for admin model test / activate checks
+# LLM_SETTINGS_SCOPE=...         # optional; scope of the saved LLM choice (default: per deployment)
 EMBEDDING_PROVIDERS=ollama,google # comma-separated fallback chain
 QDRANT_HOST=localhost
 QDRANT_PORT=6333

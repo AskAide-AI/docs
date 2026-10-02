@@ -76,6 +76,8 @@ ai-service/
 │   ├── shared.py            lazy singleton registry for heavy objects
 │   ├── service.py           lazy getters for feature services
 │   ├── llm_service.py       abstract LLMService + provider factory
+│   ├── active_llm.py        SwitchableLLM (live, swappable client) + saved-choice persistence
+│   ├── llm_admin.py         admin LLM status / test / activate / reset / model listing
 │   ├── rag.py               RAGSystem (ingestion, search, topic regeneration)
 │   ├── upload_service.py, query_service.py, generate_question_service.py
 │   ├── llm_insights.py, education_ai_agent.py, topic_sync_service.py
@@ -143,7 +145,7 @@ flowchart TD
 | `get_mongo()` | `db.mongo_db.MongoDB(MONGO_URI, MONGO_DB_NAME)` | — |
 | `get_qdrant()` | `db.qdrant_db.QdrantDB(embedding=...)` | `get_embedding` |
 | `get_topic_search()` | `utils.topic_search.TopicSearch(mongo, embedding)` | `get_mongo`, `get_embedding` |
-| `get_llm_service()` | `get_llm_service_class()()` | `LLM_PROVIDER` |
+| `get_llm_service()` | `services.active_llm.create_live_llm(mongo)` → one `SwitchableLLM` | saved choice in Mongo `llm_settings`, else `LLM_PROVIDER` |
 | `get_rag_system()` | `services.rag.RAGSystem(db, embedding, topic_search, llm_service)` | all of the above |
 | `get_redis()` | `db.redis_db.RedisDB(host, port, channel, username, password)` | — |
 
@@ -155,6 +157,7 @@ Feature services (`services/service.py`): `get_upload_service`, `get_generate_qu
 - Middleware (both `@app.middleware("http")`): `correlation_logging_middleware` is registered first and `rate_limit_middleware` second. Starlette makes the last-registered middleware outermost, so rate limiting runs first and 429 responses bypass the correlation logger.
 - Upload task registry: `_upload_tasks: Dict[str, Dict]` guarded by `threading.Lock` (`_task_get`, `_task_set`, `_task_delete`), because background threads write and the event loop reads.
 - Inline models: `AgentRequest`, `AgentResponse`, `ModifyRequest` (all other models live in `utils/schema.py`).
+- Admin LLM routes (`/v1/admin/llm/*`, tag `TAG_V1_ADMIN`) are thin wrappers over `services/llm_admin.py`; test/activate run in a worker thread capped by `LLM_TEST_TIMEOUT` (§8.1).
 
 ### 4.3 RAGSystem — `services/rag.py`
 
@@ -341,6 +344,8 @@ Database from `MONGO_DB_NAME`. The service creates **no indexes**. Id convention
 | `agent_generations` | R/W | `generation_id` (uuid4), `teacher_id` (string), `prompt`, `task_type`, `parameters`, `content`, `metadata`, `created_at` (epoch) | agent history and modify |
 | `conversations` | R/W | `_id`, `user_id` (ObjectId), `title`, `created_at`, `updated_at` | `ConversationModel` |
 | `messages` | R/W | `_id`, `conversation_id` (ObjectId), `role`, `content`, `created_at` | `ConversationModel` |
+| `llm_settings` | R/W | `_id` (`active:<scope>`), `scope`, `provider`, `model`, `updated_by`, `updated_at`, `previous` | `services/active_llm.py` (read once at startup; written on activate, deleted on reset) |
+| `llm_settings_history` | R/W | `scope`, `action`, `from`, `to`, `requested_by`, `at` | `services/active_llm.py` (appended on every switch; recent entries shown by admin status) |
 
 ### 5.3 Redis
 
@@ -402,6 +407,11 @@ Auth column: **key** = requires `x-api-key` (or `Authorization: Bearer`) equal t
 | DELETE | `/v1/conversations/{conversation_id}` | key | Delete conversation and messages | query `user_id` | `success` | 500 |
 | POST | `/v1/teacher/create-quiz` | key | Legacy quiz (wraps agent) | `TeacherQuizRequest` | `TeacherQuizResponse` | 500 |
 | GET | `/v1/teacher/classes` | key | Legacy classes | query `teacher_id` | `success`, `classes[]` | 500 |
+| GET | `/v1/admin/llm/status` | key | Live provider/model, source (`database`/`env`), env default, recent switches, per-provider key-configured flags (never the key) | — | `LlmStatus` | — |
+| POST | `/v1/admin/llm/test` | key | Plain / JSON / MCQ-schema checks on a model; never changes anything | `{ provider?, model? }` (empty = live model) | `LlmTestResult` | 400 unknown provider / key not set, 504 past `LLM_TEST_TIMEOUT` |
+| POST | `/v1/admin/llm/active` | key | Re-run the 3 checks; only if all pass, save the choice then swap the live client | `{ provider, model, requested_by? }` | `LlmSwitchResult` (`activated: false` = nothing changed) | 409 switch already running, 503 can't save, 504 |
+| POST | `/v1/admin/llm/reset` | key | Delete the saved choice and swap back to the env default | `{ requested_by? }` | `LlmSwitchResult` | 409, 503 |
+| GET | `/v1/admin/llm/models` | key | Live model listing per provider, cached 10 min; curated fallback | query `provider?`, `free_only?` (OpenRouter) | `LlmModelList` | 502 only if OpenRouter's public catalogue is down |
 
 FastAPI built-ins `/docs`, `/redoc`, `/openapi.json` are auth-exempt.
 
@@ -749,7 +759,10 @@ classDiagram
 
 - `services/llm_service.py:LLMService` is an ABC. Subclasses implement `get_response`, `list_models` and `health`. The helpers `generate_summary`, `generate_questions` and `generate_rag_response` pick a system prompt from `PromptService` and re-yield `get_response` events.
 - Every method is a **generator** yielding dicts `response` + `finish_reason`. Non-streaming calls yield once; streaming calls yield per delta.
-- `get_llm_service_class()` reads `LLM_PROVIDER` (default `openrouter`; accepts `openai`, `gemini`, `anthropic`, alias `claude`) and raises `ValueError` for anything else. Exactly one provider instance exists per process (`services/shared.py:get_llm_service`); there is **no cross-provider LLM fallback**.
+- `get_llm_service_class()` reads `LLM_PROVIDER` (default `openrouter`; accepts `openai`, `gemini`, `anthropic`, alias `claude`) and raises `ValueError` for anything else. There is **no cross-provider LLM fallback**.
+- **Live switching.** `services/shared.py:get_llm_service` returns one `services/active_llm.py:SwitchableLLM` that forwards every call to the active provider client. Every service holds that wrapper, so `SwitchableLLM.swap()` (called by `llm_admin.activate` / `reset_to_env`) switches the whole app instantly with no restart; `get_response` reads the client once, so in-flight calls finish on the old client. At startup `create_live_llm` reads the saved choice once from Mongo `llm_settings` (doc `_id = "active:<scope>"`); with none (or an unusable one, e.g. its key was removed) it uses `LLM_PROVIDER` + that provider's model env var. API keys stay in env only — a provider is usable only if its key env var is set.
+- **Scope.** `LLM_SETTINGS_SCOPE`, else `RENDER_SERVICE_ID`, else `local-<ENVIRONMENT>`, so local dev and a deployment sharing one database never pick up each other's choice.
+- **Switch safety.** `activate` holds a process lock (a second switch gets 409), re-runs the plain / JSON / MCQ-schema checks on a throwaway client, and only if all pass saves the choice (503 if it can't) then swaps. Tests and activations are capped by `LLM_TEST_TIMEOUT` (default 90 s).
 
 ### 8.2 Provider matrix
 
@@ -820,7 +833,9 @@ No tokenizer is used at runtime (`utils/question_utils.count_tokens` is unused).
 | `SELF_API_URL` | os.getenv | Base URL the self keep-alive pings |
 | `QDRANT_KEEPALIVE_SECONDS` | os.getenv | Interval of the Qdrant keep-alive `count` |
 | `BATCH_SIZE`, `MAX_WORKERS` | Settings | Ingestion embed/upsert batch size; summarization thread fan-out |
-| `LLM_PROVIDER` | os.getenv | Provider selection |
+| `LLM_PROVIDER` | os.getenv | **Default** provider; overridden by a choice saved from /admin → AI System (§8.1) |
+| `LLM_SETTINGS_SCOPE` | os.getenv | Optional scope for the saved LLM choice (else `RENDER_SERVICE_ID`, else `local-<ENVIRONMENT>`) |
+| `LLM_TEST_TIMEOUT` | os.getenv | Cap in seconds for admin LLM test / activate checks (default 90) |
 | `OPENROUTER_API_KEY`, `OPENROUTER_URL`, `OPEN_ROUTER_MODEL`, `OPEN_ROUTER_TEMPERATURE`, `OPEN_ROUTER_MAX_TOKENS`, `GITHUB_REPO_URL` | os.getenv | OpenRouter key, chat-completions URL, model, sampling, max tokens, `HTTP-Referer` header |
 | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_TEMPERATURE`, `OPENAI_MAX_TOKENS` | os.getenv | OpenAI LLM (key also reused for OpenAI embeddings) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TEMPERATURE`, `GEMINI_MAX_TOKENS` | os.getenv | Gemini LLM (key also reused for Google embeddings) |
@@ -884,7 +899,7 @@ Most handlers wrap work in `try/except Exception` and re-raise a generic 500. As
 | Step | When | Behaviour | Failure mode |
 |---|---|---|---|
 | `setup_loki_logging()` | startup | Attach Loki handler if configured | warning, non-fatal |
-| `get_mongo()` + `get_llm_service()` | startup | Warm the cheap singletons (Mongo connect + ping, provider client) | warning, non-fatal; a missing provider key re-raises on first use |
+| `get_mongo()` + `get_llm_service()` | startup | Warm the cheap singletons (Mongo connect + ping, live LLM: saved choice read once, else env default) | warning, non-fatal; a missing provider key re-raises on first use |
 | `_cleanup_old_tasks` | every 300 s | Remove tasks completed more than 3600 s ago | exceptions caught per sweep so the loop survives |
 | `keep_alive` | every 120 s | `httpx` GET `SELF_API_URL/ping` to avoid free-tier sleep | warning per failure; pings `None/ping` if unset |
 | `keep_alive_qdrant` | every `QDRANT_KEEPALIVE_SECONDS` (1800 s when blank, invalid or at most 0) | `get_qdrant()` then `count(collection, exact=False)` in a thread, to keep the Qdrant cluster from idling | warning per failure; interval parsed defensively |
@@ -922,7 +937,7 @@ Technical facts from the code at `e6043c7`:
 
 **Deployment and runtime**
 
-1. **Single-process assumption.** Task status (`_upload_tasks`), rate-limit windows, the Redis-down session fallback and metrics are process-local. A restart loses all task state (`not_found`), and multiple uvicorn workers would break status polling and rate limits.
+1. **Single-process assumption.** Task status (`_upload_tasks`), rate-limit windows, the Redis-down session fallback, metrics and the live LLM choice are process-local (another instance would only pick up a switch on restart). A restart loses all task state (`not_found`), and multiple uvicorn workers would break status polling and rate limits.
 2. **Event-loop blocking.** Most routes call synchronous services directly (§2), so one long LLM call in `/v1/ai-agent`, `/v1/query` or an insights route stalls all concurrent requests. Streaming token loops are also synchronous inside the async generator.
 3. **Rate limiter.** In-memory and per process, keyed on client IP. Server-to-server traffic from the Backend therefore shares one bucket unless the Backend forwards client IPs (not verified).
 4. **Auth.** `/` and `/metrics` require the key despite being "health" routes.

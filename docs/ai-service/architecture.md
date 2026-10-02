@@ -2,7 +2,7 @@
 
 ## Entry Point
 
-`main.py` → FastAPI app with lifespan keep-alive task. Warms MongoDB + LLM on start. Qdrant, embeddings, and RAGSystem are lazy-loaded on first use.
+`main.py` → FastAPI app with lifespan keep-alive task. Warms MongoDB + the live LLM (saved admin choice, else env default) on start. Qdrant, embeddings, and RAGSystem are lazy-loaded on first use.
 
 ## Service Layer
 
@@ -37,6 +37,8 @@ Provider factory in `services/llm_service.py` (`get_llm_service_class()`). Imple
 | Gemini | `llm/llm_gemini.py` | `GEMINI_API_KEY` |
 | OpenAI | `llm/llm_open_ai.py` | `OPENAI_API_KEY` |
 | Anthropic | `llm/llm_anthropic.py` | `ANTHROPIC_API_KEY` |
+
+**Live switching:** `get_llm_service()` (`services/shared.py`) returns one `SwitchableLLM` (`services/active_llm.py`) that forwards every call to the active provider client. Every service holds that wrapper, so a SuperAdmin switch from /admin → AI System (`/v1/admin/llm/*`, logic in `services/llm_admin.py`) swaps the client inside it and the whole app follows instantly — no restart; in-flight calls finish on the old client. The choice is saved in MongoDB `llm_settings` (scoped per deployment) and read once at startup; with none, `LLM_PROVIDER` + `<PROVIDER>_MODEL` is the default. API keys stay in env — a provider is usable only if its key is set. There is no cross-provider fallback.
 
 **Key rules:**
 - All LLM methods return **generators** — iterate with `for`

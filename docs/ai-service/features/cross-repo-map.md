@@ -72,6 +72,7 @@ User's Browser
 │      generate_question_service.py │
 │      llm_insights.py         │
 │      llm_service.py          │
+│      active_llm.py           │  ← live switchable LLM
 │    db/                       │
 │      qdrant_db.py            │
 │      mongo_db.py             │
@@ -110,6 +111,8 @@ User's Browser
 | — (called from backend controller) | `POST /v1/ai-agent/modify` | JSON | Modify existing generation |
 | — (called from backend controller) | `GET /v1/ai-agent/history` | Query params | Generation history |
 | — (called from backend controller) | `GET /v1/ai-agent/generation/{id}` | Path param | Single generation lookup |
+| `GET /api/v1/admin/system/llm/status`, `GET .../models` (`llmSystem.service.js`) | `GET /v1/admin/llm/status`, `GET /v1/admin/llm/models` | Query params (`freeOnly` → `free_only`) | SuperAdmin AI System tab: live LLM, model suggestions |
+| `POST /api/v1/admin/system/llm/test`, `/active`, `/reset` (`llmSystem.service.js`) | `POST /v1/admin/llm/test`, `/active`, `/reset` | JSON; admin email sent as `requested_by` | Test a model; switch the live LLM instantly; back to env default. 400/409/503/504 passed through, not mapped to 502 |
 
 **Key cross-repo contract:** The AI Service returns `generation_id` in every successful `/v1/ai-agent` response. The Backend forwards this as `generationId` to the Frontend. The Frontend uses it to display a "Download PDF" button and (in future) a "Modify" button.
 
@@ -199,7 +202,8 @@ Frontend requests insights
 | — | `AI_SERVICE_API_KEY` | `AI_SERVICE_API_KEY` | Shared secret sent as `x-api-key`; must match on both sides |
 | — | — | `QDRANT_HOST` | Qdrant vector DB host |
 | — | — | `REDIS_HOST` | Redis cache host |
-| — | — | `LLM_PROVIDER` | LLM backend selector |
+| — | — | `LLM_PROVIDER` | Default LLM provider (overridable live from /admin → AI System) |
+| — | — | `LLM_TEST_TIMEOUT`, `LLM_SETTINGS_SCOPE` | Admin model-check cap (s); optional scope of the saved LLM choice |
 | — | — | `EMBEDDING_PROVIDERS` | Embedding fallback chain |
 
 ---

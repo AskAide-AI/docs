@@ -93,7 +93,9 @@ ai-service/
 │   ├── llm_insights.py              LLMInsightsService — student progress analysis.
 │   ├── education_ai_agent.py        EducationAIAgent — multi-mode teacher assistant.
 │   ├── topic_sync_service.py        TopicSyncService — backfill chaptertopics from Qdrant.
-│   └── llm_service.py               LLM provider factory (get_llm_service_class).
+│   ├── llm_service.py               LLM provider factory (get_llm_service_class).
+│   ├── active_llm.py                SwitchableLLM — the one live, swappable LLM client.
+│   └── llm_admin.py                 Admin LLM status / test / activate / reset / model listing.
 │
 ├── llm/
 │   ├── llm_open_router.py           OpenRouter API provider (default).
@@ -649,6 +651,18 @@ Health check for the agent service.
 | `POST /v1/teacher/create-quiz` | Legacy quiz creation — internally delegates to EducationAIAgent |
 | `GET /v1/teacher/classes` | Legacy teacher class list |
 
+### Admin: Live LLM
+
+SuperAdmin-only, called by the Backend's `/api/v1/admin/system/llm/*` (the /admin **AI System** tab).
+
+| Endpoint | Description |
+|---|---|
+| `GET /v1/admin/llm/status` | Live provider/model, source (`database` = admin panel, `env` = env default), who set it and when, recent switches, per-provider key-configured flags |
+| `POST /v1/admin/llm/test` | `{ provider?, model? }` — plain / JSON / MCQ-schema checks; empty body = live model; never changes anything. `400` unknown provider / key missing, `504` past `LLM_TEST_TIMEOUT` |
+| `POST /v1/admin/llm/active` | `{ provider, model, requested_by? }` — re-runs the checks; only if all pass, saves the choice and swaps the live client. `activated: false` = nothing changed; `409` switch running; `503` can't save |
+| `POST /v1/admin/llm/reset` | Back to the env default |
+| `GET /v1/admin/llm/models` | `?provider=&free_only=` — live listing (cached 10 min), curated fallback |
+
 ---
 
 ### Topic Sync
@@ -903,7 +917,9 @@ publish(message)                # Publish to the configured channel
 
 ## 10. LLM Providers
 
-All LLM providers are in `llm/`. The active provider is selected by `LLM_PROVIDER` env var.
+All LLM providers are in `llm/`. `LLM_PROVIDER` (+ that provider's model env var) is the **default**; a SuperAdmin can switch the live provider/model from /admin → AI System without a restart.
+
+**Live switching:** `get_llm_service()` returns one `SwitchableLLM` (`services/active_llm.py`) that forwards every call to the active provider client. Every service holds that wrapper, so a switch swaps the client inside it and the whole app follows instantly; in-flight calls finish on the old client. The choice is saved in MongoDB `llm_settings` (doc `_id = "active:<scope>"`, history in `llm_settings_history`) and read once at startup. Scope = `LLM_SETTINGS_SCOPE`, else `RENDER_SERVICE_ID`, else `local-<ENVIRONMENT>`. API keys stay in env only — a provider is usable only if its key is set. No cross-provider fallback.
 
 **Factory function:**
 ```python
@@ -998,7 +1014,7 @@ from services.shared import (
     get_mongo,        # → MongoDB instance
     get_qdrant,       # → QdrantDB instance (depends on get_embedding)
     get_topic_search, # → TopicSearch instance (depends on get_mongo, get_embedding)
-    get_llm_service,  # → LLMService instance
+    get_llm_service,  # → SwitchableLLM (live, swappable provider client)
     get_rag_system,   # → RAGSystem instance (depends on all above)
     get_redis,        # → RedisDB instance
 )
@@ -1079,7 +1095,9 @@ If combined chunk summaries exceed 12,000 chars, they are summarized again recur
 ### LLM Provider
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_PROVIDER` | `openrouter` | `openrouter`, `gemini`, `openai`, `anthropic` |
+| `LLM_PROVIDER` | `openrouter` | Default provider: `openrouter`, `gemini`, `openai`, `anthropic` (overridden by a choice saved from /admin → AI System) |
+| `LLM_TEST_TIMEOUT` | `90` | Cap (s) for admin LLM test / activate checks |
+| `LLM_SETTINGS_SCOPE` | — | Optional scope of the saved LLM choice (else `RENDER_SERVICE_ID`, else `local-<ENVIRONMENT>`) |
 | `OPENROUTER_API_KEY` | — | Required when `LLM_PROVIDER=openrouter` |
 | `OPEN_ROUTER_MODEL` | `mistralai/ministral-8b-2512` | OpenRouter model |
 | `OPEN_ROUTER_MAX_TOKENS` | `4096` | Max tokens |

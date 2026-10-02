@@ -195,7 +195,7 @@ Create `ai-service/.env`:
 
 ```env
 # --- LLM Provider ---
-# Choose one: openrouter, openai, gemini, anthropic
+# Default provider (switchable live from /admin → AI System): openrouter, openai, gemini, anthropic
 LLM_PROVIDER=openrouter
 
 # --- Embedding ---
@@ -309,7 +309,9 @@ The app opens at **http://localhost:5173**.
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `LLM_PROVIDER` | Yes | — | `openrouter`, `openai`, `gemini`, or `anthropic` |
+| `LLM_PROVIDER` | Yes | — | **Default** LLM: `openrouter`, `openai`, `gemini`, or `anthropic`. A SuperAdmin can switch the live provider/model from /admin → AI System without a restart; this value is used whenever no choice is saved |
+| `LLM_TEST_TIMEOUT` | No | `90` | Cap in seconds for the AI System model test / activate checks |
+| `LLM_SETTINGS_SCOPE` | No | per deployment | Scope of the saved LLM choice (defaults to the deployment's service ID, else `local-<ENVIRONMENT>`), so local dev never changes a deployed service's model |
 | `EMBEDDING_PROVIDERS` | Yes | — | Comma-separated: `ollama`, `external`, `openai`, `google` |
 | `QDRANT_HOST` | Yes | — | Qdrant host (e.g. `http://localhost`) |
 | `QDRANT_PORT` | No | `6333` | Qdrant HTTP port |
@@ -322,6 +324,8 @@ The app opens at **http://localhost:5173**.
 | `GEMINI_API_KEY` | Conditional | — | Required if `LLM_PROVIDER=gemini` |
 | `ANTHROPIC_API_KEY` | Conditional | — | Required if `LLM_PROVIDER=anthropic` |
 | `OPENROUTER_API_KEY` | Conditional | — | Required if `LLM_PROVIDER=openrouter` |
+
+A provider only appears as usable in the AI System tab when its API key variable is set; keys are never stored in the database or shown in the UI.
 | `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL |
 
 ### Frontend (.env)

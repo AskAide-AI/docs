@@ -51,13 +51,13 @@ Roles are the Backend's `accountType` values (`src/shared/middleware/auth.js`). 
 | Teacher | Class dashboards, quizzes, question papers, AI assistant for quizzes, worksheets, notes and assignments |
 | Principal | School, section and teacher management, school-level dashboards |
 | Parent | Linked children's progress |
-| SuperAdmin | Curriculum and chapter PDF ingestion, user approval, feedback moderation, campaigns, platform metrics |
+| SuperAdmin | Curriculum and chapter PDF ingestion, user approval, feedback moderation, campaigns, platform metrics, live LLM selection (AI System tab) |
 
 ### 2.2 External systems
 
 | System | Used by | Purpose | Impact if unavailable |
 |---|---|---|---|
-| LLM provider (one per process, `LLM_PROVIDER`) | AI Service | Summaries, topic extraction, question generation, insights, teacher content | New questions, insights and AI assistant fail; practice on existing questions continues |
+| LLM provider (one live at a time: `LLM_PROVIDER` default, switchable by SuperAdmin from /admin → AI System without a restart) | AI Service | Summaries, topic extraction, question generation, insights, teacher content | New questions, insights and AI assistant fail; practice on existing questions continues |
 | Embedding providers (`EMBEDDING_PROVIDERS` fallback chain) | AI Service | Chunk, topic and query vectors | Falls through to the next provider; all failing blocks ingestion and retrieval |
 | Qdrant (Qdrant Cloud per code comments) | AI Service | Vector store for chapter chunks | Ingestion, generation and AI assistant fail |
 | MongoDB (Atlas per code comments) | Backend, AI Service | System of record | Platform down; Backend `/health` returns 503 |
@@ -381,7 +381,7 @@ Each service runs as a **single instance with a single process**, and both backe
 | Primary database | MongoDB via Mongoose (Backend) and pymongo (AI Service) |
 | Vector database | Qdrant, cosine distance, one collection |
 | AI framework | FastAPI with custom RAG pipeline (no orchestration framework) |
-| LLM | One provider per process: OpenRouter (default), OpenAI, Gemini or Anthropic |
+| LLM | One live provider/model at a time: OpenRouter (env default), OpenAI, Gemini or Anthropic; switchable at runtime from /admin → AI System |
 | Embeddings | Ordered fallback over Ollama, external HTTP endpoint, OpenAI, Google |
 | Email | SendGrid HTTPS API |
 | Background work | node-cron and in-process promises (Backend); asyncio tasks and threads (AI Service) |
@@ -396,7 +396,7 @@ Each service runs as a **single instance with a single process**, and both backe
 | Backend and AI Service share one MongoDB | The AI Service can scope retrieval and build insights from curriculum and progress data without extra APIs | Schema coupling across repos; changes to shared collections need coordinated releases |
 | RAG over ingested chapter PDFs | AI output stays grounded in the NCERT text the student is studying | Content quality depends on ingestion; the vector index is the only copy of chapter text |
 | Generate questions on demand, persist them in a bank | Cost is paid once per question, not per student; the bank grows with demand | Background job orchestration and de-duplication are needed; a cold chapter shows a short "generating" wait |
-| One LLM provider per process, embedding fallback chain | Simple operations and predictable output format | An LLM provider outage stops generation until the provider is switched |
+| One live LLM provider (switchable at runtime), embedding fallback chain | Simple operations and predictable output format | No automatic LLM fallback: a provider outage stops generation until a SuperAdmin switches the live model (instant, no redeploy) |
 | Prerendered SPA rather than an SSR framework | Static hosting with SEO for public pages, no server to run | Public question previews come from a snapshot refreshed at build time (`npm run content`) |
 | In-process background work instead of a queue | No extra infrastructure on free-tier hosting | Single-instance constraint (section 9) |
 | Stateless access JWT with stored, rotating refresh tokens | No session store on the hot path; refresh tokens can be revoked | Access tokens stay valid until expiry after logout |

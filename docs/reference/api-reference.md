@@ -31,6 +31,7 @@
   - [AI Agent](#4-ai-agent)
   - [Topic Management](#5-topic-management)
   - [Health & Monitoring](#6-health--monitoring)
+  - [Admin LLM](#7-admin-llm)
 - [Error Codes](#error-codes)
 - [Rate Limits](#rate-limits)
 
@@ -2994,6 +2995,122 @@ Feedback sentiment insights.
 
 ---
 
+### 20. AI System (LLM)
+
+Base: `/api/v1/admin/system/llm/`
+
+All endpoints require **SuperAdmin** role. They back the **AI System** tab in `/admin` and proxy the AI Service's `/v1/admin/llm/*` (§7 of the AI Service API) with `x-api-key`. Unlike other AI proxies, the AI Service's `400` / `409` / `503` / `504` are passed through as-is instead of being mapped to `502`.
+
+Switching takes effect **instantly for every AI feature** — no restart or redeploy; requests already running finish on the old model. API keys stay in the AI Service's environment; a provider can only be used if its key is set there. The env default (`LLM_PROVIDER` + that provider's model variable) is used whenever no choice has been saved.
+
+---
+
+#### GET `/status`
+
+The live provider/model and where it came from.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "LLM status fetched",
+  "data": {
+    "provider": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "source": "database",
+    "updated_by": "admin@example.com",
+    "updated_at": "2026-10-02T09:30:00Z",
+    "previous": { "provider": "openrouter", "model": "meta-llama/llama-3.3-70b-instruct:free" },
+    "saved_choice_error": null,
+    "env_default": { "provider": "openrouter", "model": "meta-llama/llama-3.3-70b-instruct:free" },
+    "recent_changes": [
+      { "action": "activate", "from": { "...": "..." }, "to": { "...": "..." }, "requested_by": "admin@example.com", "at": "2026-10-02T09:30:00Z" }
+    ],
+    "providers": [
+      { "name": "openrouter", "key_configured": true, "configured_model": "meta-llama/llama-3.3-70b-instruct:free" },
+      { "name": "gemini", "key_configured": false, "configured_model": null }
+    ]
+  }
+}
+```
+
+`source` is `database` (chosen in the admin panel) or `env` (env default). `saved_choice_error` is set when a saved choice could not start (e.g. its key was removed), so the env default is live. Key values are never returned. Also includes `settings_scope`, `started_at`, `commit` and `error` (see `LlmStatus` in shared contracts).
+
+---
+
+#### GET `/models`
+
+Model suggestions for a provider.
+
+**Query:** `provider` (`openrouter` | `gemini` | `openai` | `anthropic`), `freeOnly` (`true` default; OpenRouter only)
+
+**Response (200):** `data` = `{ provider, source: "live" | "curated", models: [{ id, name, context_length, free }], error }`. Live listings are cached for 10 minutes; a curated list is returned when the key is missing or the listing fails.
+
+---
+
+#### POST `/test`
+
+Runs three checks (plain reply, JSON reply, MCQ question-schema reply) against a model. **Never changes anything.** An empty body tests the live model.
+
+**Rate limit:** 10 per minute.
+
+**Request:**
+```json
+{ "provider": "openrouter", "model": "openai/gpt-4o-mini" }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "All LLM checks passed",
+  "data": {
+    "ok": true,
+    "provider": "openrouter",
+    "model": "openai/gpt-4o-mini",
+    "total_ms": 6120,
+    "checks": [
+      { "name": "plain", "ok": true, "latency_ms": 1300, "sample": "..." },
+      { "name": "json", "ok": true, "latency_ms": 1900, "sample": "..." },
+      { "name": "question", "ok": true, "latency_ms": 2900, "sample": "..." }
+    ]
+  }
+}
+```
+
+**Errors:** `400` unknown provider or its key is not configured · `504` the checks took longer than the AI Service's cap (`LLM_TEST_TIMEOUT`, 90 s).
+
+---
+
+#### POST `/active`
+
+Makes `provider` + `model` the live model for every AI feature. The AI Service re-runs the three checks first and switches **only if all pass**; the choice is then saved and swapped in memory. The SuperAdmin's email is recorded as `requested_by`.
+
+**Rate limit:** 5 per 10 minutes (shared with `/reset`).
+
+**Request:**
+```json
+{ "provider": "openrouter", "model": "openai/gpt-4o-mini" }
+```
+
+**Response (200):** `data` = `{ activated, changed, test, status, error? }`. `activated: false` means the checks failed and **nothing changed** (`test` holds the failing checks); `changed: false` with `activated: true` means that model was already live.
+
+**Errors:** `400` unknown provider or key not configured · `409` another switch is already running · `503` the choice could not be saved (not switched) · `504` timed out (not switched).
+
+---
+
+#### POST `/reset`
+
+Deletes the saved choice and goes back to the env default.
+
+**Rate limit:** 5 per 10 minutes (shared with `/active`).
+
+**Response (200):** `data` = `{ activated, changed, test: null, status }`.
+
+**Errors:** `409` a switch is already running · `503` the saved choice could not be cleared.
+
+---
+
 ## AI Service API
 
 Base: `http://localhost:8000`
@@ -3647,6 +3764,58 @@ http_requests_total{method="POST",endpoint="/query"} 1520
 
 ---
 
+### 7. Admin LLM
+
+Live LLM switching. ✅ Called only by the Backend's SuperAdmin routes `/api/v1/admin/system/llm/*` (Backend §20), which add `requested_by`. Request/response types: `LlmStatus`, `LlmTestRequest`, `LlmTestResult`, `LlmActivateRequest`, `LlmSwitchResult`, `LlmModelList` in shared contracts.
+
+Every AI feature uses one shared, switchable LLM client, so a switch takes effect instantly with no restart; in-flight calls finish on the old client. The choice is saved in MongoDB `llm_settings` (scoped per deployment) and read once at startup; with none, `LLM_PROVIDER` + that provider's model variable is used. API keys stay in env only.
+
+---
+
+#### GET `/v1/admin/llm/status`
+
+Live provider/model, `source` (`database` / `env`), who set it and when, the previous choice, the env default, recent switches, start time, commit, and a per-provider `key_configured` flag (never the key).
+
+---
+
+#### POST `/v1/admin/llm/test`
+
+Plain / JSON / MCQ-schema checks. Empty body tests the live model. Never changes anything.
+
+**Request:** `{ "provider"?: "openrouter", "model"?: "openai/gpt-4o-mini" }`
+
+**Response (200):** `{ ok, provider, model, total_ms, checks: [{ name, ok, latency_ms, sample?, error?, skipped? }] }`
+
+**Errors:** `400` unknown provider or key not configured · `504` past `LLM_TEST_TIMEOUT` (90 s).
+
+---
+
+#### POST `/v1/admin/llm/active`
+
+Re-runs the three checks on the candidate; only if all pass, saves the choice then swaps the live client.
+
+**Request:** `{ "provider": "openrouter", "model": "openai/gpt-4o-mini", "requested_by": "admin@example.com" }`
+
+**Response (200):** `{ activated, changed, test, status, error? }` — `activated: false` = checks failed, nothing changed.
+
+**Errors:** `409` a switch is already running · `503` can't save the choice (not switched) · `504` timed out (not switched).
+
+---
+
+#### POST `/v1/admin/llm/reset`
+
+Deletes the saved choice and swaps back to the env default. **Request:** `{ "requested_by"?: "..." }` · **Response:** `LlmSwitchResult`.
+
+---
+
+#### GET `/v1/admin/llm/models`
+
+**Query:** `provider?`, `free_only?` (default `true`, OpenRouter only)
+
+**Response (200):** `{ provider, source: "live" | "curated", models: [{ id, name, context_length, free }], error }` — live listing cached 10 min; curated fallback when the key is missing or listing fails (`502` only if OpenRouter's public catalogue is down).
+
+---
+
 ## Error Codes
 
 ### Backend Error Responses
@@ -3698,6 +3867,8 @@ http_requests_total{method="POST",endpoint="/query"} 1520
 | AI generation (`/ai-assistant/*`) | 30 req | 1 hour |
 | File uploads (`/chapters/create-with-pdf`) | 10 req | 1 hour |
 | Quiz start | 5 req | 1 hour |
+| AI System model test (`/admin/system/llm/test`) | 10 req | 1 min |
+| AI System switch / reset (`/admin/system/llm/active`, `/reset`) | 5 req | 10 min |
 | General API | 100 req | 15 min |
 
 Rate limit headers returned:

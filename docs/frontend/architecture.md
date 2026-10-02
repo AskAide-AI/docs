@@ -46,7 +46,7 @@ Nested constants — `ENDPOINTS.AUTH.LOGIN`, `ENDPOINTS.STUDY.QUESTIONS`, etc.
 ### API Modules (`src/api/*.api.js`)
 Redux thunks that dispatch actions, show toasts, and track Clarity events:
 - `ai-assistant.api.js` — Teacher AI content generation
-- `admin.api.js` — School/teacher/student CRUD
+- `admin.api.js` — School/teacher/student CRUD, admin metrics, AI System (live LLM status/test/switch)
 - `teacher-dashboard.api.js` — Class analytics
 - `parent.api.js` — Child progress
 - `goal.api.js` — Daily goals

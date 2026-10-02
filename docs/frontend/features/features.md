@@ -253,6 +253,19 @@
 
 ---
 
+### AI System (Live LLM Switching)
+**Status:** ✅ Completed
+**Description:** SuperAdmin sees which LLM provider/model every AI feature is using (and whether it came from the admin panel or the env default), tests any provider + model with plain / JSON / MCQ checks side by side with the live one, and makes a passing model live instantly — no restart or redeploy. Also switch back, reset to env default, and change history. Only providers whose API key is set on the AI Service can be used; keys are never shown.
+**Pages:** /admin (AI System tab)
+**Components:**
+- `admin/system/AiSystemSettings.jsx`
+**API Dependencies:**
+- GET `/admin/system/llm/status`, GET `/admin/system/llm/models`
+- POST `/admin/system/llm/test`, POST `/admin/system/llm/active`, POST `/admin/system/llm/reset`
+**Added:** October 2026
+
+---
+
 ## Role-Based Dashboards
 
 ### Student Dashboard

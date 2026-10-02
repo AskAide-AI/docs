@@ -38,10 +38,20 @@ Common issues and solutions when working with the AskAideAI AI Service.
 ### LLM provider returns errors
 **Symptoms:** Question generation or summarization fails
 **Solutions:**
-1. Verify `LLM_PROVIDER` is set correctly (`openrouter`, `openai`, `gemini`, `anthropic`)
-2. Check the corresponding API key is set
+1. Check which model is actually live in /admin → AI System (a saved admin choice overrides `LLM_PROVIDER`); use **Test running model** to see which check fails
+2. Verify `LLM_PROVIDER` is set correctly (`openrouter`, `openai`, `gemini`, `anthropic`) and the corresponding API key is set
 3. Verify API key has sufficient quota
 4. Check AI Service logs for the specific error
+
+### AI System test or switch fails
+**Symptoms:** /admin → AI System shows an error on **Test** or **Make this the live model**
+**Solutions:**
+1. `400` — unknown provider, or that provider's API key env var is not set on the AI Service
+2. `409` — another switch is running; wait and retry
+3. `503` — MongoDB unavailable, so the choice couldn't be saved; nothing was switched
+4. `504` — the checks exceeded `LLM_TEST_TIMEOUT` (default 90 s); try a faster model or raise the cap
+5. `activated: false` — the candidate failed a check (shown per check); the live model is unchanged
+6. After a restart the saved choice is re-read; if its key was removed, the env default runs and the tab shows the saved-choice error
 
 ### LLM response is slow
 **Symptoms:** Generation takes >30 seconds

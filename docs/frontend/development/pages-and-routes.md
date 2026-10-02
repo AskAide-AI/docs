@@ -341,6 +341,7 @@
 - Chapter Upload
 - Relation View
 - Chapter-Topic View
+- AI System — view, test and switch the live LLM instantly (`/admin/system/llm/*`)
 
 ---
 

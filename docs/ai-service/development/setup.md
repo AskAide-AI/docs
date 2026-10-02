@@ -208,8 +208,10 @@ QDRANT_PORT=6333
 QDRANT_VECTOR_SIZE=384
 
 # LLM Provider
-LLM_PROVIDER=openrouter  # or: openai, gemini, anthropic
-OPENROUTER_API_KEY=sk_...
+LLM_PROVIDER=openrouter  # default only (or: openai, gemini, anthropic); a SuperAdmin can switch the live model from /admin → AI System
+OPENROUTER_API_KEY=sk_...  # a provider is only selectable if its key is set
+LLM_TEST_TIMEOUT=90      # cap (s) for admin model test / activate checks
+# LLM_SETTINGS_SCOPE=... # optional; scope of the saved LLM choice (default: per deployment / local-<ENVIRONMENT>)
 
 # Embeddings
 EMBEDDING_PROVIDERS=ollama,google

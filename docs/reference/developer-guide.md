@@ -299,6 +299,7 @@ To add a new LLM provider:
    ```
 2. Add the provider selection logic in `config.py` under `LLM_PROVIDER`.
 3. Update the provider factory in whichever service dispatches LLM calls.
+4. Register it in `PROVIDERS` in `services/llm_admin.py` (key and model env vars) so it can be tested and made live from /admin → AI System.
 
 ---
 

@@ -13,7 +13,7 @@ The Backend is the only server the browser talks to. The Frontend never calls th
 | Identity | Email/password and Google ID-token login, JWT access/refresh tokens, OTP email verification, password reset | `src/modules/auth/` |
 | Authorization | Role guards (`SuperAdmin`, `Principal`, `Teacher`, `Parent`, `Student`, `NormalUser`) and per-resource ownership checks | `src/shared/middleware/auth.js`, `src/shared/utils/access.js` |
 | System of record | MongoDB (Mongoose) for curriculum, question bank, practice sessions, answers, mastery, quizzes, schools, relationships, feedback, campaigns | `src/modules/*/models/`, `src/shared/models/` |
-| AI orchestration | Calls `AI_ENDPOINT` + `/v1/...` with `x-api-key` for PDF ingestion, question generation, learning insights and the teacher AI assistant | `content.service.js`, `questions.service.js`, `topicProgress.controller.js`, `ai-assistant.service.js` |
+| AI orchestration | Calls `AI_ENDPOINT` + `/v1/...` with `x-api-key` for PDF ingestion, question generation, learning insights, the teacher AI assistant and SuperAdmin live LLM switching | `content.service.js`, `questions.service.js`, `topicProgress.controller.js`, `ai-assistant.service.js`, `llmSystem.service.js` |
 | Question supply | Keeps a per-chapter question bank topped up (on-demand generation, prefetch, yield-based "content complete" detection) | `src/modules/questions/services/questions.service.js` |
 | Learning analytics | Topic mastery scoring, streaks, badges, dashboards for students, teachers, parents, principals and SuperAdmin | `src/modules/progress/`, `teacher/`, `parent/`, `principal/`, `supporting/` |
 | Document rendering | Headless Chromium (`puppeteer-core` + `@sparticuz/chromium`) for question-paper PDFs, session share-card PNGs, AI-assistant PDF export | `questionPaper.service.js`, `shareCard.service.js`, `ai-assistant.service.js` |
@@ -145,7 +145,7 @@ flowchart TD
 | 7 | Body parsing | `index.js` | JSON, URL-encoded (`extended: true`), text |
 | 8 | Root routes | `index.js` | `GET /ping` liveness, `GET /` platform probe, `GET /health` (Mongo `readyState`, 503 when not connected), `/api-docs` Swagger UI |
 | 9 | Module router | `routes/v1/index.js` | See section 7 |
-| 10 | Route limiter | module route files | Auth, feedback and inline-feedback routes only (see 10.5) |
+| 10 | Route limiter | module route files | Auth, feedback, inline-feedback and admin LLM routes only (see 10.5) |
 | 11 | Authentication | `src/shared/middleware/auth.js` | `auth` rejects with 401; `optionalAuth` attaches `req.user` when a valid token exists and never rejects |
 | 12 | Role guard | `src/shared/middleware/auth.js` | Checks `req.user.accountType`; every guard except `isSuperAdmin` also admits `SuperAdmin`. Some routers apply `router.use(auth, guard)` for all routes; a few routes use inline SuperAdmin checks |
 | 13 | Validation | `src/shared/middleware/validate.js` | Joi on `body`, `params`, `query` with `abortEarly: false`, `allowUnknown: true`, `stripUnknown: false`. 46 of 198 route definitions use it; the rest validate inside controllers or services |
@@ -268,16 +268,16 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 | Models owned | `ParentStudent` |
 | Collaborators | `User`, `Session`, `StudentTopicProgress`, `progress.service.js`, `getSubjectProgressData` |
 
-### 5.12 supporting (including SuperAdmin admin metrics)
+### 5.12 supporting (including SuperAdmin admin metrics and AI System)
 
 | Aspect | Detail |
 |---|---|
-| Responsibility | Leaderboards, public stats, API log inspection, public feedback inbox with admin triage, SuperAdmin overview dashboards and user approval toggle, daily achievement scheduler |
-| Base paths | `/leaderboard`, `/feedback`, `/logs`, `/stats`, `/admin/metrics` |
-| Key functions | `supporting.service.js`: `getGlobalLeaderboard` and `getSubjectLeaderboard` (top 10 by distinct correct questions), `submitFeedback` (honeypot, DB write, Sheets mirror), `listFeedback`, `updateFeedback`, `getLogs`, `getLogStats`, `deleteAllLogs`, `getPublicStats`. `adminMetrics.service.js`: `getOverview`, `getUserMetrics`, `getNewUsers`, `getUserDetail`, `updateUserApproval`, `getContentMetrics`, `getQuestionJobMetrics`, `getEngagementMetrics`, `getFeedbackInsights` |
+| Responsibility | Leaderboards, public stats, API log inspection, public feedback inbox with admin triage, SuperAdmin overview dashboards and user approval toggle, SuperAdmin live LLM control (AI System tab), daily achievement scheduler |
+| Base paths | `/leaderboard`, `/feedback`, `/logs`, `/stats`, `/admin/metrics`, `/admin/system/llm` |
+| Key functions | `supporting.service.js`: `getGlobalLeaderboard` and `getSubjectLeaderboard` (top 10 by distinct correct questions), `submitFeedback` (honeypot, DB write, Sheets mirror), `listFeedback`, `updateFeedback`, `getLogs`, `getLogStats`, `deleteAllLogs`, `getPublicStats`. `adminMetrics.service.js`: `getOverview`, `getUserMetrics`, `getNewUsers`, `getUserDetail`, `updateUserApproval`, `getContentMetrics`, `getQuestionJobMetrics`, `getEngagementMetrics`, `getFeedbackInsights`. `llmSystem.service.js`: `getStatus`, `listModels`, `testModel`, `activateModel`, `resetToEnvDefault` (proxies to the AI Service `/v1/admin/llm/*`, see 9) |
 | Models owned | `ApiLog`, `Feedback`, `Achievement` |
 | Collaborators | Almost every other module's models (read-only aggregations), `googleSheets.js`, `badge.service.js` |
-| Notes | Admin metrics run aggregations on every request; the `withCache` wrapper is a pass-through (`adminMetrics.service.js`). Time ranges are clamped to 7, 30 or 90 days, series spans to 366 days |
+| Notes | Admin metrics run aggregations on every request; the `withCache` wrapper is a pass-through (`adminMetrics.service.js`). Time ranges are clamped to 7, 30 or 90 days, series spans to 366 days. The LLM routes store nothing in the Backend: the live choice and its history live in the AI Service (MongoDB `llm_settings`); the Backend validates input (`llmSystem.validator.js`: known provider, model id pattern) and sends the SuperAdmin's email as `requested_by` |
 
 ### 5.13 ai-assistant
 
@@ -574,6 +574,7 @@ Conventions:
 | `/logs` | supporting | `auth` + SuperAdmin (inline check) | API log search, stats, purge |
 | `/stats` | supporting | Public | Public counters |
 | `/admin/metrics` | supporting | `auth` + `isSuperAdmin` (router level) | SuperAdmin dashboards, user approval toggle |
+| `/admin/system/llm` | supporting | `auth` + `isSuperAdmin` (router level); `POST /test` 10 per minute, `POST /active` and `/reset` 5 per 10 min | Live LLM status, model list, test, switch, reset to env default |
 | `/referral`, `/goals` | referral, goal | `auth` | Referral code, daily goal |
 | `/question-paper` | question-paper | `auth`; `POST /public/generate` public | Papers and PDFs |
 | `/ai-assistant` | ai-assistant | `auth` + `isTeacher` | AI agent proxy, SSE, conversations, PDF export |
@@ -928,6 +929,8 @@ All calls go to `process.env.AI_ENDPOINT` + `/v1/...`. `correlationHeaders()` (`
 | `ai-assistant.service.js` `getTeacherClasses` | `GET /v1/ai-agent/classes` | No | None | Blocking error |
 | `ai-assistant.service.js` `getGeneration` (used by `exportPDF`) | `GET /v1/ai-agent/generation/:id` | No | None | 404 `GENERATION_NOT_FOUND` on non-2xx |
 | `ai-assistant.service.js` conversations | `POST/GET /v1/conversations`, `GET/POST /v1/conversations/:id/messages`, `DELETE /v1/conversations/:id` | No | None | Blocking: 502 or 503 |
+| `llmSystem.service.js` `getStatus`, `listModels`, `resetToEnvDefault` | `GET /v1/admin/llm/status`, `GET /v1/admin/llm/models`, `POST /v1/admin/llm/reset` | Yes | 20 s, 30 s, 20 s | Blocking. Own `callAi` wrapper, not `proxyAiService`: AI `400`/`409`/`503`/`504` pass through with the AI `detail`; other non-2xx become 502 |
+| `llmSystem.service.js` `testModel`, `activateModel` | `POST /v1/admin/llm/test`, `POST /v1/admin/llm/active` | Yes | 100 s, 110 s (above the AI Service's 90 s `LLM_TEST_TIMEOUT`) | Same as above; `activated: false` comes back as 200 (nothing switched) |
 
 Request/response contracts are documented in `shared-contracts` and in [Integration](../reference/integration.md).
 
@@ -945,7 +948,7 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | `JWT_SECRET` | Signs access and refresh JWTs and unsubscribe HMACs | `auth.js`, `auth.service.js`, `unsubscribeToken.js` |
 | `ACCESS_TOKEN_EXPIRY`, `REFRESH_TOKEN_EXPIRY`, `MAX_REFRESH_TOKENS` | Token lifetimes (2h, 7d) and active refresh-token cap (5) | `auth.service.js` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_IOS` | Accepted Google ID-token audiences | `auth.service.js` |
-| `AI_ENDPOINT` | AI Service base URL (no path) | content, questions, progress, ai-assistant, `index.js` |
+| `AI_ENDPOINT` | AI Service base URL (no path) | content, questions, progress, ai-assistant, supporting (`llmSystem.service.js`), `index.js` |
 | `AI_SERVICE_API_KEY` | Sent as `x-api-key` | `requestContext.js` |
 | `SENDGRID_API_KEY`, `EMAIL` | SendGrid API key and verified sender address | `mailSender.js` |
 | `FRONTEND_URL` | Base for password-reset links (default local dev URL) | `auth.service.js` |
@@ -973,7 +976,7 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 
 | Role | Created by | Typical scope |
 |---|---|---|
-| `SuperAdmin` | Not creatable through the API | Admin metrics, logs, feedback inbox, suggestions moderation, campaigns, principal accounts |
+| `SuperAdmin` | Not creatable through the API | Admin metrics, logs, feedback inbox, suggestions moderation, campaigns, principal accounts, live LLM selection |
 | `Principal` | Self-signup (`approved: false`) or SuperAdmin via `/principals` | School dashboards, teacher accounts, schools and sections |
 | `Teacher` | Self-signup or principal via `/teacher` | Content upload, question generation, quizzes, papers, AI assistant, teacher dashboards |
 | `Parent` | Self-signup or teacher/principal via `/parent-students/bulk` | Parent dashboard for linked children |
@@ -1023,6 +1026,8 @@ All limiters use `express-rate-limit` with the default in-memory store, keyed by
 | `resetLimiter` | 15 min | 5 | `POST /authenticate/reset-password-token`, `POST /authenticate/reset-password` | `auth.routes.js` |
 | `feedbackLimiter` | 60 min | 5 | `POST /feedback` | `supporting/routes/feedback.routes.js` |
 | `reactionLimiter` | 1 min | 10 | `POST /inline-feedback` (after `auth`) | `feedback/routes/inlineFeedback.routes.js` |
+| `testLimiter` | 1 min | 10 | `POST /admin/system/llm/test` (after `auth` + `isSuperAdmin`) | `supporting/routes/llmSystem.routes.js` |
+| `switchLimiter` | 10 min | 5 | `POST /admin/system/llm/active`, `POST /admin/system/llm/reset` | `supporting/routes/llmSystem.routes.js` |
 
 ### 10.6 Email via SendGrid
 

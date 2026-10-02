@@ -369,6 +369,7 @@ All require `auth, isTeacher` (applied at router level).
 | API Logs | `/api/v1/logs` | `GET /`, `DELETE /`, `GET /stats` |
 | Stats | `/api/v1/stats` | `GET /public` |
 | Admin Metrics | `/api/v1/admin/metrics` | `GET /overview`, `GET /users`, `GET /content`, `GET /engagement`, `GET /question-jobs`, `GET /new-users`, `GET /feedback-insights` (all SuperAdmin) |
+| AI System (LLM) | `/api/v1/admin/system/llm` | `GET /status` → `LlmStatus`, `GET /models?provider=&freeOnly=` → `LlmModelList`, `POST /test` `LlmTestRequest` → `LlmTestResult`, `POST /active` `{ provider, model }` → `LlmSwitchResult` (switches the live model instantly if the checks pass), `POST /reset` → `LlmSwitchResult` (back to env default) (all SuperAdmin; `/test` 10/min, `/active`+`/reset` 5 per 10 min; proxies the ai-service `/v1/admin/llm/*`) |
 | Referral | `/api/v1/referral` | `GET /my-code` (auth), `POST /redeem/:code` (auth) |
 | Goals | `/api/v1/goals` | `GET /` (auth), `PUT /` (auth) |
 
@@ -440,6 +441,11 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 | GET | `/conversations/{id}/messages` | Path param | `{ messages: [] }` | Get conversation messages |
 | POST | `/conversations/{id}/messages` | `{ role, content }` | `{ message: {...} }` | Add message to conversation |
 | DELETE | `/conversations/{id}` | Path param | `{ deleted: true }` | Delete conversation |
+| GET | `/v1/admin/llm/status` | — | `LlmStatus` | Live provider/model and where it came from (`database` / `env`), env default, recent switches, start time, commit, per-provider key configured flag (never the key) |
+| POST | `/v1/admin/llm/test` | `LlmTestRequest` — `{ provider?, model? }` | `LlmTestResult` | Plain / JSON / question checks; empty body tests the live model. `400` unknown provider or key not configured, `504` past `LLM_TEST_TIMEOUT` (90s). Never changes anything |
+| POST | `/v1/admin/llm/active` | `LlmActivateRequest` — `{ provider, model, requested_by? }` | `LlmSwitchResult` | Re-runs the 3 checks on the candidate; only if all pass: save to MongoDB `llm_settings` (scoped per deployment) → swap the live client in memory. Instant, no restart; in-flight calls finish on the old model. `activated: false` = failed checks, nothing changed. `409` switch already running, `503` can't save |
+| POST | `/v1/admin/llm/reset` | `{ requested_by? }` | `LlmSwitchResult` | Delete the saved choice; go back to `LLM_PROVIDER` + its model env var |
+| GET | `/v1/admin/llm/models` | Query: `provider?`, `free_only?` (default true, OpenRouter only) | `LlmModelList` | Live provider listing cached 10 min; curated fallback when a key is missing or listing fails (`502` only if OpenRouter's public catalogue is down) |
 | GET | `/ping` | — | `{ status: "alive" }` | Health ping |
 | GET | `/health` | — | `{ status: "healthy" }` | Full health check |
 | GET | `/health/live` | — | `{ status: "alive" }` | Liveness probe |

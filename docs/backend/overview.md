@@ -59,7 +59,7 @@ Errors use `AppError` class with global error handler.
 | `goal` | Daily student goal management |
 | `referral` | Invite/referral system |
 | `feedback` | Inline feedback, behavioral prompts, suggestions |
-| `supporting` | Leaderboard, admin metrics, background jobs |
+| `supporting` | Leaderboard, admin metrics, AI System (live LLM switching), background jobs |
 
 ## AI Integration
 
@@ -76,3 +76,4 @@ The backend acts as a proxy between Frontend and AI Service:
 | `topicProgress.controller.js` | `GET /v1/ai-insights/teacher/class` | Teacher class insight |
 | `ai-assistant/` | `POST /v1/ai-agent` | Teacher content generation |
 | `ai-assistant/` | `POST /v1/ai-agent/stream` | Teacher content generation (SSE streaming) |
+| `llmSystem.service.js` | `GET /v1/admin/llm/status`, `/models`; `POST /v1/admin/llm/test`, `/active`, `/reset` | SuperAdmin AI System tab: test and switch the live LLM (instant, no redeploy) |

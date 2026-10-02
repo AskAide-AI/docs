@@ -109,7 +109,7 @@ src/
 ├── __tests__/             10 Vitest files (flat)
 ├── api/                   axios instance, endpoints, 16 *.api.js modules, barrel
 ├── components/
-│   ├── admin/             SuperAdmin tabs (CRUD, upload, feedback, campaigns)
+│   ├── admin/             SuperAdmin tabs (CRUD, upload, feedback, campaigns, system/ AI System)
 │   │   └── overview/      metrics panels, NewUsersPanel, UserDetailDrawer, DatePicker
 │   ├── ai-agent/          floating teacher AI chat widget (SSE streaming)
 │   ├── auth/              Login, Signup, ForgotPassword, UpdatePassword, route guards
@@ -330,9 +330,12 @@ flowchart TD
   FC --> FI["Messages: FeedbackInbox (status filters, paging)"]
   FC --> FIN["Insights: FeedbackInsights (reaction, NPS, suggestion aggregates)"]
   AD --> EC["Campaigns: EmailCampaigns (compose, target, iframe preview, send)"]
+  AD --> AIS["AI System: AiSystemSettings (live LLM status, test, switch, reset, history)"]
 ```
 
 `EmailCampaigns.jsx` builds its preview iframe as a deliberate mirror of the Backend campaign email template, so the two must be changed together (comment in `EmailCampaigns.jsx`).
+
+`admin/system/AiSystemSettings.jsx` (AI System tab) controls the AI Service's live LLM through `/admin/system/llm/*`. It shows the running provider/model, whether it came from the admin panel or the env default, who set it and when, and which providers have a key. **Test running model** runs the three checks (plain, JSON, MCQ schema). **Try a model** picks a provider and model (live suggestions, OpenRouter free-only filter, or any typed ID) and tests it side by side with the live model; **Make this the live model** is offered only for the exact provider + model that just passed, behind a confirm dialog, and switches every AI feature instantly. Also: switch back to the previous model, reset to env default, and the recent change history. Backend 400/409/503/504 messages (missing key, switch in progress, can't save, timeout) are shown as-is.
 
 ### 5.6 Other role dashboards
 
@@ -451,7 +454,7 @@ The Backend response envelope is `success`, `message`, `data`. Most module funct
 | `quiz.api.js` | `quizApi` | `/quiz/*` | Teacher CRUD, publish, close, clone, analytics, question-bank search. Student `start`, `answer`, `submit`, `result`, `history`. |
 | `questionPaper.api.js` | `questionPaperApi` | `/question-paper/*` | `generatePublicPaper` targets `/question-paper/public/generate` (lead magnet). PDF via blob. |
 | `ai-assistant.api.js` | `aiAssistantApi` | `/ai-assistant/*` | Generate, continue, tasks, health, export PDF, conversations CRUD. `streamRequest` uses `fetch` to `/ai-assistant/stream` (SSE, bypasses axios). |
-| `admin.api.js` | `adminApi` | `/school`, `/teacher`, `/principals`, `/student`, `/teacher-students`, `/classes`, `/subjects/class/*`, `/sections/*`, `/admin/metrics/*`, `/feedback/admin`, `/campaign/*` | `normalizeListResponse`, `cleanParams` |
+| `admin.api.js` | `adminApi` | `/school`, `/teacher`, `/principals`, `/student`, `/teacher-students`, `/classes`, `/subjects/class/*`, `/sections/*`, `/admin/metrics/*`, `/admin/system/llm/*`, `/feedback/admin`, `/campaign/*` | `normalizeListResponse`, `cleanParams`; `getLlmStatus`, `getLlmModels`, `testLlmModel`, `activateLlmModel`, `resetLlmModel` (AI System tab) |
 | `teacher-dashboard.api.js` | `teacherDashboardApi` (re-exports `mockTeacherData`) | `/teacher-dashboard/:teacherId/*` | |
 | `principal.api.js` | `principalApi` | `/principal/*` | School-scoped analytics |
 | `parent.api.js` | `parentDashboardApi`, `parentStudentApi` | `/parent-dashboard/*`, `/parent-students/*` | |

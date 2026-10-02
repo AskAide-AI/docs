@@ -666,6 +666,11 @@ This document outlines the Question and Session API endpoints available in the a
 - **Method**: POST
 - **Request Body**: `{ "type": "...", "message": "..." }`
 
+#### AI System (SuperAdmin)
+- **URL**: `/api/v1/admin/system/llm/{status,models,test,active,reset}`
+- **Methods**: `GET /status`, `GET /models?provider=&freeOnly=`, `POST /test` `{ provider?, model? }`, `POST /active` `{ provider, model }`, `POST /reset`
+- **Description**: Shows, tests and switches the AI Service's live LLM (instant, no restart). Proxies the AI Service `/v1/admin/llm/*`. See [API Reference](../../reference/api-reference.md#20-ai-system-llm).
+
 ## New Models (Added)
 
 ### StudentTopicProgress Model
