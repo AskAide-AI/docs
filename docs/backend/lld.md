@@ -775,11 +775,10 @@ sequenceDiagram
     FE->>BE: POST /sessions (classId, subject, chapter, chapterId, questionType, difficulty)
     BE->>DB: user.class check for school-affiliated students (403)
     BE->>DB: ChapterTopics count (400 CHAPTER_NOT_STARTABLE)
-    BE->>DB: Question count for chapterId, type, difficulty (400 NO_QUESTIONS_AVAILABLE)
-    BE->>DB: Session.create with userId from JWT
+    BE->>DB: Session.create with userId from JWT (an empty question bank does not block)
     BE-->>FE: 201 session
     loop practice
-        FE->>BE: GET /questions/batch/... (flow 8.3)
+        FE->>BE: GET /questions/batch/... (flow 8.3, starts on-demand generation if the bank is empty)
         FE->>BE: POST /user-answers/batch (1 to 10 answers)
         BE->>DB: UserAnswer.insertMany
         BE-->>FE: 201
