@@ -144,9 +144,9 @@ const signupSchema = z.object({
 ```
 
 > **Live requirements checklist:** `Signup.jsx` renders a below-field checklist (8+ chars,
-> uppercase, lowercase, number, symbol) that ticks each rule green as it is met, alongside the
-> existing strength meter. The enforced rule is min 8 / max 128 chars with all four character
-> classes (`/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/`).
+> a letter, a number) that ticks each rule green as it is met, alongside the existing strength
+> meter. The enforced rule is min 8 / max 128 chars with at least one letter and one number
+> (`/^(?=.*[A-Za-z])(?=.*\d)/`), relaxed from the earlier upper/lower/digit/symbol rule.
 
 ### Profile Update Schema
 ```javascript

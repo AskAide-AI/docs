@@ -169,7 +169,7 @@ Register a new user.
 
 **Password requirements:**
 - Minimum 8 characters
-- Must include uppercase, lowercase, number, and special character (`!@#$%^&*`)
+- Must include at least one letter and one number (any other characters allowed)
 
 **Response (201):**
 ```json
@@ -195,7 +195,7 @@ Change password for logged-in user.
 }
 ```
 
-**Password requirements** (same as signup): minimum 8 characters, must include uppercase, lowercase, number, and special character.
+**Password requirements** (same as signup): minimum 8 characters, with at least one letter and one number.
 
 **Response (200):**
 ```json
@@ -244,7 +244,7 @@ Reset password with token from email.
 }
 ```
 
-**Password requirements** (same as signup): minimum 8 characters, must include uppercase, lowercase, number, and special character.
+**Password requirements** (same as signup): minimum 8 characters, with at least one letter and one number.
 
 **Response (200):**
 ```json

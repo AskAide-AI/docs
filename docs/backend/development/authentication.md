@@ -164,7 +164,7 @@ JWT is accepted from **any** of:
 
 ### Password Requirements
 - Minimum 8 characters
-- Must include uppercase, lowercase, number, and special character (`!@#$%^&*`)
+- Must include at least one letter and one number (any other characters allowed)
 
 ### Password Field Behavior
 - `password` has `select: false` — must use `.select('+password')` to read
