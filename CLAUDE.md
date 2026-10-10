@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+> Reality-First: for EVERY feature/enhancement/bugfix, fill the 5-step Reality Check from root `../REALITY_FIRST.md` in chat and get user's YES before any code.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What This Repo Is

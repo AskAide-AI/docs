@@ -1,5 +1,7 @@
 # Docs — AskAide AI
 
+> Reality-First: for EVERY feature/enhancement/bugfix, fill `../REALITY_FIRST.md` 5-step block in chat and get user's YES before any code. See root `AGENTS.md` #5.
+
 ## What This Repo Is
 
 `askaide-docs/` is the **public documentation website**, built with [Docusaurus](https://docusaurus.io/). It is a static site — no application logic, no access to the product database or backend. Content lives in `docs/`; the built output goes to `build/`.
