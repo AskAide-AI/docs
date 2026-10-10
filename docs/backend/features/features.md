@@ -6,7 +6,7 @@
 
 ## User Authentication
 **Status:** ✅ Completed  
-**Description:** Users can register (students, teachers, parents and principals), log in with email/password or Google, verify their email with an OTP, and stay signed in with JWT access tokens and single-use refresh tokens. Teachers can sign up on their own, by email or Google. Signup accepts an invite code and first-touch attribution details.  
+**Description:** Students and teachers can register themselves (principal accounts are created by an admin, parents are linked through the parent module), log in with email/password or Google, verify their email with an OTP, and stay signed in with JWT access tokens and single-use refresh tokens. Teachers can sign up on their own, by email or Google. Signup accepts an invite code and first-touch attribution details.  
 **Endpoints:**
 - `POST /api/v1/authenticate/signup` - User registration
 - `POST /api/v1/authenticate/login` - Email/password login

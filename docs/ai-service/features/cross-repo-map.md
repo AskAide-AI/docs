@@ -180,7 +180,7 @@ Background (_startBackgroundGeneration → _generateQuestionsBackground)
 ### AI Insights Pipeline
 ```
 Frontend requests insights
-  → Backend GET /topic-progress/ai-insights/userid/:userId/chapter/:chapterId
+  → Backend GET /topic-progress/ai-insights/chapter/:chapterId (user from the token)
     → Backend proxies to AI Service GET /v1/ai-insights/chapter?chapter_id=...&user_id=...
       → AI Service fetches StudentTopicProgress from MongoDB
       → AI Service aggregates by topic, identifies gaps

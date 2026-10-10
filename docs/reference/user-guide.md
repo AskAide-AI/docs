@@ -35,7 +35,6 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
 - [Parent Guide](#parent-guide)
   - [Login & Dashboard](#parent-login--dashboard)
   - [Child Progress](#child-progress)
-  - [Notification Preferences](#notification-preferences)
 - [Admin Guide](#admin-guide)
   - [School Management](#school-management)
   - [Teacher Management](#teacher-management)
@@ -179,37 +178,37 @@ Quizzes assigned by your teachers appear here.
 
 #### Viewing Assigned Quizzes
 
-1. Click **Quizzes** in the sidebar
-2. You'll see a list of quizzes with status:
-   - 🟢 **Available** — Ready to attempt
-   - 🟡 **In Progress** — Started but not submitted
-   - 🔴 **Upcoming** — Not yet released by teacher
-   - ⚪ **Completed** — Already attempted
+1. Click **Quizzes** in the sidebar (on phones it's the **Quizzes** tab in the bottom bar)
+2. You'll see only quizzes your teachers have published for your class and subject. Each card shows one status:
+   - **Available** — Ready to attempt
+   - **In Progress** — Started but not submitted
+   - **Completed** — You have submitted at least one attempt (your best score is shown)
+   - **Expired** — The deadline passed before you attempted it
+3. A quiz due within a day shows **Due today!** or **Due tomorrow** instead
+4. The counters at the top show how many quizzes are Available, In Progress and Completed. You can search by title and filter by status
 
 > **PLACEHOLDER: `[Screenshot of quiz list with status badges]`**
 
 #### Taking a Quiz
 
-1. Click on an available quiz
-2. Read the instructions (time limit, number of questions, marking scheme)
-3. Click **Start Quiz**
-4. Answer questions — navigate freely between questions
-5. Click **Submit** when done (or it auto-submits when the timer runs out)
+1. Click **Start Quiz** on an available quiz (or **Resume Quiz** on one you already started)
+2. Answer questions — navigate freely between questions
+3. Click **Submit** when done (or it auto-submits when the timer runs out)
+
+If the teacher allows more than one attempt, a completed quiz shows **Results** and **Retry**. When no attempts are left, it shows **View Results**, or says the deadline has passed.
 
 #### Viewing Quiz Results
 
 After submission:
-- Score and percentage
-- Correct/incorrect breakdown
-- Time taken vs. time allowed
-- Question-by-question review with explanations
-- Class ranking (if shared by teacher)
+- Score and percentage, and whether you passed (the teacher sets the pass mark, 50% by default)
+- Number of correct answers and the time you spent
+- Question-by-question review with the correct answers and explanations. Your teacher decides when answers are shown: right after you submit, after the deadline, or never
 
 #### Quiz History
 
-- Access all past quizzes under the **History** tab
-- Filter by subject, date, or score
-- Review any past quiz in detail
+- The **Quiz History** page (`/quiz/history`) lists your submitted attempts, newest first
+- Search by quiz title
+- Open any attempt to see its result again
 
 ---
 
@@ -389,23 +388,24 @@ Until you enter the code, nothing changes on your account. If the code expired o
 
 #### Public Profile
 
-- Other students can view your public profile
-- Shows your badges, streak, and mastery (no sensitive data)
-- Toggle visibility in **Settings**
+- Anyone with the link to your public profile can open it
+- Shows your name, picture, current and best streak, questions practised, accuracy and number of subjects (no email or other private details)
+- There is no setting to hide it
 
 ---
 
 ### Settings
 
-Access via **Profile → Settings** (gear icon).
+Open **Settings** from the **Account** section of the sidebar (on phones, from the **Menu** tab).
 
-| Setting | Options |
-|---------|---------|
-| **Theme** | Dark mode / Light mode |
-| **Sound Effects** | On / Off (for correct/incorrect answers) |
-| **Notifications** | Email alerts, daily reminders |
-| **Language** | English (more languages coming soon) |
-| **Public Profile** | Show / Hide |
+| Section | What you can do |
+|---------|-----------------|
+| **Account** | See your name, email and account type; **View Profile** opens your Profile |
+| **Appearance** | Choose **Light** or **Dark** theme |
+| **Sound Effects** | Turn sounds on or off, and play a test sound |
+| **Account Actions** | **Sign Out** |
+
+Theme and sound choices are saved on the device you set them on.
 
 > **PLACEHOLDER: `[Screenshot of settings page]`**
 
@@ -651,73 +651,49 @@ Monitor how your students are performing.
 ### Parent Login & Dashboard
 
 **Logging In:**
-1. Use the invite link from your school (or the student's "Invite Parent" feature)
-2. Link your account to your child's profile
-3. You'll land on the **Parent Dashboard**
+1. Your child's school creates your parent account with your email and links it to your child. Parents can't sign up or link a child themselves
+2. Sign in with that email. If you weren't given a password, use **Forgot password** on the login page to set one, or use **Continue with Google** with the same email
+3. Open **Parent** from the sidebar (on phones, the **Children** tab in the bottom bar)
 
 #### Dashboard Overview
 
-Your dashboard shows an overview of **each linked child**:
+If more than one child is linked to you, pick a child from the selector at the top. It lists each child's name, class, your relationship and their current streak, and marks the primary child, who is shown first.
 
-| Per Child | What It Shows |
-|-----------|---------------|
-| **Name & Class** | Child's basic info |
-| **Current Streak** | Consecutive study days |
-| **Study Time Today** | Minutes studied today |
-| **Accuracy** | Average question accuracy |
-| **Last Active** | When they last used the platform |
+For the selected child, the dashboard shows:
+
+| Card | What It Shows |
+|------|---------------|
+| **Header** | Child's name and class, and their streak |
+| **Study Time** | Minutes studied this week |
+| **Questions** | Total questions practised |
+| **Accuracy** | Overall accuracy |
+| **Subjects** | Number of subjects practised |
+
+If no child is linked yet, the page says so and asks you to contact your school administrator. Use **Refresh** after the school has linked your account.
 
 > **PLACEHOLDER: `[Screenshot of parent dashboard with child cards]`**
-
-#### Linking a Child
-
-1. Go to **Profile → Link Child**
-2. Enter the **child's invite code** (found in their profile under "Invite Parent")
-3. Confirm the link
-4. The child appears on your dashboard
 
 ---
 
 ### Child Progress
 
-Click on any child's card to view detailed progress.
+The same page, below the cards, shows the selected child's progress.
 
-#### Subject-Level Progress
+#### Subject Progress
 
-- Mastery percentage per subject
-- Breakdown by topic (Weak / Learning / Practicing / Mastered)
-- Trend over time (improving, stable, declining)
+- Accuracy per subject, with a coloured bar
+- Number of questions practised in each subject
 
-#### Weak Topics
+#### Today's Snapshot
 
-- List of topics marked as **WEAK** or **LEARNING**
-- Suggested action: encourage more practice sessions
+- Questions answered, accuracy and time spent today
+- Whether your child has practised today
 
 #### Recent Activity
 
-- Last 10 study sessions and quizzes
-- Accuracy and time spent per session
+- Your child's last 5 practice sessions: chapter, date and time, and score (with accuracy)
 
 > **PLACEHOLDER: `[Screenshot of child progress detail page]`**
-
----
-
-### Notification Preferences
-
-Configure what updates you receive.
-
-Go to **Profile → Notification Preferences**:
-
-| Notification | Frequency | Description |
-|--------------|-----------|-------------|
-| **Weekly Report** | Weekly (e.g., Sunday) | Summary of child's weekly activity and progress |
-| **Daily Activity** | Daily | What your child studied that day |
-| **Achievement Alert** | Instant | When your child earns a badge or milestone |
-| **Low Performance Alert** | Instant | When accuracy drops below a threshold (e.g., `<50%`) |
-
-Toggle each notification on/off individually.
-
-> **PLACEHOLDER: `[Screenshot of notification preferences]`**
 
 ---
 

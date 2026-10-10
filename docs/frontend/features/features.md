@@ -144,7 +144,7 @@
 - `ChapterList.jsx`
 - `ChapterDetailView.jsx`
 **API Dependencies:** 
-- GET `/topic-progress/progress/:userId/chapter/:chapterId`
+- GET `/topic-progress/progress/subject/:subjectId` (the signed-in user's progress; chapters and topics are inside it)
 **Added:** December 2025
 
 ---

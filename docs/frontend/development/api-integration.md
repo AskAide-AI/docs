@@ -129,10 +129,10 @@ Calls axios can't make (the teacher AI stream, PDF downloads) use `authorizedFet
 | Sessions | `/sessions/:sessionId/end` | End session (PATCH) |
 | Sessions | `/sessions/last-incomplete/:userId` | Get last incomplete session |
 | Answers | `/user-answers/batch` | Submit answers. The study screen sends one answer per call, as soon as it is given. |
-| Progress | `/topic-progress/progress/:userId/subject/:subjectId` | Subject progress |
-| Progress | `/topic-progress/progress/:userId/chapter/:chapterId` | Chapter progress |
-| Progress | `/topic-progress/ai-insights/userid/:userId/chapter/:chapterId` | AI chapter insights |
-| Progress | `/topic-progress/ai-insights/userid/:userId/subject/:subjectId` | AI subject insights |
+| Progress | `/topic-progress/progress/subject/:subjectId` | Subject progress (signed-in user) |
+| Progress | `/topic-progress/ai-insights/chapter/:chapterId` | AI chapter insights |
+| Progress | `/topic-progress/ai-insights/subject/:subjectId` | AI subject insights |
+| Progress | `/topic-progress/mastery-summary` | Mastery overview |
 | Quiz | `/quiz` | Create quiz |
 | Quiz | `/quiz/:quizId` | Get/update/delete quiz |
 | Quiz | `/quiz/teacher/:teacherId` | List teacher's quizzes |

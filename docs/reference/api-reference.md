@@ -32,6 +32,7 @@
   - [Challenges](#21-challenges)
   - [Teacher Class Links](#22-teacher-class-links)
   - [Notifications](#23-notifications)
+  - [Health](#24-health)
 - [AI Service API (`/`)](#ai-service-api)
   - [Document Management](#1-document-management)
   - [Search & RAG](#2-search--rag)
@@ -74,7 +75,7 @@ All Backend endpoints return responses wrapped in:
 }
 ```
 
-Errors use `{ "success": false, "message": "...", "code": "ERROR_CODE" }` (see [Error Response Format](#error-response-format)). Exceptions: `POST /authenticate/login`, `/signup`, `/google` and `/refresh` return `tokens` and `user` at the top level instead of under `data`, and the leaderboard endpoints return `{ success, data }` without a `message`.
+Errors use `{ "success": false, "message": "...", "code": "ERROR_CODE" }` (see [Error Response Format](#error-response-format)). Exceptions: `POST /authenticate/login`, `/signup`, `/google` and `/refresh` return `tokens` and `user` at the top level instead of under `data`, the leaderboard endpoints return `{ success, data }` without a `message`, and the [Quiz](#9-quiz), [Question Paper](#12-question-paper) and API log endpoints build their own bodies (some without `message`; question paper history puts `pagination` next to `data`).
 
 ---
 
@@ -149,32 +150,6 @@ Login with username (or email) and password.
 
 ---
 
-#### GET `/health`
-
-Backend health check (excluded from rate limiting).
-
-**Response (200):**
-```json
-{
-  "status": "healthy",
-  "server": "ok",
-  "database": "ok",
-  "timestamp": "2026-06-29T12:00:00.000Z"
-}
-```
-
-**Response (503):**
-```json
-{
-  "status": "degraded",
-  "server": "ok",
-  "database": "disconnected",
-  "timestamp": "2026-06-29T12:00:00.000Z"
-}
-```
-
----
-
 #### POST `/signup`
 
 Register a new user. The new account is signed in straight away (tokens are returned).
@@ -208,7 +183,7 @@ Register a new user. The new account is signed in straight away (tokens are retu
 | `email` | Yes | Valid email, unique |
 | `password` | Yes | 8–128 characters, see requirements below |
 | `confirmPassword` | Yes | Must equal `password` |
-| `accountType` | Send it | `Student`, `Teacher` (teacher self-signup), `Parent` or `Principal` (Principal accounts wait for approval). Optional in request validation, but the account has no default type, so a signup without it fails |
+| `accountType` | No | `Student` (default) or `Teacher` (teacher self-signup). Any other value is rejected with `400` "Account type must be Student or Teacher". Principal accounts are created by an admin and linked to a school; parents are linked through the parent module |
 | `contactNumber` | No | 10–15 characters: digits, spaces, `-`, optional leading `+` |
 | `referralCode` | No | A friend's invite code (max 10 chars). Credits the new account to that friend |
 | `acquisition` | No | First-touch attribution (`UserAcquisition`): `source` (`referral` \| `challenge` \| `class` \| `organic`), `ref`, `utmSource`, `utmMedium`, `utmCampaign`, `landingPath`, `firstSeenAt`. All optional |
@@ -233,7 +208,7 @@ Register a new user. The new account is signed in straight away (tokens are retu
 
 `referral` is `null` when no `referralCode` was sent. A bad or stale code **never fails signup**: it comes back as `{ "attributed": false, "reason": "INVALID_CODE" }` (other reasons: `MISSING`, `SELF`, `USER_NOT_FOUND`, `NOT_NEW`, `ALREADY_REFERRED`).
 
-**Errors:** 400 (validation failed, `USERNAME_TAKEN`, `EMAIL_TAKEN`), 429 (too many attempts)
+**Errors:** 400 (validation failed, `INVALID_ACCOUNT_TYPE`, `USERNAME_TAKEN`, `EMAIL_TAKEN`), 429 (too many attempts)
 
 ---
 
@@ -1349,135 +1324,153 @@ Get all answers for a user (across sessions).
 
 Base: `/api/v1/` (routes mounted at `/topic-progress`, `/sessions`, `/user-answers`, `/progress`, `/streaks`, `/daily-challenge`, `/session-feedback`, `/badges` — no single `/progress` prefix)
 
+The `/topic-progress` endpoints always report on the **signed-in user** (taken from the token), so they have no `userId` in the path. Mastery scores are between 0 and 1.
+
 ---
 
-#### GET `/topic-progress/progress/:userId/chapter/:chapterId`
+#### GET `/topic-progress/progress/chapter/:chapterId`
 
-Get topic-level progress for a specific chapter.
+Topic-level progress in one chapter.
 
-**Params:** `userId`, `chapterId`
+**Params:** `chapterId`
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "topicId": "64t1...",
-      "topicName": "Natural Numbers",
-      "totalAttempts": 15,
-      "correctAttempts": 12,
-      "accuracy": 80,
-      "mastery": "proficient"
-    }
-  ]
-}
-```
-
----
-
-#### GET `/topic-progress/progress/:userId/subject/:subjectId`
-
-Get topic-level progress for an entire subject.
-
-**Params:** `userId`, `subjectId`
-
-**Response (200):**
-```json
-{
-  "success": true,
+  "message": null,
   "data": {
-    "chapters": [
+    "chapterId": "64c1a2b3c4d5e6f7a8b9c0d4",
+    "totalTopics": 6,
+    "coverage": { "attempted": 4, "unattempted": 2, "percentage": 67 },
+    "mastery": { "averageScore": 0.62, "status": "GOOD" },
+    "topicBreakdown": { "unattempted": 2, "weak": 1, "learning": 1, "practicing": 1, "mastered": 1 },
+    "topics": [
       {
-        "chapterId": "64c1...",
-        "chapterName": "Number System",
-        "topics": [
-          {
-            "topicId": "64t1...",
-            "topicName": "Natural Numbers",
-            "accuracy": 80,
-            "mastery": "proficient"
-          }
-        ]
-      }
+        "topicId": "64t1a2b3c4d5e6f7a8b9c0d1",
+        "topicName": "Natural Numbers",
+        "state": "MASTERED",
+        "masteryScore": 0.86,
+        "hardAttempted": true,
+        "lastPracticedAt": "2026-10-08T09:12:00.000Z"
+      },
+      { "topicId": "64t2a2b3c4d5e6f7a8b9c0d2", "topicName": "Integers", "state": "UNATTEMPTED" }
     ],
-    "overallAccuracy": 75
+    "isStartable": true
   }
 }
 ```
 
+- `mastery.status`: `WEAK` (below 0.4), `NEEDS_REVISION` (below 0.6), `GOOD` (below 0.8) or `STRONG`
+- Topic `state`: `WEAK`, `LEARNING`, `PRACTICING`, `MASTERED`, or `UNATTEMPTED` (then only `topicId` and `topicName` are sent). `hardAttempted` is `true` once the student has tried a Hard question on that topic
+- `isStartable` is `true` once the chapter has topics and its PDF has finished indexing
+
 ---
 
-#### GET `/topic-progress/ai-insights/userid/:userId/chapter/:chapterId`
+#### GET `/topic-progress/progress/subject/:subjectId`
 
-Get AI-generated insights for a chapter.
+Progress across every active chapter of a subject.
 
-**Params:** `userId`, `chapterId`
+**Params:** `subjectId`
 
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": null,
   "data": {
-    "summary": "You have a strong grasp of Number System fundamentals...",
-    "strengths": ["Natural Numbers", "Whole Numbers"],
-    "weaknesses": ["Integers"],
-    "recommendations": [
-      "Practice more integer operations",
-      "Review negative number concepts"
+    "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
+    "subjectCoverage": 35,
+    "subjectMastery": 0.41,
+    "chapterBreakdown": { "not_started": 8, "weak": 1, "needs_revision": 2, "good": 1, "strong": 0 },
+    "chaptersStarted": 4,
+    "chaptersWithContent": 10,
+    "totalChapters": 12,
+    "chapters": [
+      {
+        "chapterId": "64c1a2b3c4d5e6f7a8b9c0d4",
+        "name": "Number Systems",
+        "order": 1,
+        "status": "GOOD",
+        "totalTopics": 6,
+        "attemptedTopics": 4,
+        "masteryScore": 0.62,
+        "coveragePercentage": 67,
+        "topics": [ "...same items as the chapter endpoint, without hardAttempted..." ],
+        "isStartable": true
+      }
     ]
   }
 }
 ```
 
+A chapter's `status` is `NOT_STARTED` until a topic is attempted, then one of the chapter statuses above.
+
 ---
 
-#### GET `/topic-progress/ai-insights/userid/:userId/subject/:subjectId`
+#### GET `/topic-progress/ai-insights/chapter/:chapterId`
 
-Get AI-generated insights for an entire subject.
+AI-generated insights on one chapter. The Backend calls the AI Service `GET /v1/ai-insights/chapter` with the signed-in user's id and returns its response unchanged in `data` (see [AI Insights](#3-ai-insights)). `message` is `null`.
 
-**Params:** `userId`, `subjectId`
+**Params:** `chapterId`
+
+---
+
+#### GET `/topic-progress/ai-insights/subject/:subjectId`
+
+AI-generated insights on a whole subject, through the AI Service `GET /v1/ai-insights/subject`. Same envelope as the chapter insights.
+
+**Params:** `subjectId`
+
+---
+
+#### GET `/topic-progress/mastery-summary`
+
+Mastery counts and highlights across all of the signed-in user's topics.
 
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": "Mastery summary fetched",
   "data": {
-    "summary": "Overall strong performance in Mathematics...",
-    "chapterInsights": [ "..." ],
-    "overallRecommendations": [ "..." ]
+    "total": 42,
+    "counts": { "WEAK": 6, "LEARNING": 12, "PRACTICING": 14, "MASTERED": 10 },
+    "weakestTopics": [
+      {
+        "topicName": "Integers",
+        "chapterName": "Number Systems",
+        "subjectName": "Mathematics",
+        "masteryState": "WEAK",
+        "masteryScore": 0.22,
+        "totalAttempts": 9
+      }
+    ],
+    "strongestTopics": [ "...same item shape..." ],
+    "recentlyImproved": [ "...same item shape, without totalAttempts..." ]
   }
 }
 ```
+
+Each list holds up to 5 topics. `recentlyImproved` lists topics updated in the last 7 days with mastery above 0.3.
 
 ---
 
-#### GET `/topic-progress/mastery-summary/:userId`
+#### GET `/topic-progress/teacher/class-insights`
 
-Get mastery summary across all subjects.
+AI insights on a teacher's class for one subject. The Backend calls the AI Service `GET /v1/ai-insights/teacher/class` with the signed-in teacher's id and returns its response unchanged in `data`.
 
-**Params:** `userId`
+**Auth:** Teacher role required.
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "totalTopics": 120,
-    "mastered": 45,
-    "proficient": 35,
-    "learning": 25,
-    "needsPractice": 15,
-    "overallMastery": 37.5
-  }
-}
-```
+**Query:** `?subjectId=64f3...` (required)
+
+**Errors:** 400 (missing `subjectId`)
 
 ---
 
 #### GET `/progress/user/:userId`
 
-Dashboard progress overview.
+Everything the student dashboard shows, in one call. The shape is large; the main fields are below.
 
 **Params:** `userId`
 
@@ -1485,17 +1478,29 @@ Dashboard progress overview.
 ```json
 {
   "success": true,
+  "message": "Progress fetched successfully",
   "data": {
-    "totalSessions": 48,
-    "totalQuestionsAnswered": 480,
-    "overallAccuracy": 78,
     "currentStreak": 5,
-    "weeklyActivity": [12, 8, 15, 10, 7, 0, 0],
-    "recentSessions": [ "..." ],
-    "topSubjects": ["Mathematics", "Science"]
+    "longestStreak": 12,
+    "streakData": { "...": "same shape as GET /streaks/:userId" },
+    "todayStats": { "questionsAnswered": 12, "correctAnswers": 9, "timeSpent": 540, "accuracy": 75 },
+    "lastStudiedChapter": {
+      "subject": "Mathematics",
+      "chapter": "Number Systems",
+      "chapterId": "64c1a2b3c4d5e6f7a8b9c0d4",
+      "studiedAt": "2026-10-09T16:40:00.000Z"
+    },
+    "subjects": [ "...per-subject question counts and accuracy by difficulty..." ],
+    "overallAccuracy": { "correctCount": 380, "totalCount": 480, "accuracyPercent": 79 },
+    "avgTime": { "averageTimeSpent": 42 },
+    "weeklyProgress": [ "..." ],
+    "chapterWiseProgress": [ "..." ],
+    "subjectWiseBestWorstChapter": [ "..." ]
   }
 }
 ```
+
+`lastStudiedChapter` is `null` before the first session.
 
 ---
 
@@ -1547,20 +1552,28 @@ Use a streak freeze to maintain streak for a missed day.
 ```json
 {
   "success": true,
+  "message": "Streak freeze activated! Your streak is protected for 1 missed day.",
   "data": {
-    "freezeCount": 1,
-    "remainingFreezes": 2
+    "currentStreak": 5,
+    "longestStreak": 12,
+    "lastPracticeDate": "2026-10-09",
+    "totalPracticeDays": 23,
+    "streakFreezes": { "available": 1, "total": 1, "bonus": 1, "resetsOn": "2026-10-12T18:30:00.000Z" },
+    "practiceDates": ["2026-10-05", "2026-10-06", "2026-10-09"],
+    "practicedToday": false
   }
 }
 ```
 
-**Errors:** 400 (no freezes remaining)
+`data` has the same shape as `GET /streaks/:userId`.
+
+**Errors:** 400 when no freeze is left ("No streak freezes available. Freezes reset every Monday.") or there is no streak to protect ("No active streak to protect."). These 400 responses keep the success body shape (`success: true`, the reason in `message`, the unchanged streak in `data`), so check the HTTP status.
 
 ---
 
 #### GET `/daily-challenge/:userId`
 
-Get today's daily challenge.
+Get today's daily challenge, creating it on the first call of the day (IST). It holds 5 questions from one of the user's weakest topics (`WEAK` or `LEARNING`), topped up with random questions when that topic has fewer than 5. With no weak topic, the names are `"Mixed"` / `"Mixed Topics"`. `difficulty` is `Easy`, `Medium` or `Hard`, from the topic's mastery.
 
 **Params:** `userId`
 
@@ -1568,68 +1581,82 @@ Get today's daily challenge.
 ```json
 {
   "success": true,
+  "message": "Daily challenge fetched successfully",
   "data": {
-    "_id": "64dc1...",
-    "title": "Speed Round: Algebra",
-    "description": "Answer 10 questions in under 5 minutes",
-    "questions": 10,
-    "timeLimit": 300,
-    "difficulty": "medium",
-    "completed": false
+    "id": "64dc1a2b3c4d5e6f7a8b9c0d1",
+    "date": "2026-10-10",
+    "subjectName": "Mathematics",
+    "chapterName": "Number Systems",
+    "topicName": "Integers",
+    "difficulty": "Easy",
+    "totalQuestions": 5,
+    "completed": false,
+    "score": 0,
+    "questions": [
+      {
+        "_id": "64q1a2b3c4d5e6f7a8b9c0d1",
+        "questionText": "Which of these is a negative integer?",
+        "options": ["-3", "0", "3", "1/2"],
+        "difficulty": "Easy"
+      }
+    ]
   }
 }
 ```
+
+Before completion the questions carry no answers. Once completed, `questions` also include `correctAnswer` and `explanation`, and `answers` and `completedAt` are added.
 
 ---
 
 #### POST `/daily-challenge/:userId/complete`
 
-Mark today's challenge as completed.
+Mark today's challenge as completed. `score` is the number of answers sent with `isCorrect: true`. Completing an already completed challenge returns the saved result unchanged.
 
 **Params:** `userId`
 
 **Request:**
 ```json
 {
-  "challengeId": "64dc1a2b3c4d5e6f7a8b9c0d1",
-  "score": 8,
-  "totalQuestions": 10
+  "answers": [
+    {
+      "questionId": "64q1a2b3c4d5e6f7a8b9c0d1",
+      "selectedOption": "A",
+      "selectedAnswer": "-3",
+      "isCorrect": true,
+      "timeSpent": 12
+    }
+  ]
 }
 ```
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "completed": true,
-    "score": 8,
-    "xpEarned": 150
-  }
-}
-```
+**Response (200):** `message` is "Daily challenge completed!" and `data` has the same shape as `GET /daily-challenge/:userId`, with `completed: true`, `score`, `completedAt`, `answers` and the full questions.
+
+**Errors:** 400 when `answers` is not an array (this response also keeps `success: true`; check the status). The call fails with 500 if today's challenge was never fetched.
 
 ---
 
 #### GET `/daily-challenge/:userId/history`
 
-Get challenge completion history.
+Get recent daily challenges, newest first.
 
 **Params:** `userId`
 
-**Query:** `?limit=30`
+**Query:** `?limit=7` (default 7)
 
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": "Challenge history fetched",
   "data": [
     {
-      "date": "2024-06-20",
-      "title": "Speed Round: Algebra",
-      "score": 8,
-      "totalQuestions": 10,
-      "completed": true
+      "date": "2026-10-10",
+      "completed": true,
+      "score": 4,
+      "totalQuestions": 5,
+      "subjectName": "Mathematics",
+      "chapterName": "Number Systems",
+      "topicName": "Integers"
     }
   ]
 }
@@ -1639,7 +1666,7 @@ Get challenge completion history.
 
 #### GET `/badges/:userId`
 
-Get all earned badges for a user.
+Get every badge, earned and locked.
 
 **Params:** `userId`
 
@@ -1647,50 +1674,62 @@ Get all earned badges for a user.
 ```json
 {
   "success": true,
+  "message": "Badges fetched successfully",
   "data": [
     {
-      "_id": "64b1...",
-      "name": "First Steps",
-      "description": "Complete your first session",
-      "icon": "star",
-      "earnedAt": "2024-01-20T10:00:00.000Z"
+      "badgeId": "first_session",
+      "title": "First Steps",
+      "description": "Complete your first practice session",
+      "icon": "🎯",
+      "earned": true,
+      "earnedAt": "2026-09-20T10:00:00.000Z"
     },
     {
-      "_id": "64b2...",
-      "name": "On Fire",
-      "description": "Maintain a 7-day streak",
-      "icon": "flame",
-      "earnedAt": "2024-06-15T08:30:00.000Z"
+      "badgeId": "streak_keeper",
+      "title": "Streak Starter",
+      "description": "Achieve a 7-day practice streak",
+      "icon": "🔥",
+      "earned": false,
+      "earnedAt": null
     }
   ]
 }
 ```
 
+There are 21 badges (practice, study time, streaks, time of day, subjects, challenges and invited friends). The list always contains all of them in the same order.
+
 ---
 
 #### POST `/badges/check`
 
-Check and award any newly earned badges.
+Check and award any newly earned badges. The session and quiz result screens call it, then show the new badges; the badges also go into the notification bell, already marked read.
 
 **Request:**
 ```json
 {
-  "userId": "64f1a2b3c4d5e6f7a8b9c0d1"
+  "userId": "64f1a2b3c4d5e6f7a8b9c0d1",
+  "sessionId": "64s1a2b3c4d5e6f7a8b9c0d1",
+  "score": 8,
+  "totalQuestions": 10
 }
 ```
+
+Only `userId` is required.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": {
-    "newBadges": [
-      { "name": "Century", "description": "Answer 100 questions" }
-    ],
-    "totalBadges": 12
-  }
+  "message": "Badge check completed",
+  "data": [
+    { "badgeId": "perfect_score", "title": "Perfect Score" }
+  ]
 }
 ```
+
+`data` lists only the badges awarded by this call (empty when none).
+
+**Errors:** 400 (missing `userId`)
 
 ---
 
@@ -1888,11 +1927,62 @@ Download the paper with `GET /question-paper/:paperId/pdf`.
 
 Base: `/api/v1/quiz/`
 
-Full lifecycle: create → publish → start → answer → submit → result
+Full lifecycle: create (draft) → add questions → publish → start → answer → submit → result
+
+**Auth:** every route needs a signed-in user; there is no role guard on the routes. Teacher operations only work on quizzes the signed-in user created, and creating a quiz (or searching the bank for one) needs a teacher–student link for that class and subject. Students only see published quizzes for the class and subject their teachers are linked to.
+
+Quiz `status`: `draft`, `published` or `closed`. Attempt `status`: `in_progress`, `completed` or `abandoned`.
+
+These responses are not built with `sendSuccess`: some have no `message`. Errors are `{ "success": false, "message": "...", "code": "..." }` (for example `NOT_FOUND`, `ACCESS_DENIED`, `QUIZ_PUBLISHED`).
+
+---
+
+#### GET `/questions/search` — Search Question Bank (Teacher)
+
+Find bank questions to add to a quiz.
+
+**Query:**
+
+| Param | Required | Notes |
+|-------|----------|-------|
+| `chapterIds` | Yes | Comma-separated chapter IDs |
+| `classId`, `subjectId` | Yes | The teacher must be linked to this class and subject |
+| `questionType` | No | `mcq` or `fillblanks` |
+| `difficulty` | No | `Easy`, `Medium` or `Hard` |
+| `search` | No | Text to find in the question |
+| `excludeQuizId` | No | Leave out questions already in this quiz |
+| `page`, `limit` | No | Defaults 1 and 20; `limit` max 50 |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "questions": [
+      {
+        "_id": "64q1a2b3c4d5e6f7a8b9c0d1",
+        "questionText": "What is 2 + 2?",
+        "options": ["3", "4", "5", "6"],
+        "correctAnswer": "4",
+        "explanation": "...",
+        "questionType": "mcq",
+        "difficulty": "Easy",
+        "chapterId": { "_id": "64c1a2b3c4d5e6f7a8b9c0d4", "name": "Number Systems" },
+        "createdAt": "2026-09-01T10:00:00.000Z"
+      }
+    ],
+    "pagination": { "page": 1, "limit": 20, "total": 57, "pages": 3 }
+  }
+}
+```
+
+**Errors:** 400 (`MISSING_FIELDS`, `INVALID_CHAPTERS`), 403 (`ACCESS_DENIED`)
 
 ---
 
 #### POST `/` — Create Quiz
+
+Creates a draft quiz with no questions.
 
 **Request:**
 ```json
@@ -1901,113 +1991,320 @@ Full lifecycle: create → publish → start → answer → submit → result
   "description": "Covers chapters 1-5",
   "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
   "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
-  "chapterIds": ["64c1...", "64c2...", "64c3..."],
-  "questionType": "MCQ",
-  "difficulty": "medium",
-  "timeLimit": 3600,
-  "totalQuestions": 20,
-  "createdBy": "64f1a2b3c4d5e6f7a8b9c0d1"
+  "chapterIds": ["64c1a2b3c4d5e6f7a8b9c0d4"],
+  "sectionIds": [],
+  "settings": {
+    "timeLimit": 30,
+    "shuffleQuestions": false,
+    "shuffleOptions": false,
+    "showAnswersAfter": "submission",
+    "allowedAttempts": 1,
+    "passingPercentage": 50,
+    "deadline": "2026-10-20T18:29:59.000Z"
+  }
 }
 ```
+
+`title`, `classId` and `subjectId` are required. `settings` is optional: `timeLimit` is in minutes (`null` = no limit), `showAnswersAfter` is `immediately`, `submission`, `deadline` or `never` (default `immediately`), `allowedAttempts` defaults to 1, `passingPercentage` to 50, `deadline` to none.
 
 **Response (201):**
 ```json
 {
   "success": true,
+  "message": "Quiz created successfully",
   "data": {
-    "_id": "64quiz1...",
-    "title": "Midterm Practice",
-    "status": "draft"
+    "quiz": {
+      "_id": "64qz1a2b3c4d5e6f7a8b9c0d1",
+      "title": "Midterm Practice",
+      "status": "draft",
+      "totalQuestions": 0,
+      "totalMarks": 0,
+      "settings": { "...": "as sent, with defaults filled in" },
+      "...": "..."
+    }
+  }
+}
+```
+
+**Errors:** 400 (`MISSING_FIELDS`), 403 (`ACCESS_DENIED`: not linked to this class/subject)
+
+---
+
+#### GET `/teacher/:teacherId` — List My Quizzes (Teacher)
+
+`:teacherId` must be the signed-in user (otherwise 403). Deleted quizzes are left out.
+
+**Query:** `?status=published&subjectId=...&classId=...&page=1&limit=10`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "quizzes": [ "...quiz documents, newest first, with classId, subjectId and chapterIds populated ({ _id, name })..." ],
+    "pagination": { "page": 1, "limit": 10, "total": 4, "pages": 1 }
   }
 }
 ```
 
 ---
 
-#### PUT `/:id/publish` — Publish Quiz
+#### GET `/:quizId` — Get Quiz
 
-Makes quiz available to students.
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": { "status": "published" }
-}
-```
-
----
-
-#### PUT `/:id/close` — Close Quiz
-
-Prevents new attempts.
+Returns the quiz and its questions. For a Teacher account the quiz must be their own.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": { "status": "closed" }
-}
-```
-
----
-
-#### POST `/:id/clone` — Clone Quiz
-
-Creates a copy of the quiz.
-
-**Response (201):**
-```json
-{
-  "success": true,
   "data": {
-    "_id": "64quiz2...",
-    "title": "Midterm Practice (Copy)",
-    "status": "draft"
-  }
-}
-```
-
----
-
-#### POST `/:id/start` — Start Quiz Attempt
-
-**Request:**
-```json
-{
-  "userId": "64f1a2b3c4d5e6f7a8b9c0d1"
-}
-```
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "attemptId": "64att1...",
-    "quizId": "64quiz1...",
+    "quiz": { "_id": "64qz1...", "title": "Midterm Practice", "classId": { "_id": "...", "name": "Class 7" }, "...": "..." },
     "questions": [
       {
-        "_id": "64q1...",
-        "question": "What is 2+2?",
-        "options": ["3", "4", "5", "6"]
+        "_id": "64qq1a2b3c4d5e6f7a8b9c0d1",
+        "questionId": { "_id": "64q1...", "questionText": "What is 2 + 2?", "options": ["3", "4", "5", "6"], "questionType": "mcq", "difficulty": "Easy" },
+        "order": 1,
+        "marks": 1,
+        "isCustom": false
       }
-    ],
-    "timeLimit": 3600,
-    "startedAt": "2024-06-20T14:00:00.000Z"
+    ]
   }
 }
 ```
 
+Each item's `_id` is the quiz-question ID used by the remove, reorder and answer endpoints. Custom questions have `isCustom: true`, `questionId: null` and the question in `customQuestion`.
+
 ---
 
-#### POST `/:id/answer` — Submit Single Answer
+#### PUT `/:quizId` — Update Quiz
+
+Draft quizzes only. Send any of `title`, `description`, `chapterIds`, `sectionIds`, `settings` (merged into the current settings).
+
+**Response (200):** `{ "success": true, "message": "Quiz updated successfully", "data": { "quiz": { ... } } }`
+
+**Errors:** 400 (`QUIZ_PUBLISHED`), 403, 404
+
+---
+
+#### DELETE `/:quizId` — Delete Quiz
+
+A draft is removed completely. A closed quiz, or a published one whose deadline has passed, is soft-deleted (kept for results). A published quiz before its deadline needs `?forceDelete=true`.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Quiz deleted successfully",
+  "data": { "deleteType": "hard" }
+}
+```
+
+`deleteType` is `hard` or `soft`.
+
+**Errors:** 400 (`QUIZ_ACTIVE`, `ALREADY_DELETED`), 403, 404
+
+---
+
+#### POST `/:quizId/publish` — Publish Quiz
+
+Makes a draft visible to students. It needs at least one question, and the deadline (if set) must be in the future.
+
+**Response (200):** `{ "success": true, "message": "Quiz published successfully", "data": { "quiz": { "status": "published", "publishedAt": "...", "...": "..." } } }`
+
+**Errors:** 400 (`ALREADY_PUBLISHED`, `NO_QUESTIONS`, `DEADLINE_EXPIRED`), 403, 404
+
+---
+
+#### POST `/:quizId/close` — Close Quiz
+
+Stops a published quiz.
+
+**Response (200):** `{ "success": true, "message": "Quiz closed successfully", "data": { "quiz": { "status": "closed", "closedAt": "...", "...": "..." } } }`
+
+**Errors:** 400 (`QUIZ_DRAFT`, `ALREADY_CLOSED`), 403, 404
+
+---
+
+#### POST `/:quizId/clone` — Clone Quiz
+
+Copies the quiz and its questions into a new draft. The deadline is cleared.
+
+**Request (optional):**
+```json
+{ "title": "Midterm Practice - Section B" }
+```
+
+Without `title`, the copy is called "`<title>` (Copy)".
+
+**Response (201):** `{ "success": true, "message": "Quiz cloned successfully", "data": { "quiz": { "status": "draft", "...": "..." } } }`
+
+---
+
+#### POST `/:quizId/questions` — Add Questions
+
+Draft quizzes only. Each item is either a bank question or a custom one; `marks` defaults to 1.
 
 **Request:**
 ```json
 {
-  "attemptId": "64att1...",
-  "questionId": "64q1...",
+  "questions": [
+    { "questionId": "64q5a2b3c4d5e6f7a8b9c0d5", "marks": 1 },
+    {
+      "customQuestion": {
+        "questionText": "Name the smallest prime number.",
+        "options": ["0", "1", "2", "3"],
+        "correctAnswer": "2",
+        "explanation": "2 is the only even prime.",
+        "questionType": "mcq",
+        "difficulty": "Easy"
+      },
+      "marks": 2
+    }
+  ]
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Questions added successfully",
+  "data": { "added": 2, "totalQuestions": 12, "totalMarks": 15 }
+}
+```
+
+**Errors:** 400 (no `questions` array, `QUIZ_PUBLISHED`), 403, 404 (`QUESTION_NOT_FOUND`)
+
+---
+
+#### DELETE `/:quizId/questions/:questionId` — Remove Question
+
+Draft quizzes only. `:questionId` is the **quiz-question** `_id` from `GET /:quizId`, not the bank question ID. The remaining questions are renumbered.
+
+**Response (200):**
+```json
+{ "success": true, "message": "Question removed successfully" }
+```
+
+**Errors:** 400 (`QUIZ_PUBLISHED`), 403, 404 (`QUESTION_NOT_FOUND`)
+
+---
+
+#### PUT `/:quizId/questions/reorder` — Reorder Questions
+
+Draft quizzes only.
+
+**Request:**
+```json
+{ "order": ["64qq3...", "64qq1...", "64qq2..."] }
+```
+
+`order` lists quiz-question IDs in the new order. Without it, the questions are just renumbered 1, 2, 3...
+
+**Response (200):**
+```json
+{ "success": true, "message": "Questions reordered successfully" }
+```
+
+---
+
+#### GET `/:quizId/analytics` — Quiz Analytics (Teacher)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "quiz": { "_id": "64qz1...", "title": "Midterm Practice", "totalMarks": 20, "totalQuestions": 20, "status": "published" },
+    "overview": {
+      "totalStudentsAssigned": 38,
+      "totalAttempts": 35,
+      "completedAttempts": 33,
+      "inProgressAttempts": 2,
+      "avgScore": 72,
+      "passRate": 82,
+      "avgTimeSpent": 1260
+    },
+    "questionAnalysis": [
+      {
+        "questionId": "64qq1...",
+        "questionText": "What is 2 + 2?",
+        "order": 1,
+        "marks": 1,
+        "totalAttempts": 33,
+        "correctPercentage": 85,
+        "avgTimeSpent": 21,
+        "optionDistribution": [ "..." ]
+      }
+    ],
+    "topPerformers": [
+      { "student": { "_id": "...", "name": "Aarav", "email": "...", "image": "..." }, "score": 19, "percentage": 95, "timeSpent": 980 }
+    ],
+    "strugglingStudents": [
+      { "student": { "_id": "...", "name": "...", "email": "...", "image": "..." }, "score": 6, "percentage": 30 }
+    ]
+  }
+}
+```
+
+`avgScore` and `passRate` are percentages; times are in seconds. `topPerformers` (passed) and `strugglingStudents` (not passed) hold up to 5 each.
+
+---
+
+#### GET `/student/available` — Available Quizzes (Student)
+
+Published, not deleted quizzes for the student's class/subject links.
+
+**Query:** `?subjectId=...&classId=...` (both optional)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "quizzes": [
+      {
+        "_id": "64qz1...",
+        "title": "Midterm Practice",
+        "classId": { "_id": "...", "name": "Class 7" },
+        "subjectId": { "_id": "...", "name": "Mathematics" },
+        "chapterIds": [ { "_id": "...", "name": "Number Systems" } ],
+        "settings": { "timeLimit": 30, "deadline": "2026-10-20T18:29:59.000Z", "allowedAttempts": 1, "...": "..." },
+        "attemptInfo": {
+          "totalAttempts": 1,
+          "completedAttempts": 1,
+          "inProgressAttempt": null,
+          "canAttempt": false,
+          "bestScore": 85,
+          "lastAttemptId": "64at1..."
+        },
+        "isExpired": false
+      }
+    ]
+  }
+}
+```
+
+`attemptInfo.inProgressAttempt` is the ID of an unfinished attempt (or `null`); `bestScore` is the best percentage (or `null`); `canAttempt` is `false` once the deadline passed or no attempts are left.
+
+---
+
+#### POST `/:quizId/start` — Start Quiz Attempt
+
+Starts an attempt on a published quiz, or resumes the student's attempt in progress.
+
+**Response (201):** `{ "success": true, "message": "Quiz started", "data": { "attempt": { "_id": "64at1...", "...": "..." }, "...": "..." } }`
+
+---
+
+#### POST `/attempt/:attemptId/answer` — Submit Single Answer
+
+Saves (or replaces) the answer to one question. Rejected once the time limit has passed.
+
+**Request:**
+```json
+{
+  "quizQuestionId": "64qq1a2b3c4d5e6f7a8b9c0d1",
   "selectedAnswer": "4"
 }
 ```
@@ -2016,118 +2313,158 @@ Creates a copy of the quiz.
 ```json
 {
   "success": true,
-  "data": {
-    "isCorrect": true,
-    "correctAnswer": "4"
-  }
+  "data": { "saved": true, "isCorrect": true, "marksObtained": 1 }
 }
 ```
 
+**Errors:** 400 (missing fields, `ALREADY_SUBMITTED`, `TIME_EXCEEDED`), 403, 404
+
 ---
 
-#### POST `/:id/submit` — Submit Quiz
+#### POST `/attempt/:attemptId/submit` — Submit Quiz
 
 Finalize attempt.
 
-**Request:**
-```json
-{
-  "attemptId": "64att1..."
-}
-```
-
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": "Quiz submitted successfully",
   "data": {
-    "score": 16,
-    "totalQuestions": 20,
-    "percentage": 80,
-    "timeTaken": 2400
+    "attempt": { "_id": "64at1...", "status": "completed", "...": "..." },
+    "results": {
+      "totalQuestions": 20,
+      "totalAnswered": 19,
+      "correctAnswers": 16,
+      "score": 16,
+      "totalMarks": 20,
+      "percentage": 80,
+      "passed": true,
+      "timeSpent": 1440
+    }
   }
 }
 ```
 
+`timeSpent` is in seconds.
+
+**Errors:** 400 (`ALREADY_SUBMITTED`), 403, 404
+
 ---
 
-#### GET `/:id/result` — Get Quiz Result
+#### GET `/attempt/:attemptId` — Resume Attempt
 
-**Query:** `?attemptId=64att1...`
+Loads an attempt that is still in progress, with the answers saved so far. Correct answers are never included.
 
 **Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    "quizTitle": "Midterm Practice",
-    "score": 16,
-    "totalQuestions": 20,
-    "percentage": 80,
-    "questionResults": [
+    "attempt": {
+      "_id": "64at1...",
+      "quizId": "64qz1...",
+      "quizTitle": "Midterm Practice",
+      "status": "in_progress",
+      "startedAt": "2026-10-10T09:00:00.000Z",
+      "totalQuestions": 20,
+      "settings": { "timeLimit": 30, "...": "..." }
+    },
+    "questions": [
       {
-        "questionId": "64q1...",
-        "question": "What is 2+2?",
+        "quizQuestionId": "64qq1...",
+        "questionText": "What is 2 + 2?",
+        "options": ["3", "4", "5", "6"],
+        "questionType": "mcq",
+        "marks": 1,
+        "explanation": null,
+        "correctAnswer": null,
+        "selectedAnswer": "4"
+      }
+    ]
+  }
+}
+```
+
+**Errors:** 400 (`NOT_IN_PROGRESS`), 403, 404
+
+---
+
+#### GET `/:quizId/in-progress` — Find Attempt in Progress
+
+Same response as `GET /attempt/:attemptId` for the student's unfinished attempt on this quiz.
+
+**Errors:** 404 (`NOT_FOUND`: no attempt in progress)
+
+---
+
+#### GET `/attempt/:attemptId/result` — Get Quiz Result
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "attempt": {
+      "_id": "64at1...",
+      "status": "completed",
+      "startedAt": "2026-10-10T09:00:00.000Z",
+      "submittedAt": "2026-10-10T09:24:00.000Z",
+      "timeSpent": 1440,
+      "totalQuestions": 20,
+      "totalAnswers": 19,
+      "correctAnswers": 16,
+      "score": 16,
+      "percentage": 80,
+      "passed": true
+    },
+    "quiz": { "_id": "64qz1...", "title": "Midterm Practice", "totalMarks": 20, "passingPercentage": 50 },
+    "questionDetails": [
+      {
+        "questionText": "What is 2 + 2?",
+        "options": ["3", "4", "5", "6"],
         "selectedAnswer": "4",
+        "isCorrect": true,
+        "marksObtained": 1,
+        "timeTaken": 21,
         "correctAnswer": "4",
-        "isCorrect": true
+        "explanation": "..."
       }
-    ]
+    ],
+    "showAnswers": true
   }
 }
 ```
 
+`correctAnswer` and `explanation` are `null` unless `showAnswers` is `true`, which follows the quiz's `showAnswersAfter` setting.
+
 ---
 
-#### GET `/:id/analytics` — Quiz Analytics (Teacher)
+#### GET `/student/history` — Quiz History (Student)
+
+Completed attempts, newest first.
+
+**Query:** `?subjectId=...&page=1&limit=10`
 
 **Response (200):**
 ```json
 {
   "success": true,
   "data": {
-    "totalAttempts": 35,
-    "averageScore": 72,
-    "highestScore": 95,
-    "lowestScore": 40,
-    "questionAnalytics": [
+    "attempts": [
       {
-        "questionId": "64q1...",
-        "correctPercentage": 85
+        "_id": "64at1...",
+        "status": "completed",
+        "score": 16,
+        "percentage": 80,
+        "passed": true,
+        "submittedAt": "2026-10-10T09:24:00.000Z",
+        "quizId": { "_id": "64qz1...", "title": "Midterm Practice", "subjectId": { "_id": "...", "name": "Mathematics" }, "classId": { "_id": "...", "name": "Class 7" }, "...": "..." },
+        "...": "..."
       }
-    ]
+    ],
+    "pagination": { "page": 1, "limit": 10, "total": 3, "pages": 1 }
   }
-}
-```
-
----
-
-#### POST `/:id/questions` — Add Question to Quiz
-
-**Request:**
-```json
-{
-  "questionId": "64q5a2b3c4d5e6f7a8b9c0d5"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": { "totalQuestions": 21 }
-}
-```
-
----
-
-#### DELETE `/:id/questions/:questionId` — Remove Question
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": { "totalQuestions": 19 }
 }
 ```
 
@@ -2135,104 +2472,280 @@ Finalize attempt.
 
 ### 10. Teacher Dashboard
 
-Base: `/api/v1/teacher/`
+Three routers serve teachers and the people who manage them:
 
-**Auth:** Teacher role required.
+| Base | Auth | Purpose |
+|------|------|---------|
+| `/api/v1/teacher-dashboard/:teacherId/` | Teacher role required | Analytics on the students assigned to one teacher. `:teacherId` is the teacher's user ID |
+| `/api/v1/teacher/` | Principal role required | Create, list, update and delete teacher accounts |
+| `/api/v1/teacher-students/` | Teacher or Principal role required | Assign students to teachers |
+
+A student counts as assigned once a teacher–student link exists for a subject (made with `POST /teacher-students/bulk`, or when the student joins a class link, see [Teacher Class Links](#22-teacher-class-links)). Mastery scores are between 0 and 1.
 
 ---
 
-#### GET `/assignments`
+#### GET `/teacher-dashboard/:teacherId/my-assignments`
 
-Get teacher's assignments.
+The teacher's subjects, classes and sections with student counts.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "_id": "64as1...",
-      "className": "Class 7",
-      "subjectName": "Mathematics",
-      "assignedStudents": 25,
-      "status": "active"
-    }
-  ]
-}
-```
-
----
-
-#### GET `/subject-dashboard`
-
-Get subject-level dashboard.
-
-**Query:** `?subjectId=64f3...`
-
-**Response (200):**
-```json
-{
-  "success": true,
+  "message": "Assignments fetched successfully",
   "data": {
-    "totalStudents": 120,
-    "averageAccuracy": 72,
-    "topPerformers": [ "..." ],
-    "weakTopics": [ "..." ],
-    "recentActivity": [ "..." ]
+    "teacher": { "_id": "64t1a2b3c4d5e6f7a8b9c0d1", "name": "Teacher Name", "image": "https://..." },
+    "schoolName": "Springfield Academy",
+    "assignments": [
+      {
+        "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
+        "subjectName": "Mathematics",
+        "classes": [
+          {
+            "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+            "className": "Class 7",
+            "sections": [ { "sectionId": "64sc1...", "name": "A", "studentCount": 28 } ],
+            "totalStudents": 28
+          }
+        ],
+        "totalStudents": 28
+      }
+    ],
+    "totalStudentsAcrossSubjects": 28
   }
 }
 ```
 
+Links without a section are grouped under a section named `Default` (`sectionId: null`). A teacher with no links gets `assignments: []` and `schoolName: null`.
+
+**Errors:** 404 (teacher not found)
+
 ---
 
-#### GET `/students`
+#### GET `/teacher-dashboard/:teacherId/subject/:subjectId/dashboard`
 
-Get list of students in teacher's classes.
-
-**Query:** `?classId=64f1...&page=1&limit=20`
+Overview of one subject across the teacher's students.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "_id": "64f1...",
-      "userName": "student1",
-      "email": "s1@example.com",
-      "accuracy": 78,
-      "totalSessions": 15,
-      "lastActive": "2024-06-20T14:00:00.000Z"
-    }
-  ],
-  "pagination": { "page": 1, "totalPages": 3, "totalItems": 55 }
+  "message": "Subject dashboard fetched successfully",
+  "data": {
+    "subject": { "_id": "64f3a2b3c4d5e6f7a8b9c0d3", "name": "Mathematics" },
+    "overview": {
+      "totalStudents": 28,
+      "activeThisWeek": 17,
+      "avgSubjectMastery": 0.52,
+      "avgSubjectCoverage": 64,
+      "studentsNeedingHelp": 4
+    },
+    "chapterProgress": [
+      {
+        "chapterId": "64c1a2b3c4d5e6f7a8b9c0d4",
+        "name": "Number Systems",
+        "order": 1,
+        "classAvgMastery": 0.61,
+        "studentsCompleted": 6,
+        "studentsInProgress": 15,
+        "studentsNotStarted": 7,
+        "status": "ON_TRACK"
+      }
+    ],
+    "topWeakTopics": [
+      { "topicId": "64tp1...", "name": "Integers", "chapterName": "Number Systems", "studentsWeak": 9 }
+    ],
+    "classSummary": [
+      { "classId": "64f1...", "className": "Class 7", "sectionName": "A", "avgMastery": 0.52, "studentCount": 28 }
+    ]
+  }
 }
 ```
 
+- `activeThisWeek`: students with a session in the last 7 days. `studentsNeedingHelp`: average mastery below 0.4
+- Chapter `status`: `NOT_STARTED`, `NEEDS_ATTENTION` (below 0.5), `ON_TRACK` (below 0.7) or `STRONG`
+- `topWeakTopics`: up to 5 topics where at least a fifth of the students (minimum 1) are weak
+
+**Errors:** 404 (no students assigned for this subject)
+
 ---
 
-#### GET `/chapter-analytics`
+#### GET `/teacher-dashboard/:teacherId/subject/:subjectId/students`
 
-Get chapter-level analytics.
+The teacher's students in a subject, with their progress.
 
-**Query:** `?chapterId=64c1...`
+**Query:**
+
+| Param | Values |
+|-------|--------|
+| `classId`, `sectionId` | Optional filters |
+| `status` | `struggling` (needs help, or 3+ weak topics), `top` (strong), `inactive` (5+ days without a session) |
+| `sortBy` | `name` (default), `mastery`, `coverage`, `lastPracticed` |
+| `order` | `asc` (default) or `desc` |
 
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": "Students list fetched successfully",
   "data": {
-    "chapterName": "Number System",
-    "totalStudents": 40,
-    "averageAccuracy": 68,
-    "topicBreakdown": [
+    "totalCount": 1,
+    "students": [
       {
-        "topicName": "Natural Numbers",
-        "accuracy": 82
-      },
+        "studentId": "64s1a2b3c4d5e6f7a8b9c0d1",
+        "name": "Aarav",
+        "email": "student@example.com",
+        "image": "https://...",
+        "class": "Class 7",
+        "section": "A",
+        "subjectMastery": 0.58,
+        "subjectCoverage": 45,
+        "chaptersCompleted": 2,
+        "totalChapters": 12,
+        "lastPracticed": "2026-10-09T16:40:00.000Z",
+        "status": "ON_TRACK",
+        "weakTopicsCount": 1,
+        "daysInactive": 0
+      }
+    ]
+  }
+}
+```
+
+Student `status`: `NOT_STARTED`, `NEEDS_HELP` (below 0.3), `NEEDS_REVISION` (below 0.5), `ON_TRACK` (below 0.7) or `STRONG`. A chapter counts as completed at an average mastery of 0.7.
+
+---
+
+#### GET `/teacher-dashboard/:teacherId/subject/:subjectId/chapter/:chapterId/analytics`
+
+Topic-by-topic results for one chapter.
+
+**Query:** `?classId=...&sectionId=...` (optional)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Chapter analytics fetched successfully",
+  "data": {
+    "chapter": { "_id": "64c1a2b3c4d5e6f7a8b9c0d4", "name": "Number Systems", "order": 1 },
+    "overview": { "totalTopics": 6, "classAvgCoverage": 75, "classAvgMastery": 0.55 },
+    "topics": [
       {
-        "topicName": "Integers",
-        "accuracy": 55
+        "topicId": "64tp1...",
+        "name": "Integers",
+        "classAvgMastery": 0.38,
+        "masteryDistribution": { "MASTERED": 3, "PRACTICING": 6, "LEARNING": 7, "WEAK": 8 },
+        "studentsAttempted": 24,
+        "studentsTotal": 28,
+        "status": "CRITICAL"
+      }
+    ],
+    "strugglingStudents": [
+      { "studentId": "64s2...", "name": "...", "image": "https://...", "masteryScore": 0.21, "weakTopics": 3 }
+    ]
+  }
+}
+```
+
+Topic `status`: `NOT_STARTED`, `CRITICAL` (30% or more of the students who tried it are weak), `ON_TRACK` (average 0.7 or more) or `NEEDS_ATTENTION`. `strugglingStudents` (average below 0.4, or 2+ weak topics) holds up to 10, weakest first.
+
+**Errors:** 404 (no students assigned)
+
+---
+
+#### GET `/teacher-dashboard/:teacherId/student/:studentId/subject/:subjectId/progress`
+
+One student's progress in a subject.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Student progress fetched successfully",
+  "data": {
+    "student": { "_id": "64s1...", "name": "Aarav", "email": "student@example.com", "image": "https://...", "class": "Class 7-A" },
+    "subjectSummary": {
+      "subjectId": "64f3...",
+      "subjectName": "Mathematics",
+      "overallMastery": 0.41,
+      "overallCoverage": 35,
+      "chaptersStarted": 4,
+      "totalChapters": 12,
+      "totalTimeSpent": 310,
+      "lastActive": "2026-10-09T16:40:00.000Z"
+    },
+    "chapters": [ "...same items as GET /topic-progress/progress/subject/:subjectId chapters..." ],
+    "weakTopics": [
+      { "topicId": "64tp1...", "name": "Integers", "chapterName": "Number Systems", "masteryScore": 0.22 }
+    ],
+    "recommendations": ["Student has not started 8 chapters yet"]
+  }
+}
+```
+
+`totalTimeSpent` is in minutes. `weakTopics` holds up to 10.
+
+**Errors:** 403 (`FORBIDDEN`: the teacher isn't assigned to this student for this subject)
+
+---
+
+#### GET `/teacher-dashboard/:teacherId/subject/:subjectId/weak-topics`
+
+Topics the class finds hard.
+
+**Query:** `?classId=...&sectionId=...&threshold=0.4` (`threshold` between 0 and 1, default 0.4)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Weak topics fetched successfully",
+  "data": {
+    "totalWeakTopics": 1,
+    "topics": [
+      {
+        "topicId": "64tp1...",
+        "name": "Integers",
+        "chapterName": "Number Systems",
+        "studentsWeak": 9,
+        "totalStudents": 24,
+        "weakPercentage": 38,
+        "avgMastery": 0.36,
+        "difficulty": { "easyAccuracy": 0.71, "mediumAccuracy": 0.42, "hardAccuracy": 0.18 },
+        "teacherAction": "MEDIUM_PRIORITY"
+      }
+    ],
+    "classroomRecommendation": "Consider revisiting \"Number Systems\" focusing on Integers concept."
+  }
+}
+```
+
+A topic is listed when its average mastery is below `threshold` or 30% or more of the students who tried it are weak. `teacherAction`: `HIGH_PRIORITY` (40%+ weak), `MEDIUM_PRIORITY` (25%+) or `MONITOR`. Up to 20 topics, most weak students first.
+
+---
+
+#### GET `/teacher-dashboard/:teacherId/subject/:subjectId/activity`
+
+Recent practice sessions by the teacher's students.
+
+**Query:** `?limit=20` (1–100, default 20)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Activity feed fetched successfully",
+  "data": {
+    "activities": [
+      {
+        "type": "SESSION_COMPLETED",
+        "student": { "_id": "64s1...", "name": "Aarav", "image": "https://..." },
+        "timestamp": "2026-10-09T16:40:00.000Z",
+        "chapter": "Number Systems",
+        "score": 8,
+        "questionsAttempted": 10,
+        "correctAnswers": 8
       }
     ]
   }
@@ -2241,138 +2754,163 @@ Get chapter-level analytics.
 
 ---
 
-#### GET `/student-progress/:studentId`
+#### POST `/teacher` — Create Teacher
 
-Get detailed progress for a specific student.
+**Auth:** Principal role required.
 
-**Params:** `studentId`
+Send one teacher object, or an array of them for a bulk create.
 
-**Response (200):**
+**Request:**
+```json
+{
+  "name": "Teacher Name",
+  "email": "teacher@example.com",
+  "password": "secret123",
+  "schoolId": "64sch1a2b3c4d5e6f7a8b9c0",
+  "subject": ["64f3a2b3c4d5e6f7a8b9c0d3"],
+  "class": ["64f1a2b3c4d5e6f7a8b9c0d2"]
+}
+```
+
+`name`, `email`, `password` (6–128 characters) and `schoolId` are required.
+
+**Response (201), one teacher:**
 ```json
 {
   "success": true,
-  "data": {
-    "studentName": "john",
-    "overallAccuracy": 75,
-    "subjectProgress": [
-      {
-        "subjectName": "Mathematics",
-        "accuracy": 80,
-        "chaptersCompleted": 8,
-        "totalChapters": 12
-      }
-    ],
-    "recentSessions": [ "..." ]
+  "message": "Teacher created successfully",
+  "data": { "_id": "64t1...", "name": "Teacher Name", "email": "teacher@example.com" }
+}
+```
+
+**Response (200), array:** `message` is "Bulk creation completed" and `data` is `{ "success": [{ "_id", "name", "email", "accountType", "schoolId" }], "failed": [{ "email", "error" }] }`.
+
+**Errors:** 400 (validation failed, `MISSING_FIELDS`, `USER_EXISTS`)
+
+---
+
+#### GET `/teacher/get-all` — List Teachers
+
+**Auth:** Principal role required.
+
+**Query:** `?schoolId=...` (optional)
+
+**Response (200):** `message` "Teachers fetched successfully", `data` is an array of teacher user records with their profile (`additionalDetails`) populated.
+
+---
+
+#### PUT `/teacher/:id` — Update Teacher
+
+**Auth:** Principal role required.
+
+**Request:** any of `name`, `email`, `subject` (array of subject IDs), `class` (array of class IDs).
+
+**Response (200):** `message` "Teacher updated successfully", `data` is the updated teacher.
+
+**Errors:** 400 (`EMAIL_EXISTS`), 404 (`NOT_FOUND`)
+
+---
+
+#### DELETE `/teacher/:id` — Delete Teacher
+
+**Auth:** Principal role required.
+
+Deletes the teacher and all of their teacher–student links.
+
+**Response (200):** `{ "success": true, "message": "Teacher deleted successfully", "data": null }`
+
+**Errors:** 404 (`NOT_FOUND`)
+
+---
+
+#### POST `/teacher-students/bulk` — Assign Students
+
+**Auth:** Teacher or Principal role required.
+
+**Request:** an array of links.
+```json
+[
+  {
+    "teacher_id": "64t1a2b3c4d5e6f7a8b9c0d1",
+    "student_id": "64s1a2b3c4d5e6f7a8b9c0d1",
+    "class_id": "64f1a2b3c4d5e6f7a8b9c0d2",
+    "_subject_id": "64f3a2b3c4d5e6f7a8b9c0d3",
+    "school_id": "64sch1a2b3c4d5e6f7a8b9c0",
+    "section_id": "64sc1a2b3c4d5e6f7a8b9c0d"
   }
-}
+]
 ```
+
+`section_id` is optional. Each student's `class` list also gains the link's class.
+
+**Response (201):** `message` "Teacher-Student links created successfully", `data` is the array of created links.
+
+**Errors:** 400 (validation failed)
 
 ---
 
-#### GET `/weak-topics`
+#### GET `/teacher-students` — List Assignments
 
-Get weak topics across all students.
+**Auth:** Teacher or Principal role required.
 
-**Query:** `?classId=64f1...&subjectId=64f3...`
+**Query:** `?schoolId=...` (required), plus optional `teacherId`, `classId`, `subjectId`, `sectionId`
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "topicId": "64t1...",
-      "topicName": "Integers",
-      "chapterName": "Number System",
-      "averageAccuracy": 45,
-      "studentsAffected": 18
-    }
-  ]
-}
-```
+**Response (200):** `message` "Teacher Students fetched successfully", `data` is an array of links with `teacher_id` and `student_id` (`name`, `email`), `class_id`, `section_id`, `_subject_id` and `school_id` populated.
 
----
-
-#### GET `/activity`
-
-Get recent teacher activity feed.
-
-**Query:** `?limit=20`
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "type": "quiz_completed",
-      "studentName": "john",
-      "quizTitle": "Algebra Quiz",
-      "score": 85,
-      "timestamp": "2024-06-20T14:00:00.000Z"
-    }
-  ]
-}
-```
+**Errors:** 400 (`MISSING_FIELDS`: no `schoolId`)
 
 ---
 
 ### 11. Parent Dashboard
 
-Base: `/api/v1/parent/`
+| Base | Auth | Purpose |
+|------|------|---------|
+| `/api/v1/parent-dashboard/` | Parent role required | The signed-in parent's linked children and their progress |
+| `/api/v1/parent-students/` | See each endpoint | Link and unlink parents and students |
 
-**Auth:** Parent role required.
+Every `/parent-dashboard/child/:childId/...` request checks that the child is linked to the signed-in parent; otherwise it returns `403` (`FORBIDDEN`).
 
 ---
 
-#### GET `/children`
+#### GET `/parent-dashboard/children`
 
-Get list of children linked to parent.
+Children linked to the signed-in parent, primary child first.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "_id": "64f1...",
-      "userName": "child1",
-      "class": "Class 7",
-      "overallAccuracy": 75
-    }
-  ]
-}
-```
-
----
-
-#### GET `/child-overview/:childId`
-
-Get overview for a specific child.
-
-**Params:** `childId`
-
-**Response (200):**
-```json
-{
-  "success": true,
+  "message": "Children fetched successfully",
   "data": {
-    "childName": "child1",
-    "class": "Class 7",
-    "overallAccuracy": 75,
-    "currentStreak": 5,
-    "totalSessions": 48,
-    "weeklyActivity": [12, 8, 15, 10, 7, 0, 0],
-    "recentSessions": [ "..." ]
+    "parent": { "_id": "64p1a2b3c4d5e6f7a8b9c0d1", "name": "Parent Name", "image": "https://..." },
+    "children": [
+      {
+        "childId": "64s1a2b3c4d5e6f7a8b9c0d1",
+        "name": "Aarav",
+        "email": "student@example.com",
+        "image": "https://...",
+        "className": "Class 7",
+        "sectionName": "A",
+        "schoolName": "Springfield Academy",
+        "relationship": "mother",
+        "isPrimary": true,
+        "currentStreak": 5,
+        "longestStreak": 12,
+        "practicedToday": false,
+        "lastActive": "2026-10-09T16:40:00.000Z",
+        "linkedAt": "2026-08-01T10:00:00.000Z"
+      }
+    ],
+    "totalChildren": 1
   }
 }
 ```
 
 ---
 
-#### GET `/child-overview/:childId/subject-progress`
+#### GET `/parent-dashboard/child/:childId/overview`
 
-Get subject-wise progress for a child.
+One child's dashboard.
 
 **Params:** `childId`
 
@@ -2380,67 +2918,169 @@ Get subject-wise progress for a child.
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "subjectName": "Mathematics",
-      "accuracy": 80,
-      "chaptersCompleted": 8,
-      "totalChapters": 12,
-      "weakTopics": ["Integers", "Fractions"]
-    }
-  ]
+  "message": "Child overview fetched successfully",
+  "data": {
+    "child": { "_id": "64s1...", "name": "Aarav", "email": "student@example.com", "image": "https://...", "className": "Class 7" },
+    "overview": {
+      "currentStreak": 5,
+      "longestStreak": 12,
+      "practicedToday": false,
+      "streakFreezes": { "available": 1, "total": 1, "bonus": 0, "resetsOn": "2026-10-12T18:30:00.000Z" },
+      "weeklyStudyMinutes": 95,
+      "totalQuestions": 480,
+      "overallAccuracy": 79
+    },
+    "todayStats": { "questionsAnswered": 12, "correctAnswers": 9, "timeSpent": 540, "accuracy": 75 },
+    "subjects": [ "...same as subjects in GET /progress/user/:userId..." ],
+    "lastStudiedChapter": { "subject": "Mathematics", "chapter": "Number Systems", "chapterId": "...", "studiedAt": "..." },
+    "recentSessions": [ "...up to 5 most recent sessions..." ]
+  }
 }
 ```
 
 ---
 
-#### GET `/child-overview/:childId/weak-topics`
+#### GET `/parent-dashboard/child/:childId/subject/:subjectId/progress`
 
-Get weak topics for a child.
-
-**Params:** `childId`
+One child's progress in a subject.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "topicName": "Integers",
-      "chapterName": "Number System",
-      "accuracy": 45,
-      "attempts": 20
-    }
-  ]
+  "message": "Child subject progress fetched successfully",
+  "data": {
+    "child": { "_id": "64s1...", "name": "Aarav", "image": "https://..." },
+    "subjectSummary": {
+      "subjectId": "64f3...",
+      "overallMastery": 0.41,
+      "overallCoverage": 35,
+      "chaptersStarted": 4,
+      "totalChapters": 12
+    },
+    "chapters": [ "...same items as GET /topic-progress/progress/subject/:subjectId chapters..." ],
+    "weakTopics": [
+      { "topicId": "64tp1...", "name": "Integers", "chapterName": "Number Systems", "chapterId": "64c1...", "masteryScore": 0.22, "state": "WEAK" }
+    ]
+  }
+}
+```
+
+`weakTopics` holds up to 10.
+
+---
+
+#### GET `/parent-dashboard/child/:childId/subject/:subjectId/weak-topics`
+
+Topics the child has tried and is weak in (state `WEAK`, or mastery below 0.4), weakest first.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Child weak topics fetched successfully",
+  "data": {
+    "totalWeakTopics": 1,
+    "topics": [
+      {
+        "topicId": "64tp1...",
+        "name": "Integers",
+        "subjectName": "Mathematics",
+        "chapterName": "Number Systems",
+        "chapterId": "64c1...",
+        "masteryScore": 0.22,
+        "masteryState": "WEAK",
+        "totalAttempts": 9
+      }
+    ]
+  }
 }
 ```
 
 ---
 
-#### GET `/child-overview/:childId/activity`
+#### GET `/parent-dashboard/child/:childId/activity`
 
-Get recent activity for a child.
+The child's recent practice sessions, newest first.
 
-**Params:** `childId`
-
-**Query:** `?limit=20`
+**Query:** `?limit=20` (1–100, default 20)
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "type": "session_completed",
-      "subject": "Mathematics",
-      "chapter": "Number System",
-      "score": 8,
-      "totalQuestions": 10,
-      "timestamp": "2024-06-20T14:00:00.000Z"
-    }
-  ]
+  "message": "Child activity fetched successfully",
+  "data": {
+    "activities": [
+      {
+        "type": "SESSION_COMPLETED",
+        "timestamp": "2026-10-09T16:40:00.000Z",
+        "chapter": "Number Systems",
+        "subject": "Mathematics",
+        "chapterId": "64c1...",
+        "subjectId": "64f3...",
+        "score": 8,
+        "questionsAttempted": 10,
+        "correctAnswers": 8,
+        "accuracy": 80,
+        "duration": 420
+      }
+    ],
+    "total": 1
+  }
 }
 ```
+
+`duration` is in seconds.
+
+---
+
+#### POST `/parent-students/bulk` — Link Parent to Students
+
+**Auth:** Teacher or Principal role required.
+
+Links one parent to one or more students. Identify the parent by `parentEmails` (exactly one email) **or** `parentIds` (exactly one ID), not both.
+
+**Request:**
+```json
+{
+  "parentEmails": ["parent@example.com"],
+  "studentIds": ["64s1a2b3c4d5e6f7a8b9c0d1"],
+  "schoolId": "64sch1a2b3c4d5e6f7a8b9c0",
+  "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+  "sectionId": "64sc1a2b3c4d5e6f7a8b9c0d",
+  "relationship": "mother",
+  "createParentsIfNotExist": true
+}
+```
+
+`relationship` is `father`, `mother` or `guardian` (default). With `createParentsIfNotExist: true`, an unknown email gets a new Parent account. The first parent linked to a student is marked primary. Links that already exist are skipped.
+
+**Response (201):** `message` "Parent-Student links created successfully", `data` is the array of new links (empty when all existed).
+
+**Errors:** 400 (validation failed, `INVALID_DATA`, `INVALID_ACCOUNT_TYPE`), 404 (`PARENT_NOT_FOUND`, `STUDENTS_NOT_FOUND`)
+
+---
+
+#### GET `/parent-students` — List Links
+
+**Auth:** Teacher or Principal role required.
+
+**Query:** `?parentId=...&studentId=...` (both optional)
+
+**Response (200):** `message` "Parent Students fetched successfully", `data` is an array of links with parent, student, class, section and school populated.
+
+---
+
+#### DELETE `/parent-students/unlink/:studentId` — Unlink a Child
+
+**Auth:** Parent role required.
+
+Removes the link between the signed-in parent and the student.
+
+**Response (200):** `message` "Parent-Student link removed successfully", `data` is `{ "acknowledged": true, "deletedCount": 1 }`.
+
+**Errors:** 404 (`LINK_NOT_FOUND`)
 
 ---
 
@@ -2448,9 +3088,13 @@ Get recent activity for a child.
 
 Base: `/api/v1/question-paper/`
 
+**Auth:** signed in, except `POST /public/generate`. (The app shows the generator to teachers.)
+
 ---
 
 #### POST `/` — Create Question Paper
+
+Builds a paper from the question bank of the chosen chapters.
 
 **Request:**
 ```json
@@ -2458,74 +3102,85 @@ Base: `/api/v1/question-paper/`
   "title": "Unit Test 1",
   "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
   "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
-  "chapterIds": ["64c1...", "64c2..."],
-  "totalMarks": 50,
+  "chapterIds": ["64c1a2b3c4d5e6f7a8b9c0d4", "64c2a2b3c4d5e6f7a8b9c0d5"],
+  "config": {
+    "totalQuestions": 10,
+    "difficultyMix": { "easy": 4, "medium": 4, "hard": 2 },
+    "questionTypes": ["mcq", "fillblanks"],
+    "includeAnswerKey": true
+  },
   "duration": 60,
-  "sections": [
-    {
-      "name": "MCQ",
-      "questionType": "MCQ",
-      "difficulty": "easy",
-      "count": 10,
-      "marksPerQuestion": 1
-    },
-    {
-      "name": "Short Answer",
-      "questionType": "ShortAnswer",
-      "difficulty": "medium",
-      "count": 5,
-      "marksPerQuestion": 3
-    }
-  ]
+  "schoolName": "Springfield Academy",
+  "examName": "Unit Test",
+  "instructions": []
 }
 ```
+
+- `difficultyMix` must add up to `totalQuestions`
+- Questions are picked at random per difficulty; if a difficulty runs short, the paper is topped up from any difficulty
+- Marks: Easy 1, Medium 2, Hard 3
+- `duration` (minutes) defaults to 60, `examName` to "Examination", `questionTypes` to `["mcq"]`. With no `instructions`, four standard instructions are added
 
 **Response (201):**
 ```json
 {
   "success": true,
+  "message": "Question paper generated with 10 questions (18 marks)",
   "data": {
-    "_id": "64qp1...",
+    "_id": "64qp1a2b3c4d5e6f7a8b9c0d1",
     "title": "Unit Test 1",
-    "status": "draft"
+    "classId": "64f1...",
+    "subjectId": "64f3...",
+    "chapterIds": ["64c1...", "64c2..."],
+    "config": { "totalQuestions": 10, "difficultyMix": { "easy": 4, "medium": 4, "hard": 2 }, "questionTypes": ["mcq", "fillblanks"], "includeAnswerKey": true },
+    "questionIds": ["64q1...", "..."],
+    "totalMarks": 18,
+    "duration": 60,
+    "examName": "Unit Test",
+    "instructions": ["All questions are compulsory.", "..."],
+    "status": "generated",
+    "createdAt": "2026-10-10T09:00:00.000Z"
   }
 }
 ```
 
+**Errors:** 400 (`INVALID_MIX`), 404 (`NO_QUESTIONS`: nothing matches)
+
 ---
 
-#### POST `/generate-public` — Public AI Generation
+#### POST `/public/generate` — Public Generation
 
-Generate a question paper using AI (public endpoint).
+Free sample paper for visitors (no sign-in). The name, school and contact are saved with the paper. At most 10 questions: a larger request is cut to 10 with a 4/4/2 easy/medium/hard mix.
 
 **Request:**
 ```json
 {
-  "title": "Practice Paper",
-  "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
-  "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
-  "chapterIds": ["64c1...", "64c2..."],
-  "totalMarks": 50,
-  "duration": 60
+  "leadParams": {
+    "name": "Teacher Name",
+    "schoolName": "Springfield Academy",
+    "contactInfo": "teacher@example.com"
+  },
+  "paperParams": {
+    "title": "Practice Paper",
+    "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+    "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
+    "chapterIds": ["64c1a2b3c4d5e6f7a8b9c0d4"],
+    "config": { "totalQuestions": 5, "difficultyMix": { "easy": 2, "medium": 2, "hard": 1 } }
+  }
 }
 ```
 
-**Response (202):**
-```json
-{
-  "success": true,
-  "message": "Question paper generation started",
-  "task_id": "task_qp123"
-}
-```
+**Response (201):** `message` "Your free question paper is generated successfully!", `data` is the paper (as above) plus `questions`, the full question objects, so the page can build the PDF.
+
+**Errors:** 400 (missing `name`, `schoolName` or `contactInfo`; `INVALID_MIX`), 404 (`NO_QUESTIONS`)
 
 ---
 
 #### GET `/history`
 
-Get question paper history for a teacher.
+The signed-in user's papers, newest first. Deleted papers are left out.
 
-**Query:** `?page=1&limit=20`
+**Query:** `?page=1&limit=10&classId=...&subjectId=...`
 
 **Response (200):**
 ```json
@@ -2535,261 +3190,268 @@ Get question paper history for a teacher.
     {
       "_id": "64qp1...",
       "title": "Unit Test 1",
-      "createdAt": "2024-06-20T14:00:00.000Z"
+      "classId": { "_id": "...", "name": "Class 7", "grade": 7 },
+      "subjectId": { "_id": "...", "name": "Mathematics", "code": "..." },
+      "totalMarks": 18,
+      "createdAt": "2026-10-10T09:00:00.000Z",
+      "...": "..."
     }
-  ]
+  ],
+  "pagination": { "page": 1, "limit": 10, "total": 3, "totalPages": 1 }
 }
 ```
 
+`pagination` is at the top level, next to `data`.
+
 ---
 
-#### GET `/:id/preview`
+#### GET `/:paperId/preview`
 
-Preview a question paper.
+The paper with its class, subject and chapters populated, plus `questions` (the full question objects).
 
-**Params:** `id`
+**Params:** `paperId`
+
+**Response (200):** `{ "success": true, "data": { "_id": "64qp1...", "title": "Unit Test 1", "questions": [ { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": "Easy", "...": "..." } ], "...": "..." } }`
+
+**Errors:** 404 (`NOT_FOUND`)
+
+---
+
+#### GET `/:paperId/pdf`
+
+Download the paper as an A4 PDF (with the answer key when `includeAnswerKey` is on).
+
+**Params:** `paperId`
+
+**Response:** PDF binary (`application/pdf`), `Content-Disposition: attachment; filename="question-paper-<paperId>.pdf"`
+
+**Errors:** 404 (`NOT_FOUND`), 500 (`PDF_GENERATION_FAILED`)
+
+---
+
+#### DELETE `/:paperId`
+
+Delete one of your own papers (it is hidden, not erased).
+
+**Params:** `paperId`
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": {
-    "title": "Unit Test 1",
-    "totalMarks": 50,
-    "duration": 60,
-    "sections": [
-      {
-        "name": "MCQ",
-        "questions": [
-          {
-            "question": "What is 2+2?",
-            "options": ["3", "4", "5", "6"],
-            "correctAnswer": "4",
-            "marks": 1
-          }
-        ]
-      }
-    ]
-  }
+  "message": "Question paper deleted successfully"
 }
 ```
 
----
-
-#### GET `/:id/download-pdf`
-
-Download question paper as PDF.
-
-**Params:** `id`
-
-**Response:** PDF binary (application/pdf)
-
----
-
-#### DELETE `/:id`
-
-Delete a question paper.
-
-**Params:** `id`
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Question paper deleted"
-}
-```
+**Errors:** 404 (`NOT_FOUND`: no such paper, or not yours)
 
 ---
 
 ### 13. School & Sections
 
-Base: `/api/v1/school/`
+Base: `/api/v1/school/` and `/api/v1/sections/`
 
-**Auth:** Admin role required for school CRUD.
+**Auth:** reads need a signed-in user; creating and changing schools and sections needs the Principal role.
 
 ---
 
-#### POST `/` — Create School
+#### POST `/school` — Create School
 
 **Request:**
 ```json
 {
-  "name": "Springfield Academy",
-  "address": "123 Main St",
-  "city": "Springfield",
-  "state": "IL",
-  "contactEmail": "admin@springfield.edu"
+  "schoolName": "Springfield Academy",
+  "schoolCode": "SPR001",
+  "schoolBoard": "CBSE",
+  "schoolAddress": "123 Main Street",
+  "schoolPhone": "+91 98765 43210",
+  "schoolEmail": "office@example.com",
+  "schoolWebsite": "https://example.com"
 }
 ```
+
+`schoolName`, `schoolCode` (unique), `schoolBoard` and `schoolAddress` are required.
 
 **Response (201):**
 ```json
 {
   "success": true,
+  "message": "School created successfully",
   "data": {
-    "_id": "64sch1...",
-    "name": "Springfield Academy"
+    "_id": "64sch1a2b3c4d5e6f7a8b9c0",
+    "schoolName": "Springfield Academy",
+    "schoolCode": "SPR001",
+    "board": "CBSE",
+    "address": "123 Main Street",
+    "phone": "+91 98765 43210",
+    "email": "office@example.com",
+    "website": "https://example.com",
+    "kind": "school",
+    "createdAt": "2026-10-10T09:00:00.000Z"
+  }
+}
+```
+
+`kind` is `school`, or `independent` for the private school created for a self-signed-up teacher's first class link.
+
+**Errors:** 400 (`MISSING_FIELDS`), 409 (`DUPLICATE_CODE`)
+
+---
+
+#### GET `/school` — List Schools
+
+**Query:** `?page=1&limit=20` (`limit` max 100)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Schools fetched successfully",
+  "data": {
+    "schools": [ { "_id": "64sch1...", "schoolName": "Springfield Academy", "schoolCode": "SPR001", "...": "..." } ],
+    "pagination": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
   }
 }
 ```
 
 ---
 
-#### GET `/` — List Schools
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [ { "_id": "64sch1...", "name": "Springfield Academy" } ]
-}
-```
-
----
-
-#### GET `/:id` — Get School
+#### GET `/school/:id` — Get School
 
 **Params:** `id`
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "64sch1...",
-    "name": "Springfield Academy",
-    "sections": [ "..." ]
-  }
-}
-```
+**Response (200):** `message` "School fetched successfully", `data` is the school (same fields as above).
+
+**Errors:** 404 (`SCHOOL_NOT_FOUND`)
 
 ---
 
-#### PUT `/:id` — Update School
+#### PUT `/school/:id` — Update School
 
-**Params:** `id`
+Only the name and code can be changed, and both are required.
 
 **Request:**
 ```json
 {
-  "name": "Springfield Academy Updated"
+  "schoolName": "Springfield Academy",
+  "schoolCode": "SPR002"
 }
 ```
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": { "..." : "updated school" }
-}
-```
+**Response (200):** `message` "School updated successfully", `data` is the updated school.
+
+**Errors:** 400 (`MISSING_FIELDS`), 404 (`SCHOOL_NOT_FOUND`), 409 (`DUPLICATE_CODE`)
+
+There is no endpoint to delete a school.
 
 ---
 
-#### DELETE `/:id` — Delete School
-
-**Params:** `id`
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "School deleted"
-}
-```
-
----
-
-#### POST `/:schoolId/sections` — Create Section
-
-**Params:** `schoolId`
+#### POST `/sections` — Create Section
 
 **Request:**
 ```json
 {
-  "name": "7-A",
-  "classId": "64f1a2b3c4d5e6f7a8b9c0d2"
+  "schoolId": "64sch1a2b3c4d5e6f7a8b9c0",
+  "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+  "name": "a"
 }
 ```
+
+The name is stored in capitals, and `displayName` is "`<class name>`-`<NAME>`".
 
 **Response (201):**
 ```json
 {
   "success": true,
+  "message": "Section created successfully",
   "data": {
-    "_id": "64sec1...",
-    "name": "7-A",
+    "_id": "64sc1a2b3c4d5e6f7a8b9c0d",
     "schoolId": "64sch1...",
-    "classId": "64f1..."
+    "classId": "64f1...",
+    "name": "A",
+    "displayName": "Class 7-A",
+    "maxStrength": 40,
+    "currentStrength": 0,
+    "isActive": true,
+    "createdAt": "2026-10-10T09:00:00.000Z"
   }
 }
 ```
 
----
-
-#### GET `/:schoolId/sections` — List Sections
-
-**Params:** `schoolId`
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [
-    { "_id": "64sec1...", "name": "7-A" },
-    { "_id": "64sec2...", "name": "7-B" }
-  ]
-}
-```
+**Errors:** 400 (`MISSING_FIELDS`), 404 (`SCHOOL_NOT_FOUND`, `CLASS_NOT_FOUND`), 409 (`DUPLICATE_SECTION`)
 
 ---
 
-#### GET `/:schoolId/sections/:sectionId` — Get Section
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "64sec1...",
-    "name": "7-A",
-    "students": 35,
-    "classId": "64f1..."
-  }
-}
-```
-
----
-
-#### PUT `/:schoolId/sections/:sectionId` — Update Section
+#### POST `/sections/bulk` — Create Several Sections
 
 **Request:**
 ```json
 {
-  "name": "7-A (Updated)"
+  "schoolId": "64sch1a2b3c4d5e6f7a8b9c0",
+  "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+  "sections": ["A", "B", "C"]
 }
 ```
 
-**Response (200):**
+**Response (201):**
 ```json
 {
   "success": true,
-  "data": { "..." : "updated section" }
+  "message": "Bulk sections created successfully",
+  "data": {
+    "created": [ { "_id": "...", "name": "B", "displayName": "Class 7-B", "...": "..." } ],
+    "skipped": [ { "name": "A", "reason": "Already exists" } ],
+    "failed": []
+  }
 }
 ```
 
 ---
 
-#### DELETE `/:schoolId/sections/:sectionId` — Delete Section
+#### GET `/sections/school/:schoolId` — List Sections
 
-**Response (200):**
+Active sections of a school, with `classId` (`name`, `grade`) and `schoolId` (`schoolName`, `schoolCode`) populated.
+
+**Response (200):** `message` "Sections fetched successfully", `data` is an array of sections.
+
+---
+
+#### GET `/sections/school/:schoolId/class/:classId` — List Sections of a Class
+
+Same as above, for one class.
+
+---
+
+#### GET `/sections/:sectionId` — Get Section
+
+**Response (200):** `message` "Section fetched successfully", `data` is the section with class and school populated.
+
+**Errors:** 404 (`SECTION_NOT_FOUND`)
+
+---
+
+#### PUT `/sections/:sectionId` — Update Section
+
+**Request:** `name` and/or `isActive`.
 ```json
-{
-  "success": true,
-  "message": "Section deleted"
-}
+{ "name": "D", "isActive": true }
 ```
+
+A new name also updates `displayName`.
+
+**Response (200):** `message` "Section updated successfully", `data` is the updated section.
+
+**Errors:** 404 (`SECTION_NOT_FOUND`), 409 (`DUPLICATE_SECTION`)
+
+---
+
+#### DELETE `/sections/:sectionId` — Delete Section
+
+Soft delete: sets `isActive` to `false`.
+
+**Response (200):** `message` "Section deleted (soft delete)", `data` is the section.
+
+**Errors:** 404 (`SECTION_NOT_FOUND`)
 
 ---
 
@@ -2905,56 +3567,142 @@ Continue a multi-turn clarification conversation.
 
 ### 15. Supporting
 
-Base: `/api/v1/`
-
----
-
-#### GET `/feedback`
-
-Get feedback list.
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": [ "..." ]
-}
-```
+Base: `/api/v1/` (routes mounted at `/feedback`, `/logs` and `/stats`; the leaderboard is in [Gamification](#8-gamification), admin metrics in [Admin Metrics](#19-admin-metrics))
 
 ---
 
 #### POST `/feedback`
 
-Submit feedback.
+Submit feedback from the public `/feedback` page or from inside the app. No sign-in needed; when a valid token is sent, the message is linked to that account.
+
+**Rate limit:** 5 per hour.
 
 **Request:**
 ```json
 {
-  "type": "bug",
-  "message": "The quiz timer resets on page reload",
-  "userId": "64f1a2b3c4d5e6f7a8b9c0d1"
+  "name": "Riya",
+  "email": "user@example.com",
+  "feedback": "The quiz timer resets on page reload",
+  "source": "in_app",
+  "context": { "path": "/quizzes", "questionId": "", "sessionId": "" }
 }
 ```
 
-**Response (201):**
-```json
-{
-  "success": true,
-  "message": "Feedback submitted"
-}
-```
-
----
-
-#### GET `/logs`
-
-Get system logs (Admin only).
+`name` and `feedback` are required. `source` is `public_link` (default), `in_app` or `question_report`; `context` is optional. The form also has a hidden `website` field: a request that fills it in is answered with success but not saved.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [ "..." ]
+  "message": "Feedback submitted successfully."
+}
+```
+
+**Errors:** 400 (missing `name` or `feedback`), 429 (too many submissions)
+
+---
+
+#### GET `/feedback/admin`
+
+The feedback inbox, newest first.
+
+**Auth:** SuperAdmin.
+
+**Query:** `?status=new&source=in_app&page=1&limit=20` (`status` and `source` accept `all`; `limit` max 100)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Feedback fetched",
+  "data": {
+    "items": [
+      {
+        "_id": "6705e1a2b3c4d5e6f7a8b9c0",
+        "name": "Riya",
+        "email": "user@example.com",
+        "message": "The quiz timer resets on page reload",
+        "source": "in_app",
+        "status": "new",
+        "context": { "path": "/quizzes", "questionId": "", "sessionId": "" },
+        "userId": { "_id": "...", "email": "user@example.com", "accountType": "Student" },
+        "createdAt": "2026-10-10T09:00:00.000Z"
+      }
+    ],
+    "counts": { "new": 3, "in_progress": 1, "resolved": 10, "archived": 2 },
+    "pagination": { "page": 1, "limit": 20, "total": 16, "pages": 1 }
+  }
+}
+```
+
+---
+
+#### PATCH `/feedback/admin/:id`
+
+Triage one message.
+
+**Auth:** SuperAdmin.
+
+**Request:**
+```json
+{ "status": "resolved", "adminNote": "Fixed in the latest release" }
+```
+
+`status` is `new`, `in_progress`, `resolved` or `archived`. Both fields are optional.
+
+**Response (200):** `message` "Feedback updated", `data` is the updated message.
+
+**Errors:** 400 (`Invalid feedback id`, `Invalid status`), 404 (not found)
+
+---
+
+#### GET `/logs`
+
+Stored API request logs, newest first.
+
+**Auth:** SuperAdmin.
+
+**Query:** all optional: `userId`, `sessionId`, `endpoint` (matches part of the path), `method`, `startDate`, `endDate`, `hasError=true`, `minProcessingTime`, `page` (default 1), `limit` (default 50)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "logs": [ "...log entries..." ],
+    "pagination": { "currentPage": 1, "totalPages": 8, "totalItems": 391, "itemsPerPage": 50 }
+  }
+}
+```
+
+---
+
+#### GET `/logs/stats`
+
+**Auth:** SuperAdmin.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { "totalRequests": 391, "avgProcessingTime": 84.2, "maxProcessingTime": 2310, "errorCount": 7 }
+}
+```
+
+---
+
+#### DELETE `/logs`
+
+Delete every stored API log.
+
+**Auth:** SuperAdmin.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "All logs deleted",
+  "data": { "deletedCount": 391 }
 }
 ```
 
@@ -2962,20 +3710,22 @@ Get system logs (Admin only).
 
 #### GET `/stats/public`
 
-Get public platform stats.
+Platform totals for the landing page. No auth.
 
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": "Public stats fetched",
   "data": {
-    "totalUsers": 12500,
-    "totalSessions": 98000,
-    "totalQuestions": 45000,
-    "activeToday": 350
+    "totalStudents": 1234,
+    "totalSessions": 5678,
+    "totalQuestionsAnswered": 91011
   }
 }
 ```
+
+Example values. `totalStudents` counts student and teacher accounts.
 
 ---
 
@@ -3946,6 +4696,53 @@ or
 
 ---
 
+### 24. Health
+
+Base: the server root (`http://localhost:4000/`), **not** `/api/v1`. No auth.
+
+---
+
+#### GET `/ping`
+
+Liveness check. Skipped by the general rate limiter.
+
+**Response (200):**
+```json
+{ "message": "Working Fine" }
+```
+
+`GET /` answers the same way for platform uptime probes, with `{ "message": "AskAide AI Backend is running" }`.
+
+---
+
+#### GET `/health`
+
+Deep health check: reports whether MongoDB is connected. It goes through the general rate limiter like other routes.
+
+**Response (200):**
+```json
+{
+  "status": "healthy",
+  "server": "ok",
+  "database": "ok",
+  "timestamp": "2026-06-29T12:00:00.000Z"
+}
+```
+
+**Response (503):**
+```json
+{
+  "status": "degraded",
+  "server": "ok",
+  "database": "disconnected",
+  "timestamp": "2026-06-29T12:00:00.000Z"
+}
+```
+
+`database` is `ok`, `connecting`, `disconnected` or `error`; anything but `ok` returns `503`.
+
+---
+
 ## AI Service API
 
 Base: `http://localhost:8000`
@@ -4813,17 +5610,29 @@ Most limiters send the IETF draft-8 `RateLimit` and `RateLimit-Policy` headers i
 ```typescript
 {
   _id: string;
+  createdBy: string;
   title: string;
   description?: string;
   classId: string;
   subjectId: string;
   chapterIds: string[];
-  questionType: string;
-  difficulty: string;
-  timeLimit: number;       // seconds
-  totalQuestions: number;
-  createdBy: string;
+  sectionIds: string[];
+  settings: {
+    timeLimit: number | null;   // minutes
+    shuffleQuestions: boolean;
+    shuffleOptions: boolean;
+    showAnswersAfter: "immediately" | "submission" | "deadline" | "never";
+    allowedAttempts: number;
+    passingPercentage: number;
+    deadline: Date | null;
+  };
   status: "draft" | "published" | "closed";
+  totalQuestions: number;
+  totalMarks: number;
+  publishedAt: Date | null;
+  closedAt: Date | null;
+  isDeleted: boolean;
+  deletedAt: Date | null;
   createdAt: Date;
 }
 ```
@@ -4832,10 +5641,14 @@ Most limiters send the IETF draft-8 `RateLimit` and `RateLimit-Policy` headers i
 ```typescript
 {
   _id: string;
-  title: string;
+  name: string;
   classId: string;
   subjectId: string;
-  indexed: boolean;        // has PDF in vector DB
+  description?: string;
+  order: number;
+  isActive: boolean;
+  hidden: boolean;
+  ragIndexed: boolean;     // PDF finished indexing in the vector DB
   createdAt: Date;
 }
 ```
@@ -4845,9 +5658,13 @@ Most limiters send the IETF draft-8 `RateLimit` and `RateLimit-Policy` headers i
 {
   _id: string;
   title: string;
-  chapterId: string;
-  classId: string;
-  subjectId: string;
+  slug: string;
+  description?: string;
+  keywords: string[];
+  status: "active" | "inactive";
   createdAt: Date;
+  updatedAt: Date;
 }
 ```
+
+Topics are linked to chapters through a separate chapter-topic mapping (with an `order`), so a topic has no `chapterId` of its own.

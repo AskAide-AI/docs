@@ -1,72 +1,51 @@
-# Frontend Refactoring Guide
+# Frontend Conventions
 
-## Overview
-This document outlines the necessary changes to modernize the codebase, improve maintainability, and fix architectural inconsistencies found during the December 2025 code review.
-
----
-
-## 🚀 Priority 1: Critical Cleanup
-
-### 1. Remove Duplicate Service Layer
-**Issue**: Two competing layers for API calls (`src/api` vs `src/services`) cause confusion. `src/services` is legacy.
-**Action**:
-- [ ] **Delete** the `src/services` directory entirely.
-- [ ] **Verify** `src/api/endpoints.js` contains all endpoint constants that were in `services/api.js`.
-- [ ] **Verify** `src/api/auth.api.js` contains all auth logic that was in `services/operations`.
-- [ ] **Update Imports**: Search for any imports from `../services/...` and update them to use `@/api` or relative paths to `src/api`.
-
-### 2. Fix Environment Variables (Vite Standard)
-**Issue**: The code uses `process.env.REACT_APP_` (Create React App style) which does not work natively with Vite in production logic without plugins.
-**Action**:
-- [ ] **Search & Replace**: Global search for `process.env.REACT_APP_` and replace with `import.meta.env.VITE_`.
-- [ ] **Update .env**: Ensure your local `.env` file uses `VITE_` prefix for all client-side variables (e.g., `VITE_API_URL`).
-- [ ] **Check `src/api/axios.js`**: Confirm it uses `import.meta.env.VITE_API_URL`.
+The rules the frontend code follows today. When in doubt, copy an existing file that already does it.
 
 ---
 
-## 🛠 Priority 2: Component Modularity
+## API calls
 
-### 3. Refactor `QuestionPractice.jsx`
-**Issue**: File is ~1000 lines, mixing UI, speech recognition, and complex session logic.
-**Action**:
-- [ ] **Extract Hooks**:
-    - Create `src/hooks/useSpeechRecognition.js` for the speech-to-text logic.
-    - Create `src/hooks/useSession.js` for managing `sessionHistory` and `currentQuestion`.
-- [ ] **Extract Components**:
-    - Move the typing animation logic to `src/components/common/Typewriter.jsx`.
-    - Extract the question rendering card to `src/components/study/QuestionCard.jsx`.
+- Components never call Axios directly. Every request goes through the API layer in `src/api/`:
+  - `axios.js`: the one shared Axios instance. It adds the JWT, refreshes an expired token once (shared across tabs) and replays the request, and sends the user to `/login` when the session can't be refreshed.
+  - `endpoints.js`: every URL as a constant (`ENDPOINTS.AUTH.LOGIN`, ...). Add new routes here.
+  - `*.api.js`: one module per area (`study.api.js`, `quiz.api.js`, `teacherClass.api.js`, ...), all re-exported from `src/api/index.js` (`import { studyApi, quizApi } from '../api'`).
+- Raw `fetch` (for example streaming) must use `authorizedFetch()` from `src/api/axios.js`, so an expired token is refreshed the same way Axios does it.
+- The Backend answers `{ success, message, data }`. Read `response.data`. List shapes vary between endpoints; `normalizeListResponse()` in `admin.api.js` flattens paginated payloads into an array.
+- Errors: `try`/`catch`, then `toast.error(error.response?.data?.message || 'fallback message')`.
+- Before adding a call, check the route exists in the Backend. There is no `src/services/` folder.
 
-### 4. Refactor `LandingPage.jsx`
-**Issue**: Large file with many hardcoded sections.
-**Action**:
-- [ ] Create `src/components/pages/landing/` directory.
-- [ ] Extract sections into separate files:
-    - `HeroSection.jsx`
-    - `FeaturesSection.jsx`
-    - `TestimonialsSection.jsx`
-    - `FooterSection.jsx`
+## Styling
 
----
+- Tailwind for layout and spacing. **Every color is a CSS variable** from `src/index.css` (`var(--bg-card)`, `var(--text-primary)`, `var(--accent)`, ...). Hard-coded colors such as `bg-white` or `bg-blue-500` break dark mode, which works by toggling the `.dark` class.
+- Grids: write `minmax(min(Npx, 100%), 1fr)`, never `minmax(Npx, 1fr)`. The app root clips overflow, so on a 320px phone a too-wide column is cut off instead of scrolling sideways.
 
-## 🧹 Priority 3: Code Quality
+```jsx
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 16 }} />
+```
 
-### 5. Type Safety (Future Proofing)
-**Recommendation**: The project has `tsconfig.json` but uses `.jsx`.
-**Action**:
-- [ ] Start renaming files from `.jsx` to `.tsx` one by one.
-- [ ] Fix basic type errors (add `any` if needed temporarily, then refine).
-- [ ] Define interfaces for your core data models: `User`, `Question`, `Session`.
+## Forms and controls
 
-### 6. Linting & Formatting
-**Action**:
-- [ ] Run `npm run lint` and fix all warnings (unused variables, missing dependencies in useEffect).
-- [ ] Ensure Prettier is set up and running to enforce consistent formatting.
+- Forms use React Hook Form (`useForm`). Never keep form state in Redux. Zod is installed for schemas, but today's forms validate with React Hook Form's own rules.
+- Use the shared controls instead of native ones: `ui/Dropdown` (not `<select>`), `ui/RangeSlider` (not `<input type="range">`), `common/ConfirmDialog` (not `window.confirm()`), `admin/overview/DatePicker` (not `<input type="date">`).
 
----
+## State
 
-## Verification Checklist
-After making these changes, verify:
-1.  **Build**: `npm run build` completes without errors.
-2.  **Auth**: Login and Signup flow works.
-3.  **Study**: Can start a session, answer questions, and view results.
-4.  **Admin**: Admin dashboard still loads data correctly (since it might use legacy services).
+- Redux (`src/store/`) holds session and server state: auth tokens, the signed-in user, the study session, AI assistant conversations.
+- React Context holds UI preferences saved in localStorage: theme (`useTheme`) and sound (`useSound`).
+- Tabs, dropdowns and other local UI state stay in `useState`.
+
+## Routes and components
+
+- Every page in `src/App.jsx` is loaded with `React.lazy()`. Add new pages the same way.
+- Pages that need sign-in are wrapped in `ProtectedRoute`; role pages in `RoleProtectedRoute allowedRoles={[...]}`. The Backend still checks every request, so the frontend guards are only for navigation.
+- Components are `.jsx`. TypeScript is installed but not used for components.
+
+## Tests
+
+- Vitest + Testing Library, all in `src/__tests__/` (no tests next to components). Run `npm test`, or `npx vitest run src/__tests__/<file>` for one file.
+- Good examples to copy: `navigation-role-model.test.jsx`, `auth-login-field.test.jsx`, `onboarding-first-session.test.jsx`.
+
+## Analytics
+
+- Microsoft Clarity through `src/utils/clarity.js` (off in development). Track meaningful features with `ClarityEvents` / `ClarityTags`.

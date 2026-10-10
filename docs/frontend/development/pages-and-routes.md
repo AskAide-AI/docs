@@ -266,8 +266,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Description:** Learning progress tracking
 **Authentication:** Protected (ProtectedRoute)
 **API Calls:**
-- GET `/topic-progress/user/:userId/subject/:subjectId`
-- GET `/topic-progress/progress/:userId/chapter/:chapterId`
+- GET `/topic-progress/progress/subject/:subjectId`
 - GET `/topic-progress/ai-insights/chapter/:chapterId`
 - GET `/topic-progress/ai-insights/subject/:subjectId`
 **Features:**

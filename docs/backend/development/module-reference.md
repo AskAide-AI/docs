@@ -10,7 +10,7 @@ There are 19 modules. All follow `src/modules/<name>/` with `controllers`, `serv
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/authenticate/login` | POST | Rate-limited | `{ userName, password }` → `{ user, tokens }` |
-| `/authenticate/signup` | POST | Rate-limited | `{ userName, email, password, confirmPassword, name, accountType?, referralCode?, acquisition? }` → `{ user, tokens, referral }`. `accountType` is `Student`, `Teacher`, `Parent` or `Principal` |
+| `/authenticate/signup` | POST | Rate-limited | `{ userName, email, password, confirmPassword, name, accountType?, referralCode?, acquisition? }` → `{ user, tokens, referral }`. `accountType` is `Student` (default) or `Teacher`; any other value gets `400` (`INVALID_ACCOUNT_TYPE`) |
 | `/authenticate/google` | POST | Rate-limited | `{ idToken, referralCode?, accountType?, acquisition? }` → `{ user, tokens, isNewUser, referral }`. `accountType` (`Student` or `Teacher`) is used only when this login creates the account |
 | `/authenticate/refresh` | POST | - | Token refresh (each refresh token works once) |
 | `/authenticate/logout` | POST | - | Revoke refresh token |
@@ -115,10 +115,11 @@ The practice and free-trial batches shuffle both the question order and each que
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/topic-progress/progress/:userId/chapter/:chapterId` | GET | Chapter progress |
-| `/topic-progress/progress/:userId/subject/:subjectId` | GET | Subject progress |
-| `/topic-progress/ai-insights/...` | GET | AI learning insights |
-| `/topic-progress/mastery-summary/:userId` | GET | Mastery overview |
+| `/topic-progress/progress/chapter/:chapterId` | GET | Chapter progress (signed-in user) |
+| `/topic-progress/progress/subject/:subjectId` | GET | Subject progress (signed-in user) |
+| `/topic-progress/ai-insights/{chapter,subject}/:id` | GET | AI learning insights |
+| `/topic-progress/teacher/class-insights?subjectId=` | GET | AI class insights (Teacher) |
+| `/topic-progress/mastery-summary` | GET | Mastery overview (signed-in user) |
 | `/progress/user/:userId` | GET | Progress dashboard |
 | `/streaks/:userId` | GET | Streak data |
 | `/streaks/:userId/use-freeze` | POST | Use streak freeze |

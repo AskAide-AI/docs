@@ -162,7 +162,7 @@ Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`
 
 | Aspect | Detail |
 |---|---|
-| Responsibility | Signup (students, teachers, parents, principals), login, Google login, token refresh and logout, OTP send/verify, change password, reset password |
+| Responsibility | Signup (students and teachers only), login, Google login, token refresh and logout, OTP send/verify, change password, reset password |
 | Base path | `/authenticate` |
 | Key functions | `auth.service.js`: `signup`, `login`, `loginWithGoogle`, `generateAccessToken`, `generateRefreshToken`, `storeRefreshToken`, `rotateTokens`, `revokeRefreshToken`, `revokeAllUserTokens`, `changePassword`, `generateResetToken`, `resetPassword`, `sendOTP`, `verifyOTP`, `_acquisition` (first-touch attribution), `_attributeReferral` |
 | Models owned | `RefreshToken`, `OTP` (module copy; `src/shared/models/otp.model.js` registers the same model name guarded by `mongoose.models.OTP`) |
@@ -781,7 +781,7 @@ sequenceDiagram
 | Password reset token | 20 random bytes (hex), SHA-256 stored in `User.token`, expires after 5 min, link `FRONTEND_URL/update-password/<token>` | `generateResetToken` |
 | Refresh reuse | Each refresh token works once: the claim and the revoke are one atomic update, so two refreshes sent in the same millisecond cannot both succeed | `rotateTokens` |
 | Google login | `verifyIdToken` against any of `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_IOS`; match by `googleId`, else link by email, else create a `Teacher` (when `accountType: 'Teacher'` is sent) or a `Student` with `provider: 'google'`. A new account also stores `acquisition` and is credited to `referralCode`'s owner. Response adds `isNewUser` and `referral` | `loginWithGoogle` |
-| Self-signup roles | Joi allows `Student`, `Teacher`, `Parent`, `Principal`; `Principal` is created with `approved: false` | `auth.validator.js`, `auth.service.js` |
+| Self-signup roles | `Student` (default) or `Teacher` only, checked by Joi and again in `signup` (`INVALID_ACCOUNT_TYPE`, 400). New accounts get `approved: true` | `auth.validator.js`, `auth.service.js` |
 | Password policy | 8 to 128 characters with at least one letter and one number (signup, reset and change) | `auth.validator.js` |
 
 ### 8.2 Chapter PDF upload and AI ingestion
@@ -1220,11 +1220,11 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | Role | Created by | Typical scope |
 |---|---|---|
 | `SuperAdmin` | Not creatable through the API | Admin metrics, logs, feedback inbox, suggestions moderation, campaigns, principal accounts, live LLM selection |
-| `Principal` | Self-signup (`approved: false`) or SuperAdmin via `/principals` | School dashboards, teacher accounts, schools and sections |
+| `Principal` | SuperAdmin via `/principals` (linked to a school) | School dashboards, teacher accounts, schools and sections |
 | `Teacher` | Self-signup (email or Google) or principal via `/teacher` | Content upload, question generation, quizzes, papers, AI assistant, teacher dashboards, class join links |
-| `Parent` | Self-signup or teacher/principal via `/parent-students/bulk` | Parent dashboard for linked children |
+| `Parent` | Teacher/principal via `/parent-students/bulk` (with `createParentsIfNotExist`) | Parent dashboard for linked children |
 | `Student` | Self-signup, Google login, or teacher/principal via `/student/create` | Practice, quizzes, progress, challenges, joining class links |
-| `NormalUser` | Enum value only (not selectable in the signup schema) | Guard exists (`isNormalUser`) |
+| `NormalUser` | Enum value only (signup accepts only `Student` and `Teacher`) | Guard exists (`isNormalUser`) |
 
 The `approved` flag is changed by `PATCH /admin/metrics/users/:id/approval`; see [Authentication](./development/authentication.md).
 

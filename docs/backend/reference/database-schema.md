@@ -49,7 +49,7 @@ User ──→ (N) Notification, (N) UserActivityDay
 | accountType | String | REQUIRED, ENUM | SuperAdmin, Principal, Parent, Teacher, Student, NormalUser |
 | name | String | REQUIRED | Display name |
 | active | Boolean | DEFAULT: true | Account active flag |
-| approved | Boolean | DEFAULT: true | `false` for self-signed-up principals until approved |
+| approved | Boolean | DEFAULT: true | Set to `true` at signup; SuperAdmin can toggle it from `/admin` |
 | emailOptOut | Boolean | DEFAULT: false | Opted out of emails |
 | additionalDetails | ObjectId | REF: Profile, REQUIRED | Profile document |
 | class | [ObjectId] | REF: Class | Classes the student can practise |

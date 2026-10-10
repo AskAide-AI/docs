@@ -115,9 +115,12 @@
 POST /api/v1/authenticate/signup
 Body: { userName, email, password, confirmPassword, name,
         accountType?, contactNumber?, referralCode?, acquisition? }
-- accountType: Student, Teacher, Parent or Principal (Teachers can
-  sign up on their own and create class join links)
-- Principal accounts start with approved: false
+- accountType: Student (default) or Teacher (Teachers can sign up
+  on their own and create class join links). Any other value gets
+  400 "Account type must be Student or Teacher"
+  (INVALID_ACCOUNT_TYPE). Principals are created by an admin and
+  linked to a school; parents come through the parent module
+- New accounts are created with approved: true
 - A valid referralCode credits the new account to its inviter;
   a bad or stale code is ignored and never fails the signup
 - Returns { user, tokens, referral } (auto-login)
