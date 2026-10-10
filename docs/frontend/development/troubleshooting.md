@@ -36,9 +36,11 @@ Common issues and solutions when working with the AskAideAI frontend.
 ### API returns 401 Unauthorized
 **Symptoms:** Random logouts, API calls failing with 401
 **Solutions:**
-1. Check if JWT token is expired (tokens are in localStorage)
-2. Clear localStorage and re-login
-3. Verify the token is being sent in Authorization header
+1. Check if JWT token is expired (tokens are in localStorage). An expired access token should refresh on its own: the axios interceptor calls `/authenticate/refresh` once and retries.
+2. A raw `fetch` that skips `authorizedFetch()` (from `src/api/axios.js`) gets no refresh and fails with a bare 401 after the 2-hour access token expires. Route it through `authorizedFetch()`.
+3. Refresh tokens are single-use. If several tabs are open, all refreshes must go through `refreshAccessToken()`, which runs one at a time across tabs; a second refresh with the same token gets "Refresh token has been revoked" and logs that tab out.
+4. Clear localStorage and re-login
+5. Verify the token is being sent in Authorization header
 
 ### Data not showing in dropdowns/lists
 **Symptoms:** Empty dropdowns, "No data" states
@@ -90,5 +92,7 @@ Common issues and solutions when working with the AskAideAI frontend.
 ### Mobile layout broken
 **Solutions:**
 1. Use responsive prefixes: `sm:`, `md:`, `lg:`
-2. Test at 360px width minimum
-3. Ensure touch targets are at least 44px
+2. Test at 320, 360, 375 and 412px wide. The app root clips horizontal overflow, so too-wide content is cut off instead of scrolling.
+3. Auto-fit grids: use `minmax(min(280px, 100%), 1fr)`, not `minmax(280px, 1fr)`
+4. Google sign-in button spilling off the screen: use `auth/FitGoogleLogin.jsx`, not a fixed `width`
+5. Ensure touch targets are at least 44px

@@ -1,13 +1,13 @@
 # Testing Documentation
 
 > Testing strategy and how to run tests for the AskAideAI frontend.
-> Last Updated: June 26, 2026
+> Last Updated: October 10, 2026
 
 ---
 
 ## Current Status
 
-> **Note:** Automated testing is not yet implemented — the project has zero test files and all testing is currently manual. This document outlines the recommended strategy and how tests will run once introduced.
+Vitest and React Testing Library are set up, and the frontend has **23 test files**, all in `src/__tests__/` (no co-located tests). Coverage is still thin: the files guard specific flows and past bugs rather than whole areas. There is no coverage report, no end-to-end suite, and no CI, so tests only run when someone runs them.
 
 ---
 
@@ -15,232 +15,165 @@
 
 | Priority | Area | Rationale |
 |----------|------|-----------|
-| P0 | Auth flows (login, signup, password reset) | Blocks all user access |
+| P0 | Auth flows (login, signup, password reset, token refresh) | Blocks all user access |
 | P0 | Study session (question load, answer submit) | Core product value |
 | P1 | Quiz attempt and submission | Student assessment flow |
 | P1 | Admin CRUD operations | Data integrity |
+| P1 | Challenge, referral and class-join flows | How new students arrive |
 | P2 | Dashboard rendering | Visual, less business-critical |
 | P2 | Blog / SEO pages | Static content |
 | P3 | UI component library | Shared primitives |
 
 ---
 
-## Recommended Testing Stack
+## Testing Stack
 
-| Tool | Purpose |
-|------|---------|
-| Vitest | Test runner (native to the Vite ecosystem) |
-| React Testing Library | Component testing utilities |
-| MSW | API mocking |
-| Playwright | End-to-end testing (critical paths only) |
+| Tool | Purpose | Status |
+|------|---------|--------|
+| Vitest 4 | Test runner (config in the `test` block of `vite.config.ts`, `jsdom` environment, globals on) | Installed |
+| React Testing Library + `user-event` | Component testing utilities | Installed |
+| `@testing-library/jest-dom` | DOM matchers, loaded by `src/setupTests.js` | Installed |
+| `vi.mock` | Mocking `src/api/*` modules and `react-router-dom` | Used instead of MSW |
+| Playwright 1.63 | Manual, CLI-driven browser checks (`npx playwright cli`), not a test suite | Installed |
 
 ---
 
-## Proposed Test Structure
+## Test Structure
 
 ```
 src/
-├── components/
-│   ├── auth/
-│   │   ├── Login.jsx
-│   │   └── Login.test.jsx    # Component tests
-│   └── ...
-├── hooks/
-│   ├── useAuth.js
-│   └── useAuth.test.js       # Hook tests
-├── utils/
-│   ├── formatDate.js
-│   └── formatDate.test.js    # Unit tests
-└── __tests__/                 # Integration tests
-    └── e2e/                   # E2E tests
-        └── login.spec.js
+└── __tests__/                         # every test file, flat
+    ├── navigation-role-model.test.jsx # component / config tests (.jsx)
+    ├── token-refresh.test.js          # pure logic tests (.js)
+    └── ...
 ```
+
+Imports are relative (`../components/...`, `../api/...`). There are no path aliases, so `@/store`-style imports won't resolve.
 
 ---
 
-## Test Commands (When Implemented)
+## Test Commands
 
 ```bash
-# Run all tests
-npm run test
+# Run all tests once
+npm test                     # vitest run
 
-# Run tests in watch mode
+# Watch mode
 npm run test:watch
 
-# Run tests with coverage
-npm run test:coverage
-
-# Run E2E tests
-npm run test:e2e
+# One file, or one test by name
+npx vitest run src/__tests__/navigation-role-model.test.jsx
+npx vitest run -t "should pass a smoke test"
 ```
+
+There is no `test:coverage` or `test:e2e` script.
+
+---
+
+## Current Test Files
+
+| File | Covers |
+|------|--------|
+| `admin-ai-feature-models.test.jsx` | AI System "Model per feature" card |
+| `admin-ai-system.test.jsx` | AI System tab: status, test, switch the live model |
+| `auth-login-field.test.jsx` | Email-or-username field, role-based redirect after login |
+| `badge-unlock-flow.test.jsx` | Badge check maps `{ badgeId, title }` to IDs; unknown badges are skipped so the result card opens |
+| `challenge-gift-note.test.jsx` | Gift progress note on challenge pages |
+| `challenge-share-card.test.jsx` | Challenge button hidden for short sessions; creates the challenge and opens WhatsApp |
+| `curriculum-static-class-6-8.test.js` | Class 6–8 curriculum data and route counts |
+| `navigation-role-model.test.jsx` | Which nav items each role sees |
+| `notifications-bell.test.jsx` | Unread count, opening the panel marks read, row navigation, empty state, `timeAgo` |
+| `onboarding-first-session.test.jsx` | First-run gate and the onboarding → study handoff |
+| `placeholder.test.jsx` | The original `1 + 1` smoke test |
+| `prerender-route-matcher.test.js` | Prerender URL → page loader (incl. About, Pricing, How it works) |
+| `profile-email-change.test.jsx` | Email changes only after the code; name edit saves |
+| `question-practice-answer-saving.test.jsx` | Each answer saved at once; session ended on leave and with `keepalive` on tab close |
+| `referral-attribution.test.js` | First-touch `?ref=` and UTM capture; pending challenge claim and class join |
+| `seo-chapter-page-class-number.test.jsx` | Real class number in SEO chapter copy |
+| `seo-chapter-page-legacy-slug.test.jsx` | Legacy chapter URLs redirect; unknown slugs still 404 |
+| `seo-class-hub-page.test.jsx` | Class hub lists the right subjects |
+| `seo-subject-page-chapter-links.test.jsx` | Distinct chapter link slugs |
+| `strip-inline-markdown.test.js` | `stripInlineMarkdown` helper |
+| `teacher-ai-clarification.test.jsx` | Teacher AI generator clarification round-trip |
+| `token-refresh.test.js` | One refresh per tab and across tabs; `authorizedFetch` refresh-and-retry |
+| `try-choice.test.js` | Chapter remembered from `/try`: used once, expires after a day |
 
 ---
 
 ## Component Testing Example
 
+Mock the API module, render inside a minimal store and a `MemoryRouter`, then drive it with `user-event` (abridged from `notifications-bell.test.jsx`):
+
 ```jsx
-// Login.test.jsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
-import { store } from '@/store';
-import Login from './Login';
+import { configureStore } from '@reduxjs/toolkit';
+import { MemoryRouter } from 'react-router-dom';
 
-const renderLogin = () => {
-  return render(
-    <Provider store={store}>
-      <BrowserRouter>
-        <Login />
-      </BrowserRouter>
-    </Provider>
-  );
-};
+const api = vi.hoisted(() => ({ unreadCount: vi.fn(), list: vi.fn(), markRead: vi.fn() }));
+vi.mock('../api/notification.api', () => ({ notificationApi: api }));
 
-describe('Login Component', () => {
-  it('renders login form', () => {
-    renderLogin();
-    
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
-  });
-  
-  it('shows validation errors for empty fields', async () => {
-    renderLogin();
-    
-    fireEvent.click(screen.getByRole('button', { name: /login/i }));
-    
-    await waitFor(() => {
-      expect(screen.getByText(/email is required/i)).toBeInTheDocument();
-      expect(screen.getByText(/password is required/i)).toBeInTheDocument();
-    });
-  });
-  
-  it('submits form with valid data', async () => {
-    renderLogin();
-    
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), {
-      target: { value: 'password123' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /login/i }));
-    
-    await waitFor(() => {
-      // Assert login API was called or navigation occurred
-    });
+import NotificationBell from '../components/notifications/NotificationBell';
+import NotificationCenter from '../components/notifications/NotificationCenter';
+
+const store = configureStore({ reducer: () => ({ auth: { token: 't' }, profile: { user: { _id: 'u1' } } }) });
+
+describe('notification bell', () => {
+  it('shows the unread count, opens the list and marks it read', async () => {
+    api.unreadCount.mockResolvedValue(2);
+    api.list.mockResolvedValue({ items: [], hasMore: false, nextCursor: null, unread: 2 });
+    api.markRead.mockResolvedValue({ updated: 2, unread: 0 });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter><NotificationBell /><NotificationCenter /></MemoryRouter>
+      </Provider>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: /2 unread/i }));
+    await waitFor(() => expect(api.markRead).toHaveBeenCalledWith({ all: true }));
   });
 });
 ```
 
 ---
 
-## Hook Testing Example
+## Logic Testing Example
 
-```jsx
-// useAuth.test.js
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { store } from '@/store';
-import { useAuth } from './useAuth';
-
-const wrapper = ({ children }) => (
-  <Provider store={store}>{children}</Provider>
-);
-
-describe('useAuth Hook', () => {
-  it('returns initial auth state', () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-    
-    expect(result.current.user).toBeNull();
-    expect(result.current.isAuthenticated).toBe(false);
-  });
-  
-  it('logs in user successfully', async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-    
-    await act(async () => {
-      await result.current.login({
-        email: 'test@example.com',
-        password: 'password123',
-      });
-    });
-    
-    await waitFor(() => {
-      expect(result.current.isAuthenticated).toBe(true);
-    });
-  });
-});
-```
-
----
-
-## API Mocking with MSW
-
-```jsx
-// mocks/handlers.js
-import { rest } from 'msw';
-
-export const handlers = [
-  rest.post('/api/v1/auth/login', (req, res, ctx) => {
-    return res(
-      ctx.json({
-        success: true,
-        user: { id: '1', name: 'Test User', email: 'test@example.com' },
-        token: 'mock-token',
-      })
-    );
-  }),
-  
-  rest.get('/api/v1/profile/userDetails', (req, res, ctx) => {
-    return res(
-      ctx.json({
-        success: true,
-        user: { id: '1', name: 'Test User', email: 'test@example.com' },
-      })
-    );
-  }),
-];
-
-// mocks/server.js
-import { setupServer } from 'msw/node';
-import { handlers } from './handlers';
-
-export const server = setupServer(...handlers);
-```
-
----
-
-## E2E Testing Example (Playwright)
+Pure helpers need no rendering. `localStorage` comes from `jsdom` (from `try-choice.test.js`):
 
 ```javascript
-// e2e/login.spec.js
-import { test, expect } from '@playwright/test';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { saveTryChoice, takeTryChoice, peekTryChoice } from '../utils/tryChoice';
 
-test.describe('Login Flow', () => {
-  test('user can log in', async ({ page }) => {
-    await page.goto('/login');
-    
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    
-    await expect(page).toHaveURL('/dashboard');
-    await expect(page.locator('h1')).toContainText('Dashboard');
+const CHOICE = { classId: 'c1', subjectId: 's1', subject: 'Science', chapterId: 'ch1', chapter: 'Light' };
+
+beforeEach(() => localStorage.clear());
+afterEach(() => vi.useRealTimers());
+
+describe('tryChoice', () => {
+  it('is used once: take clears it', () => {
+    saveTryChoice(CHOICE);
+    expect(takeTryChoice()).toMatchObject(CHOICE);
+    expect(takeTryChoice()).toBeNull();
   });
-  
-  test('shows error for invalid credentials', async ({ page }) => {
-    await page.goto('/login');
-    
-    await page.fill('input[name="email"]', 'wrong@example.com');
-    await page.fill('input[name="password"]', 'wrongpassword');
-    await page.click('button[type="submit"]');
-    
-    await expect(page.locator('.error-message')).toBeVisible();
+
+  it('expires after a day', () => {
+    vi.useFakeTimers();
+    saveTryChoice(CHOICE);
+    vi.advanceTimersByTime(25 * 60 * 60 * 1000);
+    expect(peekTryChoice()).toBeNull();
   });
 });
 ```
+
+---
+
+## Browser Checks (Playwright CLI)
+
+There is no Playwright test suite. To check a change in a real browser, `node scripts/pw-auth.mjs <role> --target=local` signs in through the Backend API and writes a storage-state file (roles: student, teacher, principal, superadmin). `npx playwright cli` then opens pages with that state and writes snapshots, console output and screenshots to `.playwright-cli/`. Check small phones too (320, 360, 375 and 412 px wide): Playwright's "iPhone SE" preset is 320 px.
 
 ---
 
@@ -280,26 +213,33 @@ test.describe('Login Flow', () => {
 | Phase 2 | P1–P2 areas: 60% coverage | Second sprint |
 | Phase 3 | E2E for 3 critical paths | Third sprint |
 
-Priority targets for the first pass: the `useQuestionPolling` hook (loading/polling/mastered states), auth form validation + protected-route redirects, and the Axios JWT/error interceptors.
+Next targets: the `useQuestionPolling` hook (loading/polling/mastered states), protected-route redirects, and the quiz attempt flow. The Axios refresh logic is now covered by `token-refresh.test.js`.
 
 ---
 
 ## Manual Testing Checklist
 
-Until automated tests are implemented, use this checklist:
+Automated tests cover only parts of the app. Before a release, also check:
 
 ### Authentication
 - [ ] Login with valid credentials
 - [ ] Login with invalid credentials (error shown)
-- [ ] Signup and email verification
+- [ ] Signup (email and Google), including `/signup?role=teacher`
 - [ ] Password reset flow
+- [ ] Edit name; change email with the 6-digit code
+- [ ] Two tabs open past the 2-hour token expiry both stay signed in
 - [ ] Logout
 
 ### Study Flow
 - [ ] Select class, subject, chapter
 - [ ] Start practice session
-- [ ] Answer questions
-- [ ] View session results
+- [ ] Answer questions; switch tabs mid-session (no warning)
+- [ ] View session results; Challenge on WhatsApp is visible without scrolling on a 320 px phone
+
+### Sharing and Notifications
+- [ ] Open a challenge link signed out, play, then sign up and see the results
+- [ ] Teacher creates a class link; a new student joins through `/join/...`
+- [ ] Bell shows the unread count; opening the panel marks all read
 
 ### Progress
 - [ ] View subject progress

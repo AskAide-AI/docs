@@ -162,9 +162,11 @@ API_SECRET=your_api_secret
 SENDGRID_API_KEY=your_sendgrid_api_key
 EMAIL=verified_sender@yourdomain.com
 
-# Razorpay (payments)
-RAZORPAY_KEY=your_razorpay_key
-RAZORPAY_SECRET=your_razorpay_secret
+# Links in emails and in invite, challenge and class-join links
+FRONTEND_URL=http://localhost:5173
+
+# Google sign-in (verifies the Google ID token; same Web client ID as the frontend)
+GOOGLE_CLIENT_ID=your_google_web_client_id
 ```
 
 Start the backend:
@@ -302,7 +304,8 @@ The app opens at **http://localhost:5173**.
 | `API_SECRET` | No | — | Cloudinary API secret |
 | `SENDGRID_API_KEY` | Yes | — | SendGrid API key (needs Mail Send permission) |
 | `EMAIL` | Yes | — | "From" address — must be a SendGrid Verified Sender |
-| `FRONTEND_URL` | Yes | — | Base URL for links inside emails (unsubscribe, password reset) |
+| `FRONTEND_URL` | Yes | — | Base URL of the web app, used for links inside emails (unsubscribe, password reset) and for invite (`/signup?ref=`), challenge (`/c/:code`) and class-join (`/join/:code`) links |
+| `GOOGLE_CLIENT_ID` | For Google sign-in | — | Google OAuth Web client ID used to verify Google ID tokens (Google login and Google signup, including teacher signup) |
 | `NODE_ENV` | No | `development` | `development` or `production` |
 
 ### AI Service (.env)
@@ -324,9 +327,9 @@ The app opens at **http://localhost:5173**.
 | `GEMINI_API_KEY` | Conditional | — | Required if `LLM_PROVIDER=gemini` |
 | `ANTHROPIC_API_KEY` | Conditional | — | Required if `LLM_PROVIDER=anthropic` |
 | `OPENROUTER_API_KEY` | Conditional | — | Required if `LLM_PROVIDER=openrouter` |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL |
 
 A provider only appears as usable in the AI System tab when its API key variable is set; keys are never stored in the database or shown in the UI.
-| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama server URL |
 
 ### Frontend (.env)
 
@@ -335,6 +338,7 @@ A provider only appears as usable in the AI System tab when its API key variable
 | `VITE_API_URL` | Yes | — | Backend API base URL (e.g. `http://localhost:4000/api/v1`) |
 | `VITE_SITE_URL` | Yes | — | Site URL for SEO, share links, sitemap, and OG tags (e.g. `http://localhost:5173`) |
 | `VITE_CONTACT_EMAIL` | Yes | — | Contact email shown in Legal Policy and Terms of Service (e.g. `hello@askaide.in`) |
+| `VITE_GOOGLE_CLIENT_ID` | No | — | Google OAuth Web client ID; without it the Google sign-in buttons are hidden. The origin you run on (e.g. `http://localhost:5173`) must be an authorized JavaScript origin of that client |
 
 ---
 

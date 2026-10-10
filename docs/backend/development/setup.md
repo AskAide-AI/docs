@@ -657,9 +657,9 @@ This document outlines the Question and Session API endpoints available in the a
 ### Supporting APIs
 
 #### Get Leaderboard
-- **URL**: `/api/v1/leaderboard`
+- **URL**: `/api/v1/leaderboard` (this week) and `/api/v1/leaderboard/subject/:subjectId` (all-time, one subject)
 - **Method**: GET
-- **Query Params**: `type` (class/global), `classId`
+- **Description**: Top 10 students by distinct correct answers. The main board counts answers from Monday 00:00 IST and returns `{ userId, name (first name), totalScore, totalQuestions, accuracy }`.
 
 #### Submit Feedback
 - **URL**: `/api/v1/feedback`
@@ -667,9 +667,67 @@ This document outlines the Question and Session API endpoints available in the a
 - **Request Body**: `{ "type": "...", "message": "..." }`
 
 #### AI System (SuperAdmin)
-- **URL**: `/api/v1/admin/system/llm/{status,models,test,active,reset}`
-- **Methods**: `GET /status`, `GET /models?provider=&freeOnly=`, `POST /test` `{ provider?, model? }`, `POST /active` `{ provider, model }`, `POST /reset`
-- **Description**: Shows, tests and switches the AI Service's live LLM (instant, no restart). Proxies the AI Service `/v1/admin/llm/*`. See [API Reference](../../reference/api-reference.md#20-ai-system-llm).
+- **URL**: `/api/v1/admin/system/llm/{status,models,test,active,reset,features/:feature}`
+- **Methods**: `GET /status`, `GET /models?provider=&freeOnly=`, `POST /test` `{ provider?, model?, temperature?, feature? }`, `POST /active` `{ provider, model }`, `POST /reset`, `POST /features/:feature` `{ provider?, model?, temperature? }`, `POST /features/:feature/reset`
+- **Description**: Shows, tests and switches the AI Service's live LLM (instant, no restart), and sets a model per AI feature. Proxies the AI Service `/v1/admin/llm/*`. See [API Reference](../../reference/api-reference.md#20-ai-system-llm).
+
+### Profile APIs
+
+#### Change Name
+- **URL**: `/api/v1/profile/name`
+- **Method**: PUT
+- **Request Body**: `{ "name": "..." }` (2–100 characters)
+
+#### Change Email
+- **URL**: `/api/v1/profile/email/request-change`, then `/api/v1/profile/email/confirm-change`
+- **Method**: POST
+- **Request Body**: `{ "email": "new@example.com" }`, then `{ "code": "123456" }`
+- **Description**: The code is sent to the new address and expires after 10 minutes. The email changes only when the code is confirmed. Limited to 10 requests per 15 minutes per IP.
+
+### Referral APIs
+
+#### Get My Referral Summary
+- **URL**: `/api/v1/referral/my-code`
+- **Method**: GET
+- **Description**: Invite code and link, friends who joined, rewards (practice-paper credits), milestones, and who referred you.
+
+#### Redeem a Practice Paper
+- **URL**: `/api/v1/referral/rewards/practice-paper`
+- **Method**: POST
+- **Request Body**: `{ "chapterId": "..." }`
+- **Description**: Spends one credit on a 20-question paper with an answer key. Credits are earned when an invited friend answers 10 questions (both sides get one).
+
+### Challenge APIs
+
+#### Create a Challenge
+- **URL**: `/api/v1/challenges`
+- **Method**: POST
+- **Request Body**: `{ "sessionId": "..." }`
+- **Description**: Turns a finished session (at least 3 multiple-choice answers) into a share link `/c/:code`.
+
+#### Play a Challenge
+- **URL**: `/api/v1/challenges/:code` (GET), `/api/v1/challenges/:code/attempts` (POST)
+- **Request Body**: `{ "answers": [{ "questionId": "...", "selected": "..." }], "name": "..." }`
+- **Description**: No login needed. Questions come without answers; the play is scored on the server. Guests receive a `claimToken` to link the play after signing up (`POST /api/v1/challenges/attempts/:attemptId/claim`).
+
+### Teacher Class Link APIs
+
+#### Create a Class Link
+- **URL**: `/api/v1/teacher-classes`
+- **Method**: POST
+- **Request Body**: `{ "classId": "...", "subjectId": "...", "sectionName": "B", "expectedStudents": 35 }`
+- **Description**: Returns a `/join/:code` link. Students join with `POST /api/v1/teacher-classes/join/:code`; the teacher sees progress at `GET /api/v1/teacher-classes/mine`.
+
+### Notification APIs
+
+#### List Notifications
+- **URL**: `/api/v1/notifications`
+- **Method**: GET
+- **Query Params**: `before` (cursor from the previous page), `limit` (max 50, default 20)
+
+#### Unread Count / Mark Read
+- **URL**: `/api/v1/notifications/unread-count` (GET), `/api/v1/notifications/read` (POST)
+- **Request Body** (mark read): `{ "ids": ["..."] }` or `{ "all": true }`
 
 ## New Models (Added)
 
@@ -786,7 +844,7 @@ npm install
 |---|---|
 | `AI_ENDPOINT` | AI Service base URL (e.g. `http://localhost:8000`) — paths appended in code |
 | `AI_SERVICE_API_KEY` | Shared secret sent as the `x-api-key` header on every AI Service call |
-| `AI_SERVICE_API_KEY` | Shared API key for AI Service `x-api-key` header |
+| `FRONTEND_URL` | Frontend base URL used in email and share links (password reset, invite links, challenge links) |
 | `GOOGLE_CLIENT_ID` | Google OAuth Web client ID |
 | `GOOGLE_CLIENT_ID_ANDROID` | Google OAuth Android client ID |
 | `GOOGLE_CLIENT_ID_IOS` | Google OAuth iOS client ID |

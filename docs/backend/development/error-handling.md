@@ -1,6 +1,6 @@
 # AskAide AI - Error Handling
 
-**Last Updated:** 2026-06-26
+**Last Updated:** 2026-10-10
 
 ---
 
@@ -26,9 +26,10 @@ All API errors follow this structure:
 | `201` | Created | Successful POST (resource created) |
 | `400` | Bad Request | Validation errors, missing fields |
 | `401` | Unauthorized | Missing or invalid JWT token |
-| `403` | Forbidden | Valid auth but insufficient permissions |
+| `403` | Forbidden | Valid auth but insufficient permissions, or a feature not unlocked yet (e.g., class report before 10 students practised) |
 | `404` | Not Found | Resource doesn't exist |
-| `409` | Conflict | Duplicate resource (e.g., email exists) |
+| `409` | Conflict | Duplicate resource (e.g., email exists), or a challenge attempt already claimed by another account |
+| `410` | Gone | A teacher class link that has been turned off |
 | `429` | Too Many Requests | Rate limit exceeded |
 | `500` | Internal Server Error | Unexpected server errors |
 | `502` | Bad Gateway | AI Service returned an error (proxied via AppError) |

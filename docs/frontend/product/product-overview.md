@@ -23,29 +23,25 @@ An AI-powered EdTech practice and learning platform designed specifically for K-
 - "Generic SaaS" or template-like layouts that don't feel tailored to education.
 - Complex navigation to reach core study tools.
 
-## Business Model
-- **Model**: B2B SaaS sold to schools (not direct-to-student). School pays per-student per-year.
-- **Pricing**: ₹200-600/student/year depending on tier and school size.
-- **Sales cycle**: Principal-driven decision, 2-6 week trial, annual contract aligned to academic year (April-March).
-- **Revenue expansion**: Upsell more classes/subjects within same school → expand to sister schools → district-level deals.
+## Model
+- **For schools first**: built for school adoption, with student, teacher, principal and parent roles. Teachers can also sign up on their own and bring their class in with a link.
+- **Pricing**: see the public Pricing page (`/pricing`).
 
 ## Growth Levers (AARRR Framework)
-1. **Acquisition**: Teacher word-of-mouth, principal conference demos, free trial → paid conversion.
+1. **Acquisition**: Teacher word-of-mouth, principal demos, the free `/try` session, teacher class links shared on WhatsApp.
 2. **Lead Magnet**: **Free Question Paper Generator** for prospective leads with WhatsApp delivery.
 3. **Activation**: Student completes first AI practice session and sees instant feedback within 5 minutes of signup.
 4. **Retention**: Daily practice streaks, visible progress, teacher-assigned practice, gamified achievements.
-5. **Referral**: Teachers recommend to other schools, students share achievements, school case studies.
-6. **Revenue**: Annual renewals driven by measurable improvement in student performance and teacher efficiency.
+5. **Referral**: Students challenge friends on WhatsApp and invite them through Refer & Earn (both get a gift); teachers recommend to other schools; students share achievements.
 
 ## Competitive Moats
 1. **AI-adaptive practice engine** — Personalized difficulty, not one-size-fits-all content delivery.
 2. **School-centric analytics** — Built for principals and teachers, not individual tutoring.
 3. **Lightweight mobile-first** — Works on ₹8000 Android phones on 3G/4G, unlike heavyweight competitors.
-4. **Curriculum precision** — CBSE/ICSE/State board chapter-level alignment, not generic content.
+4. **Curriculum precision** — CBSE / NCERT chapter-level alignment, not generic content.
 
 ## Success Metrics
 - **North Star**: Weekly Active Practicing Students (WAPS) — students who complete ≥3 practice sessions/week.
-- **Acquisition**: Schools onboarded per month, trial-to-paid conversion rate.
+- **Acquisition**: Schools and teachers onboarded, students joining through class links and invites.
 - **Activation**: % of students who complete first practice session within 24 hours of account creation.
-- **Retention**: 30-day student retention rate, school annual renewal rate.
-- **Revenue**: Annual Recurring Revenue (ARR), Revenue per School, Net Revenue Retention.
+- **Retention**: 30-day student retention rate.

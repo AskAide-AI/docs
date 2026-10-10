@@ -1,7 +1,7 @@
 # Performance Optimization
 
 > Performance optimization strategies for the AskAideAI frontend.
-> Last Updated: June 26, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -25,6 +25,20 @@ Vite provides automatic optimizations:
 - ✅ **Minification** in production builds
 - ✅ **Asset optimization** for images and fonts
 - ✅ **Fast HMR** in development
+
+---
+
+## Fonts and Layout Stability
+
+What the app does today to keep first paint stable:
+
+| Technique | Where |
+|-----------|-------|
+| Self-hosted fonts, preloaded | `public/fonts/*.woff2`, `<link rel="preload">` and `@font-face` in `index.html`. On a first visit the fonts are ready in the same frame as first paint, so headings no longer re-draw in a new font. Fonts are in the service worker precache. |
+| Reserved space for live numbers | The landing page's student and answer counters render from first paint, invisible until real values arrive, in a fixed-width slot of tabular digits. They no longer push the hero and CTAs down as they count up. |
+| Fixed card heights while loading | `DailyGoalCard` keeps a minimum height in its skeleton and loaded states |
+| Smaller prerender chunk | `src/prerender.jsx` loads pages with dynamic `import()`, so one shared chunk no longer carries every page plus the question snapshot |
+| One notification poller | `useNotifications` polls the unread count once for the whole app, every 60 s, only while the tab is visible |
 
 ---
 

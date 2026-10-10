@@ -44,6 +44,12 @@ Common issues and solutions when working with the AskAideAI backend.
 3. Ensure `Authorization: Bearer <token>` header is set
 4. Verify the token was signed with the same secret
 
+### Token refresh returns 401 `REFRESH_TOKEN_REVOKED`
+**Symptoms:** `/authenticate/refresh` fails although the refresh token has not expired
+**Solutions:**
+1. Each refresh token works once. A second refresh with the same token (for example from two browser tabs at the same moment) is rejected by design
+2. Make sure the client sends only one refresh at a time and stores the new refresh token from every successful response
+
 ## Database Issues
 
 ### Mongoose validation errors
@@ -62,7 +68,7 @@ Common issues and solutions when working with the AskAideAI backend.
 
 ### Slow queries
 **Solutions:**
-1. Check if indexes exist: run `createIndexes.js` script
+1. Check if indexes exist: the server builds them at startup, so look for `Some MongoDB indexes could not be built` in the startup log, or run `db.collection.getIndexes()`
 2. Use `.explain()` to analyze query performance
 3. Add `.lean()` for read-only queries
 4. Avoid N+1 queries by using `.populate()` or aggregation

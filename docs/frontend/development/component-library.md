@@ -1,7 +1,7 @@
 # Component Library
 
 > Complete reference of all reusable components in the AskAideAI frontend.
-> Last Updated: June 25, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -11,7 +11,7 @@
 
 **Location:** `/src/components/ui/Dropdown.jsx`
 
-**Purpose:** Reusable dropdown/select component for form inputs
+**Purpose:** Reusable dropdown/select component for form inputs. Built on the HeadlessUI Listbox. The open list is capped at 280px, tall enough to show all 7 classes (6th–12th) without an inner scroll.
 
 **Props:**
 | Prop | Type | Required | Default | Description |
@@ -52,6 +52,7 @@ import { Dropdown } from '@/components/ui/Dropdown';
 - `TeacherQuizList.jsx` (status filter)
 - `QuestionBankSelector.jsx` (difficulty & type filters)
 - `CustomQuestionForm.jsx` (question type & difficulty)
+- `TeacherClassLinks.jsx` (class and subject for a new class link)
 
 ---
 
@@ -235,6 +236,151 @@ import EmptyState from '@/components/teacher/shared/EmptyState';
 
 ---
 
+## Sharing Components
+
+### ChallengeShareCard
+
+**Location:** `/src/components/common/ChallengeShareCard.jsx`
+
+**Purpose:** "Challenge a friend" for a finished practice session. Creates the challenge on tap and opens WhatsApp with its message, or copies the link.
+
+**Props:**
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| sessionId | string | Yes | - | The finished session |
+| questionCount | number | No | 0 | Answers in the session. Renders nothing below 3 (`canChallenge()`). |
+| variant | `'card'` \| `'footer'` | No | `'card'` | `footer` is the compact form pinned to the bottom of the session result card |
+
+**Features:**
+- `POST /challenges`, then `wa.me` with the returned share text
+- Copy-link button with a "copied" state
+- Footer variant: 48px-tall buttons, shorter "Challenge a friend" label and no caption below 360px
+
+**Used In:**
+- `SessionResultModal.jsx` (`variant="footer"`)
+
+---
+
+### ChallengeGiftNote
+
+**Location:** `/src/components/common/ChallengeGiftNote.jsx`
+
+**Purpose:** Tells a friend who came in through a challenge where they stand on the way to the referral gift.
+
+**Props:**
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| gift | object | No | - | `{ from, unlocked, justUnlocked, answered, goal }` from the challenge response. Renders nothing when absent. |
+
+**Used In:**
+- `ChallengePlay.jsx`, `ChallengeResults.jsx`
+
+---
+
+### BadgeUnlockToast
+
+**Location:** `/src/components/common/BadgeUnlockToast.jsx`
+
+**Purpose:** Full-screen badge popup shown before the session result card, one badge at a time.
+
+**Props:**
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| badgeId | string | Yes | - | ID from `src/constants/badges.js` |
+| onDismiss | function | Yes | - | Shows the next badge, or the result card after the last |
+| userId | string | No | - | Current user |
+
+A badge ID it doesn't know is skipped, so the result card behind it still opens. `src/constants/badges.js` defines 21 badges, including Challenger, Challenge Champion, Squad Starter, Squad Leader and Class Captain.
+
+---
+
+## Notification Components
+
+All three read one shared store, `src/hooks/useNotifications.js` (see [State Management](./state-management.md)).
+
+### NotificationBell
+
+**Location:** `/src/components/notifications/NotificationBell.jsx`
+
+**Purpose:** Bell icon button with the unread count. Opens the one `NotificationCenter`.
+
+**Props:**
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| className | string | No | '' | Extra classes (e.g. `md:hidden` on the dashboard) |
+| style | object | No | - | Extra inline styles |
+
+The file also exports `UnreadBadge` (the red count, or a dot with `dot`) and `bellLabel(count)` for the accessible name ("Notifications, 3 unread").
+
+**Used In:**
+- `Navbar.jsx` (signed-in users on public pages)
+- `Dashboard.jsx` (beside the greeting, phones only)
+- `AppSidebar.jsx`, `BottomNav.jsx`, `MobileMenu.jsx` use `UnreadBadge` / `bellLabel` with their own buttons
+
+---
+
+### NotificationCenter
+
+**Location:** `/src/components/notifications/NotificationCenter.jsx`
+
+**Purpose:** The notification panel. Mounted once in `App.jsx` for signed-in users.
+
+**Props:** None (open state comes from the shared store)
+
+**Features:**
+- Top sheet on phones; popover beside the bell on desktop
+- Opening it loads the latest notifications and marks them all read
+- Tap a row to go to its link; "Show older" for the next page
+- Empty state ("Nothing yet"), error state with "Try again"
+- `role="dialog"`, `aria-modal`, Escape closes, focus moves to the panel
+
+---
+
+### NotificationToaster
+
+**Location:** `/src/components/notifications/NotificationToaster.jsx`
+
+**Purpose:** Pops the newest unread notification as a toast, once. Mounted once in `App.jsx`.
+
+**Props:** None
+
+**Features:**
+- Toasts when the app opens with news waiting and when news arrives on the next poll
+- "+N more in your notifications" when several are new
+- Quiet on `/study` and `/quiz/` (practice and quizzes); the toast waits until the student leaves
+- Remembers the last toasted time in `localStorage` (`askaide:notifToastAt`)
+
+---
+
+## Profile Components
+
+### NameEditor
+
+**Location:** `/src/components/profile/NameEditor.jsx`
+
+**Purpose:** Inline **Edit** for the display name (`PUT /profile/name`). 2–100 characters.
+
+**Props:** `name` (string, current name)
+
+---
+
+### EmailChanger
+
+**Location:** `/src/components/profile/EmailChanger.jsx`
+
+**Purpose:** Two-step email change: request a 6-digit code to the new address, then confirm it.
+
+**Props:** `email` (string, current email)
+
+**Features:**
+- Refuses the current email and invalid addresses before sending
+- Shows the server's message (tries left, expired, taken)
+- 60-second resend countdown and "Use a different email"
+
+**Used In:** `Profile.jsx`
+
+---
+
 ## Common Components
 
 ### ScrollToTop
@@ -268,10 +414,24 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 
 **Features:**
 - Logo with link to home
-- Navigation links (Dashboard, Study, Progress)
+- Navigation links (Dashboard, Study, Progress), plus Pricing for visitors
+- Notification bell for signed-in users
 - User avatar with dropdown (Profile, Settings, Logout)
 - Compact top-right "Log in" pill for logged-out visitors on mobile (`md:hidden`) — desktop shows the full Sign in / Try a session block
 - Hidden on login/signup pages
+
+---
+
+### AppSidebar
+
+**Location:** `/src/components/layout/AppSidebar.jsx`
+
+**Purpose:** Desktop sidebar on signed-in app pages (replaces the Navbar there)
+
+**Features:**
+- Role-based nav items from `src/config/navItems.js`
+- **Notifications** button with the unread count (a dot when collapsed)
+- Collapse toggle (remembered in `localStorage`), theme toggle, sign out
 
 ---
 
@@ -287,7 +447,7 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 - Fixed to viewport bottom, mobile only (`md:hidden`); respects `env(safe-area-inset-bottom)`
 - Single full-width "Start free — no signup →" CTA to `/try`
 - Auto-hides on `/try`, `/login`, `/signup`
-- Mounted from `App.jsx` only when `isPublicRoute && !user`
+- Mounted from `App.jsx` only when `isPublicRoute && !user`, and not on challenge (`/c/:code`) or class join (`/join/:code`) pages
 
 ---
 
@@ -300,13 +460,12 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 **Props:**
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| sessionStarted | boolean | No | false | Whether a study session is active |
 | onOpenMenu | function | No | - | Handler to open mobile menu |
 
 **Features:**
-- Home, Study, Progress, Profile icons
+- Signed in: Study, the role's primary page, Dashboard, Progress, Menu. Guests: Home, Try, Blog, Login, Menu.
 - Active state indication
-- Menu button for additional options
+- Menu button for additional options; for signed-in users it shows the unread notification count
 
 ---
 
@@ -326,11 +485,28 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 - Full-screen overlay
 - Slide animation
 - All navigation links
+- **Notifications** row with the unread count (signed-in users); opens the notification panel as a sheet
 - Logout button
 
 ---
 
 ## Auth Components
+
+### FitGoogleLogin
+
+**Location:** `/src/components/auth/FitGoogleLogin.jsx`
+
+**Purpose:** Wraps `GoogleLogin` from `@react-oauth/google`. Google's button takes a fixed pixel width, so a hard-coded 320 or 380 spills off small phones. This measures its container (with a `ResizeObserver`) and passes that width, clamped to Google's 200–400 range.
+
+**Props:**
+| Prop | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| maxWidth | number | No | 380 | Widest the button may get |
+| ...props | - | - | - | Passed to `GoogleLogin` (`onSuccess`, `onError`, `text`, …) |
+
+**Used In:** `Login.jsx`, `Signup.jsx`, `JoinClass.jsx`, `ChallengePlay.jsx`
+
+---
 
 ### ProtectedRoute
 
@@ -485,11 +661,36 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 | results | object | Yes | - | Session results data |
 
 **Features:**
+- New badges pop up first (`BadgeUnlockToast`), one at a time; the card opens after the last
 - Total questions answered
 - Correct/incorrect count
 - Accuracy percentage
 - Time taken
 - Option to view answers or start new session
+- Pinned footer that stays on screen on every phone size: **Challenge on WhatsApp** (`ChallengeShareCard variant="footer"`, sessions with 3+ answers) above the primary action
+
+---
+
+## Teacher Components
+
+### TeacherClassLinks
+
+**Location:** `/src/components/teacher/TeacherClassLinks.jsx` (route `/teacher/classes`)
+
+**Purpose:** Create and manage class join links
+
+**Features:**
+- New link form: class, subject, optional section and class size
+- Per link: WhatsApp share, copy, QR download for the projector (`qrcode.react`), joined / practised / active-this-week counts, on/off toggle
+- Class report button (unlocks at a practising-students milestone) and Champion Teacher certificate progress
+
+---
+
+### TeacherClassReport and TeacherCertificate
+
+**Location:** `/src/components/teacher/TeacherClassReport.jsx`, `/src/components/teacher/TeacherCertificate.jsx`, shared `/src/components/teacher/PrintSheet.jsx`
+
+**Purpose:** Printable class progress report (`/teacher/classes/:id/report`) and certificate (`/teacher/certificate`)
 
 ---
 

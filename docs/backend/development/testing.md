@@ -1,12 +1,12 @@
 # AskAide AI - Testing
 
-**Last Updated:** 2026-05-04
+**Last Updated:** 2026-10-10
 
 ---
 
 ## Current Status
 
-> ✅ **Tests are implemented.** 10 test files exist across modules, covering auth, content, progress, questions, quiz, teacher, supporting, school, question-paper, and user services.
+> ✅ **Tests are implemented.** 20 test files exist across 14 of the 19 modules, covering auth, user, content, questions, progress, quiz, teacher, school, principal, question-paper, supporting, referral, challenge and notification.
 
 ---
 
@@ -30,14 +30,24 @@ Backend/
 └── src/
     └── modules/
         ├── auth/tests/auth.service.test.js
+        ├── auth/tests/activityTracker.test.js
+        ├── auth/tests/refreshRotation.test.js
+        ├── challenge/tests/challenge.service.test.js
         ├── content/tests/content.service.test.js
+        ├── notification/tests/notification.service.test.js
+        ├── principal/tests/principalAccount.service.test.js
+        ├── principal/tests/principalDashboard.service.test.js
         ├── progress/tests/progress.service.test.js
+        ├── question-paper/tests/questionPaper.service.test.js
         ├── questions/tests/questions.service.test.js
         ├── quiz/tests/quiz.service.test.js
-        ├── question-paper/tests/questionPaper.service.test.js
+        ├── referral/tests/referral.service.test.js
         ├── school/tests/school.service.test.js
+        ├── supporting/tests/llmSystem.service.test.js
+        ├── supporting/tests/llmSystem.validator.test.js
         ├── supporting/tests/supporting.service.test.js
         ├── teacher/tests/teacher.service.test.js
+        ├── teacher/tests/teacherClass.service.test.js
         └── user/tests/user.service.test.js
 ```
 
@@ -108,15 +118,23 @@ describe('Quiz Service', () => {
 | Module | Test File | Key Coverage |
 |--------|-----------|-------------|
 | Auth | `auth.service.test.js` | Login, signup, OTP, JWT |
-| User | `user.service.test.js` | User CRUD, profile management |
+| Auth | `refreshRotation.test.js` | Single-use refresh tokens (atomic claim) |
+| Auth | `activityTracker.test.js` | Daily-active rows, IST day, write throttling |
+| User | `user.service.test.js` | User CRUD, profile management, name change, email change codes |
 | Content | `content.service.test.js` | Chapters CRUD, PDF upload |
-| Questions | `questions.service.test.js` | Question retrieval, AI generation |
+| Questions | `questions.service.test.js` | Question retrieval, AI generation, option shuffling, public preview matching |
 | Progress | `progress.service.test.js` | Mastery scoring, topic progress |
 | Quiz | `quiz.service.test.js` | Quiz CRUD, attempts, grading |
 | Teacher | `teacher.service.test.js` | Teacher-student relationships |
+| Teacher | `teacherClass.service.test.js` | Class join links, independent schools, report and certificate unlocks |
 | School | `school.service.test.js` | School/section management |
+| Principal | `principalAccount.service.test.js`, `principalDashboard.service.test.js` | Principal accounts, school-scoped dashboards |
 | Supporting | `supporting.service.test.js` | Achievements, API logs |
+| Supporting | `llmSystem.service.test.js`, `llmSystem.validator.test.js` | AI System proxy and input validation |
 | Question Paper | `questionPaper.service.test.js` | Paper generation, PDF export |
+| Referral | `referral.service.test.js` | Signup attribution, activation at 10 answers, monthly cap, practice-paper credits |
+| Challenge | `challenge.service.test.js` | Create from session, server-side scoring, claim tokens, referral credit |
+| Notification | `notification.service.test.js` | Grouping per day, one-time events, list, unread count, mark read |
 
 ---
 
@@ -126,7 +144,7 @@ describe('Quiz Service', () => {
 - No coverage thresholds configured
 - Tests use mocked DB — no `mongodb-memory-server` in-memory integration tests
 
-**Modules without tests:** `ai-assistant`, `goal`, `parent`, `referral` (10/14 modules = 71% have tests).
+**Modules without tests:** `ai-assistant`, `campaign`, `feedback`, `goal`, `parent` (14/19 modules = 74% have tests).
 
 ---
 
@@ -138,7 +156,7 @@ describe('Quiz Service', () => {
 
 ### Phase 2
 1. **parent** — dashboard data aggregation
-2. **referral** — code generation and redemption
+2. **campaign** and **feedback** — campaign sends, unsubscribe tokens, suggestion moderation
 
 ### Phase 3
 1. Integration tests for cross-module flows (auth → study → progress)
@@ -148,7 +166,7 @@ describe('Quiz Service', () => {
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Modules with tests | 10/14 (71%) | 14/14 (100%) |
+| Modules with tests | 14/19 (74%) | 19/19 (100%) |
 | Service method coverage | ~40% | 70%+ |
 | Controller coverage | 0% | 50%+ |
 | Integration tests | 0 | 3 critical flows |

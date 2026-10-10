@@ -1,7 +1,7 @@
 # State Management
 
 > How global state is managed in the AskAideAI frontend application.
-> Last Updated: April 17, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -19,7 +19,7 @@
 src/store/
 ├── index.js          # Store configuration and export (combineReducers)
 └── slices/
-    ├── authSlice.js      # Authentication state (token, signupData)
+    ├── authSlice.js      # Authentication state (token, refreshToken, signupData)
     ├── profileSlice.js   # User profile state (user object)
     ├── sessionSlice.js   # Study session state (history, answers)
     └── aiAgentSlice.js   # AI Assistant state (conversations, messages, streaming)
@@ -62,7 +62,8 @@ export default rootReducer;
 {
   signupData: object | null,   // Temporary signup form data
   loading: boolean,
-  token: string | null         // JWT token from localStorage
+  token: string | null,        // JWT access token from localStorage
+  refreshToken: string | null  // Single-use refresh token from localStorage
 }
 ```
 
@@ -70,7 +71,8 @@ export default rootReducer;
 | Action | Description |
 |--------|-------------|
 | `setSignupData(data)` | Set signup form data |
-| `setToken(token)` | Store JWT token |
+| `setToken(token)` | Store JWT token (also writes localStorage) |
+| `setRefreshToken(token)` | Store refresh token (also writes localStorage) |
 | `setLoading(boolean)` | Set loading state |
 
 **Selectors:**
@@ -83,8 +85,9 @@ const isAuthenticated = !!useSelector(state => state.auth.token);
 ```
 
 **Persistence:**
-- Token stored in `localStorage.getItem('token')` (JSON parsed)
+- Token stored in `localStorage.getItem('token')` (JSON parsed), refresh token in `localStorage.getItem('refreshToken')`
 - User data is in `profileSlice`, not `authSlice`
+- Refreshing is done by `refreshAccessToken()` in `src/api/axios.js`, not by a thunk. Refresh tokens are single-use, so it runs one refresh at a time per tab and, with a Web Lock, across tabs. A tab that waited for the lock reuses the tokens the other tab just saved instead of refreshing again.
 
 > **SSR Safety:** All three slices guard `localStorage` access with `typeof window !== 'undefined'` in their `initialState`. This is required for the `vite-prerender-plugin` build step which runs in Node.js. Do not add direct `localStorage` calls to `initialState` without this guard.
 
@@ -305,11 +308,46 @@ if (rootElement.hasChildNodes()) {
 
 **Location:** `/src/contexts/`
 
-The app also uses React Context for specific purposes:
+| Context | Value | Persistence |
+|---------|-------|-------------|
+| `ThemeContext` | `theme`, `toggleTheme` (dark/light via a `.dark` class on `<html>`) | localStorage `theme` |
+| `SoundContext` | `soundEnabled` and sound helpers | localStorage `soundEnabled` |
 
-### StudyContext (if present)
-- Alternative to session slice for study state
-- May be used for more granular control
+Both are re-exported as hooks (`useTheme`, `useSound`) from `src/hooks/index.js`. There is no `StudyContext`.
+
+---
+
+## Shared Store Outside Redux: Notifications
+
+**File:** `/src/hooks/useNotifications.js`
+
+The notification bell uses a small module-level store instead of Redux. Every bell, the BottomNav Menu badge and the toaster read the same unread count, and one poller keeps it fresh.
+
+| Export | Purpose |
+|--------|---------|
+| `useUnreadNotifications()` | Unread count for the signed-in user (0 when signed out). The first component that uses it starts polling; the last one to unmount stops it. |
+| `useNotificationPanel()` | `{ open, anchor }` for the one `NotificationCenter` |
+| `openNotifications(anchorEl)` / `closeNotifications()` | Open the panel next to the tapped bell, or as a sheet when no element is passed (mobile menu) |
+| `refreshUnread()`, `setUnread(count)` | Refresh or set the count after marking items read |
+
+**Polling:** on start, every 60 s while the tab is visible, and when the tab becomes visible or the window regains focus.
+
+> **Prerender safety:** both hooks call `useSyncExternalStore` with a third "server snapshot" argument (`0` and a closed panel). Keep it: public pages are prerendered in Node, and without it the build fails with React error #407.
+
+---
+
+## Browser Storage Used by Features
+
+Small per-feature values live in `localStorage` under `askaide:` keys. Each read is wrapped in try/catch, so blocked storage only switches the feature off.
+
+| Key | Owner | Holds |
+|-----|-------|-------|
+| `askaide:tryChoice` | `utils/tryChoice.js` | Chapter tried on `/try` (24 h, used once for the first session) |
+| `askaide:acquisition` | `utils/acquisition.js` | First-touch `?ref=` code, UTM tags, landing page (30 days, cleared after sign-in) |
+| `askaide:pendingChallenge` | `utils/pendingChallenge.js` | A guest's challenge play waiting to be claimed |
+| `askaide:pendingJoin` | `utils/pendingChallenge.js` | A class link a guest was joining |
+| `askaide:myRefCode` | `hooks/useReferralCode.js` | Cached invite code for share links |
+| `askaide:notifToastAt` | `NotificationToaster.jsx` | Time of the last notification toast |
 
 ---
 

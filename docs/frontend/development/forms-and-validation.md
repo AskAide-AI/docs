@@ -131,10 +131,8 @@ const signupSchema = z.object({
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .max(128, 'Password must be at most 128 characters')
-    .regex(/[a-z]/, 'Must contain at least one lowercase letter')
-    .regex(/[A-Z]/, 'Must contain at least one uppercase letter')
-    .regex(/[0-9]/, 'Must contain at least one number')
-    .regex(/[!@#$%^&*]/, 'Must contain at least one symbol (!@#$%^&*)'),
+    .regex(/[A-Za-z]/, 'Must contain at least one letter')
+    .regex(/[0-9]/, 'Must contain at least one number'),
   confirmPassword: z.string()
     .min(1, 'Please confirm your password'),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -163,6 +161,8 @@ const profileSchema = z.object({
     .optional(),
 });
 ```
+
+> **What the profile page uses today:** `profile/NameEditor.jsx` and `profile/EmailChanger.jsx` use React Hook Form with inline rules, not Zod. Name: required, 2–100 characters. Email change: two separate forms, one for the new address (`/^\S+@\S+\.\S+$/`, and not the current email) and one for the 6-digit code (`/^\s*\d{6}\s*$/`). Server errors are shown under the field.
 
 ### Password Reset Schema
 ```javascript

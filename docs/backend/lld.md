@@ -1,6 +1,6 @@
 # Backend — Low-Level Design
 
-> **Verified against:** `Backend` @ `bf8e7df` (main), 2026-09-26. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md), [Database Schema](./reference/database-schema.md).
+> **Verified against:** `Backend` @ `bf8e7df` (main), 2026-09-26; updated for changes through `9934c80`, 2026-10-10. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md), [Database Schema](./reference/database-schema.md).
 
 All paths in this document are relative to the Backend repository root. Numbers (timeouts, limits, defaults) are taken from the code at the commit above.
 
@@ -10,15 +10,16 @@ The Backend is the only server the browser talks to. The Frontend never calls th
 
 | Responsibility | What the Backend does | Main location |
 |---|---|---|
-| Identity | Email/password and Google ID-token login, JWT access/refresh tokens, OTP email verification, password reset | `src/modules/auth/` |
+| Identity | Email/password and Google ID-token login, JWT access tokens and single-use refresh tokens, OTP email verification, password reset, verified email change, daily-active tracking | `src/modules/auth/`, `src/modules/user/`, `src/shared/utils/activityTracker.js` |
 | Authorization | Role guards (`SuperAdmin`, `Principal`, `Teacher`, `Parent`, `Student`, `NormalUser`) and per-resource ownership checks | `src/shared/middleware/auth.js`, `src/shared/utils/access.js` |
 | System of record | MongoDB (Mongoose) for curriculum, question bank, practice sessions, answers, mastery, quizzes, schools, relationships, feedback, campaigns | `src/modules/*/models/`, `src/shared/models/` |
 | AI orchestration | Calls `AI_ENDPOINT` + `/v1/...` with `x-api-key` for PDF ingestion, question generation, learning insights, the teacher AI assistant and SuperAdmin live LLM switching | `content.service.js`, `questions.service.js`, `topicProgress.controller.js`, `ai-assistant.service.js`, `llmSystem.service.js` |
 | Question supply | Keeps a per-chapter question bank topped up (on-demand generation, prefetch, yield-based "content complete" detection) | `src/modules/questions/services/questions.service.js` |
 | Learning analytics | Topic mastery scoring, streaks, badges, dashboards for students, teachers, parents, principals and SuperAdmin | `src/modules/progress/`, `teacher/`, `parent/`, `principal/`, `supporting/` |
+| Growth and notifications | Invite codes and two-sided rewards, challenge-a-friend links, teacher class join links, in-app notification bell | `src/modules/referral/`, `challenge/`, `teacher/`, `notification/` |
 | Document rendering | Headless Chromium (`puppeteer-core` + `@sparticuz/chromium`) for question-paper PDFs, session share-card PNGs, AI-assistant PDF export | `questionPaper.service.js`, `shareCard.service.js`, `ai-assistant.service.js` |
-| Email | Transactional (OTP, reset, password change) and broadcast campaigns over the SendGrid HTTPS API | `src/shared/utils/mailSender.js`, `src/modules/campaign/` |
-| Background work | In-process cron jobs, fire-and-forget generation tasks, campaign sends | `index.js`, `src/shared/jobs/`, `src/modules/supporting/jobs/` |
+| Email | Transactional (OTP, reset, password change, email change), activity emails (challenge plays, referral rewards) and broadcast campaigns over the SendGrid HTTPS API | `src/shared/utils/mailSender.js`, `src/modules/campaign/` |
+| Background work | In-process cron jobs, fire-and-forget generation tasks, per-user progress updates, campaign sends | `index.js`, `src/shared/jobs/`, `src/modules/supporting/jobs/`, `src/modules/notification/jobs/` |
 
 Out of scope for the Backend: embeddings, vector search, LLM calls and conversation storage for the AI assistant (AI Service); UI and client-side orchestration (Frontend). Uploaded chapter PDFs are **not stored** by the Backend: they are held in memory and forwarded to the AI Service.
 
@@ -49,7 +50,7 @@ Out of scope for the Backend: embeddings, vector search, LLM calls and conversat
 - Headless Chromium is launched as a child process for each PDF/PNG render and closed afterwards (no browser pool).
 - Background work (cron, question generation, campaign sends, post-session progress updates) runs in the same process as request handling.
 - `app.set('trust proxy', 1)` (`index.js`) so `req.ip` is the client IP behind one reverse proxy.
-- Startup (`index.js`): `app.listen(PORT)`, then inside the listen callback `DBConnection()` (`config/db.config.js`: `maxPoolSize: 50`, `minPoolSize: 10`, `readPreference: 'secondaryPreferred'`, rethrows on failure), then pre-warm the study-configuration cache and a fire-and-forget `GET ${AI_ENDPOINT}/ping` (30 s timeout) to wake the AI Service.
+- Startup (`index.js`): `app.listen(PORT)`, then inside the listen callback `DBConnection()` (`config/db.config.js`: `maxPoolSize: 50`, `minPoolSize: 10`, `readPreference: 'secondaryPreferred'`, rethrows on failure), then `ensureIndexes()` in the background (`src/shared/utils/ensureIndexes.js`: `createIndexes()` for every registered model, because Mongoose's automatic index build does not run under `secondaryPreferred`; never drops indexes, logs per-model failures), then pre-warm the study-configuration cache and a fire-and-forget `GET ${AI_ENDPOINT}/ping` (30 s timeout) to wake the AI Service.
 - Shutdown (`index.js`): on `SIGTERM`/`SIGINT`, flush buffered API logs (`flushApiLogs`), `server.close()`, and force `process.exit(0)` after 10 s.
 - Deployment hints in code comments: Render (proxy IP handling, SIGTERM on deploy, free-tier sleep, blocked SMTP ports) and Grafana Cloud Loki for logs. No Procfile, Dockerfile or `render.yaml` exists in the repo.
 
@@ -64,35 +65,36 @@ Backend/
 │   └── swagger.config.js       # OpenAPI 3.0 spec built from JSDoc in route files
 ├── routes/
 │   ├── index.js                # /api  -> /v1
-│   └── v1/index.js             # mounts all module routers (40 base paths)
+│   └── v1/index.js             # mounts all module routers (44 base paths)
 ├── src/
-│   ├── modules/<name>/         # 17 feature modules
+│   ├── modules/<name>/         # 19 feature modules
 │   │   ├── routes/             # express.Router + middleware chain + Swagger JSDoc
 │   │   ├── controllers/        # thin HTTP handlers (asyncHandler)
 │   │   ├── services/           # business logic, singleton class instances
 │   │   ├── models/             # Mongoose schemas owned by the module
 │   │   ├── validators/         # Joi schemas (not every module)
 │   │   ├── tests/              # Jest service tests (not every module)
+│   │   ├── jobs/               # node-cron jobs (supporting, notification)
 │   │   └── index.js            # barrel re-exporting routers/services
 │   └── shared/
 │       ├── middleware/         # auth.js, errorHandler.js, validate.js, apiLogger.middleware.js
-│       ├── models/             # User, Profile, OTP
-│       ├── utils/              # logger, mailSender, requestContext, apiLogBuffer, access, cache, ...
+│       ├── models/             # User, Profile, OTP, UserActivityDay
+│       ├── utils/              # logger, mailSender, requestContext, apiLogBuffer, access, cache, ensureIndexes, activityTracker, ...
 │       ├── jobs/               # keepAlive.js
-│       └── templates/email/    # OTP, password reset, password update, campaign
+│       └── templates/email/    # OTP, password reset, password update, email change, notification, campaign
 ├── edu-platform-tester/        # standalone TypeScript/Playwright test agent, own package.json, not loaded by the server
 └── eslint.config.js
 ```
 
 | Folder | Responsibility |
 |---|---|
-| `index.js` | Global middleware order, health endpoints, Swagger UI, 404 and error handlers, startup warm-ups, graceful shutdown. Side-effect imports start both cron jobs |
+| `index.js` | Global middleware order, health endpoints, Swagger UI, 404 and error handlers, index build and startup warm-ups, graceful shutdown. Side-effect imports start all three cron jobs |
 | `config/` | Env loading (`dotenv`), Mongo connection, Swagger spec |
 | `routes/v1/index.js` | Single place where every module router is mounted under `/api/v1` |
 | `src/modules/*` | Feature modules (see section 5) |
 | `src/shared/middleware/` | `auth`, `optionalAuth`, role guards, `validate`, `apiLogger`, `AppError`, `asyncHandler`, `errorHandler`, `notFoundHandler` |
-| `src/shared/utils/` | `logger.js` (Winston), `mailSender.js` (SendGrid), `requestContext.js` (AsyncLocalStorage, `correlationHeaders`, `fetchWithTimeout`, `proxyAiService`), `apiLogBuffer.js`, `access.js` (`canAccessUser`), `responseHandler.js` (`sendSuccess`, `sendError`), `unsubscribeToken.js`, `googleSheets.js`, `whatsapp.js` (mock), `cache.js` (Redis, see 6.5), `validation.js` |
-| `src/shared/models/` | Cross-cutting `User`, `Profile`, `OTP` |
+| `src/shared/utils/` | `logger.js` (Winston), `mailSender.js` (SendGrid), `requestContext.js` (AsyncLocalStorage, `correlationHeaders`, `fetchWithTimeout`, `proxyAiService`), `apiLogBuffer.js`, `access.js` (`canAccessUser`), `responseHandler.js` (`sendSuccess`, `sendError`), `unsubscribeToken.js`, `googleSheets.js`, `whatsapp.js` (mock), `cache.js` (Redis, see 6.5), `validation.js`, `ensureIndexes.js` (startup index build), `activityTracker.js` (daily-active rows) |
+| `src/shared/models/` | Cross-cutting `User`, `Profile`, `OTP`, `UserActivityDay` |
 
 **Module pattern** (`routes → controllers → services → models`):
 
@@ -145,38 +147,38 @@ flowchart TD
 | 7 | Body parsing | `index.js` | JSON, URL-encoded (`extended: true`), text |
 | 8 | Root routes | `index.js` | `GET /ping` liveness, `GET /` platform probe, `GET /health` (Mongo `readyState`, 503 when not connected), `/api-docs` Swagger UI |
 | 9 | Module router | `routes/v1/index.js` | See section 7 |
-| 10 | Route limiter | module route files | Auth, feedback, inline-feedback and admin LLM routes only (see 10.5) |
-| 11 | Authentication | `src/shared/middleware/auth.js` | `auth` rejects with 401; `optionalAuth` attaches `req.user` when a valid token exists and never rejects |
+| 10 | Route limiter | module route files | Auth, profile email change, feedback, inline-feedback, admin LLM, public challenge and class-join routes only (see 10.5) |
+| 11 | Authentication | `src/shared/middleware/auth.js` | `auth` rejects with 401, and on success records the user's daily activity (not awaited, see 10.2); `optionalAuth` attaches `req.user` when a valid token exists and never rejects |
 | 12 | Role guard | `src/shared/middleware/auth.js` | Checks `req.user.accountType`; every guard except `isSuperAdmin` also admits `SuperAdmin`. Some routers apply `router.use(auth, guard)` for all routes; a few routes use inline SuperAdmin checks |
-| 13 | Validation | `src/shared/middleware/validate.js` | Joi on `body`, `params`, `query` with `abortEarly: false`, `allowUnknown: true`, `stripUnknown: false`. 46 of 198 route definitions use it; the rest validate inside controllers or services |
+| 13 | Validation | `src/shared/middleware/validate.js` | Joi on `body`, `params`, `query` with `abortEarly: false`, `allowUnknown: true`, `stripUnknown: false`. 67 of 225 route definitions use it; the rest validate inside controllers or services |
 | 14 | Controller / service | module folders | `asyncHandler` forwards rejections to `errorHandler` |
 | 15 | 404 and errors | `src/shared/middleware/errorHandler.js` | `notFoundHandler` raises `AppError(404, 'NOT_FOUND')`; `errorHandler` logs and responds (see 10.3) |
 
 ## 5. Module design
 
-Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1`.
+Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`.
 
 ### 5.1 auth
 
 | Aspect | Detail |
 |---|---|
-| Responsibility | Signup, login, Google login, token refresh and logout, OTP send/verify, change password, reset password |
+| Responsibility | Signup (students, teachers, parents, principals), login, Google login, token refresh and logout, OTP send/verify, change password, reset password |
 | Base path | `/authenticate` |
-| Key functions | `auth.service.js`: `signup`, `login`, `loginWithGoogle`, `generateAccessToken`, `generateRefreshToken`, `storeRefreshToken`, `rotateTokens`, `revokeRefreshToken`, `revokeAllUserTokens`, `changePassword`, `generateResetToken`, `resetPassword`, `sendOTP`, `verifyOTP` |
+| Key functions | `auth.service.js`: `signup`, `login`, `loginWithGoogle`, `generateAccessToken`, `generateRefreshToken`, `storeRefreshToken`, `rotateTokens`, `revokeRefreshToken`, `revokeAllUserTokens`, `changePassword`, `generateResetToken`, `resetPassword`, `sendOTP`, `verifyOTP`, `_acquisition` (first-touch attribution), `_attributeReferral` |
 | Models owned | `RefreshToken`, `OTP` (module copy; `src/shared/models/otp.model.js` registers the same model name guarded by `mongoose.models.OTP`) |
-| Collaborators | `User`, `Profile` (shared), `referral.service.js` (redeem on signup), `mailSender`, email templates |
-| Notes | Joi validators in `validators/auth.validator.js`; route limiters on login, Google, signup and reset (10.5) |
+| Collaborators | `User`, `Profile` (shared), `referral.service.js` (`attributeSignup` for email signups and new Google accounts; failures are logged and never fail the signup), `mailSender`, email templates |
+| Notes | Joi validators in `validators/auth.validator.js`; route limiters on login, Google, signup and reset (10.5). `rotateTokens` claims the refresh token with one atomic `findOneAndUpdate` on `revoked: false`, so each refresh token works once. Google login creates a `Teacher` when `accountType: 'Teacher'` is sent, otherwise a `Student` |
 
 ### 5.2 user
 
 | Aspect | Detail |
 |---|---|
-| Responsibility | Own profile (details, update, display picture, delete account), public profile, school-managed student accounts |
+| Responsibility | Own profile (details, update, name, verified email change, display picture, delete account), public profile, school-managed student accounts |
 | Base paths | `/profile`, `/student` |
-| Key functions | `user.service.js`: `updateProfile`, `deleteAccount`, `getUserDetails`, `updateDisplayPicture`, `createStudent`, `createStudentsBulk`, `getPublicProfile`, `getAllStudents`, `updateStudent`, `deleteStudent` |
-| Models owned | None (uses shared `User`, `Profile`) |
-| Collaborators | `TeacherStudent` |
-| Notes | Display picture accepts a URL/object from the client; the Cloudinary upload call is commented out in `profile.controller.js` |
+| Key functions | `user.service.js`: `updateProfile`, `updateName`, `requestEmailChange`, `confirmEmailChange`, `deleteAccount`, `getUserDetails`, `updateDisplayPicture`, `createStudent`, `createStudentsBulk`, `getPublicProfile`, `getAllStudents`, `updateStudent`, `deleteStudent` |
+| Models owned | `EmailChangeRequest` (one pending change per user, TTL at `expiresAt`) |
+| Collaborators | `User`, `Profile`, `TeacherStudent`, `mailSender`, `emailChange.js` template |
+| Notes | Email change: a 6-digit code from `crypto.randomInt` is emailed to the new address and stored only as a SHA-256 hash; 10-minute expiry, 5 wrong tries, re-send once a minute, and 10 requests per 15 minutes per IP on both routes. The new address is compared case-insensitively and re-checked for uniqueness at confirm time, then the old address is told. Display picture accepts a URL/object from the client; the Cloudinary upload call is commented out in `profile.controller.js` |
 
 ### 5.3 content
 
@@ -198,7 +200,7 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 | Key functions | `questions.service.js`: `getQuestionsBatch`, `_handleNoQuestions`, `_maybePrefetch`, `prewarmChapter`, `generateForChapter`, `_claimGenerationJob`, `_startBackgroundGeneration`, `_generateQuestionsBackground`, `_persistBatch`, `_dedupeNewQuestions`, `_callAIService`, `getPublicQuestionsBatch`, `getPublicChapterPreview`, `countByChapters` |
 | Models owned | `Question`, `QuestionGenerationJob` |
 | Collaborators | Content models, `UserAnswer` (answered-question exclusion), AI Service `/v1/generate-questions` |
-| Notes | See flow 8.3 for the job state machine and tuning variables |
+| Notes | See flow 8.3 for the job state machine and tuning variables. The practice and free-trial batches shuffle question order and each question's options (Fisher-Yates). `getPublicChapterPreview` matches DB chapter names to the SEO slug after dropping a Social Studies strand prefix (`Geography:`, `History:`, `Economics:`, `Political Science:`, `Civics:`) and a leading number, and pools questions from every chapter that matches (duplicate uploads) |
 
 ### 5.5 progress
 
@@ -206,10 +208,10 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 |---|---|
 | Responsibility | Practice sessions, answer batches, topic mastery, dashboard aggregate, streaks and freezes, daily challenge, session reactions and NPS, badges, share cards, AI learning insights proxy |
 | Base paths | `/sessions`, `/user-answers`, `/topic-progress`, `/progress`, `/streaks`, `/daily-challenge`, `/session-feedback`, `/badges` |
-| Key functions | `progress.service.js`: `createSession`, `endSession`, `submitAnswerBatch`, `calculateAndUpdateProgress`, `updateTopicProgress`, `calculateMasteryScore`, `getProgress`, `getLastIncompleteSession`, `getMasterySummary`. `topicProgress.controller.js`: `calculateChapterProgress`, `getSubjectProgressData`, AI insight handlers. `streak.service.js`: `recordPractice`, `useStreakFreeze`, `getStreakData`. `badge.service.js`: 15 badge definitions, `checkAndAwardBadges`, `getUserBadges`. `dailyChallenge.service.js`, `sessionFeedback.service.js`, `shareCard.service.js` (Chromium PNG) |
+| Key functions | `progress.service.js`: `createSession`, `endSession`, `submitAnswerBatch`, `_syncSessionTotals`, `_queueProgressUpdate`, `applyAnswersToProgress`, `calculateAndUpdateProgress`, `updateTopicProgress`, `calculateMasteryScore`, `getProgress`, `getLastIncompleteSession`, `getMasterySummary`. `topicProgress.controller.js`: `calculateChapterProgress`, `getSubjectProgressData`, AI insight handlers. `streak.service.js`: `recordPractice`, `useStreakFreeze`, `addBonusFreezes`, `getStreakData`. `badge.service.js`: 21 badge definitions, `checkAndAwardBadges`, `getUserBadges`. `dailyChallenge.service.js`, `sessionFeedback.service.js`, `shareCard.service.js` (Chromium PNG) |
 | Models owned | `Session`, `UserAnswer`, `StudentTopicProgress`, `Streak`, `DailyChallenge`, `SessionFeedback` |
-| Collaborators | `Question`, `ChapterTopics`, `Chapter`, `User`, `Profile` (badges stored in `Profile.achievements`), `Achievement`, AI Service `/v1/ai-insights/*` |
-| Notes | Topic-progress routes take the user from the JWT (`req.user.id`), not from a URL parameter |
+| Collaborators | `Question`, `ChapterTopics`, `Chapter`, `User`, `Profile` (badges stored in `Profile.achievements`), `Achievement`, `Referral`, `Challenge`, `ChallengeAttempt` (social badges), `referral.service.js` (`checkActivation` after each answer batch), `notification.service.js` (new badges), AI Service `/v1/ai-insights/*` |
+| Notes | Topic-progress routes take the user from the JWT (`req.user.id`), not from a URL parameter. Night Owl and Early Bird read the session hour in `Asia/Kolkata`. Streak freezes: one weekly freeze (`total`/`used`, reset on Monday) plus earned `bonus` freezes that never reset and are spent after the weekly one |
 
 ### 5.6 question-paper
 
@@ -226,11 +228,12 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 
 | Aspect | Detail |
 |---|---|
-| Responsibility | Teacher accounts (created by principals), teacher-student-subject assignments, teacher analytics dashboards |
-| Base paths | `/teacher`, `/teacher-students`, `/teacher-dashboard` |
-| Key functions | `teacher.service.js`: `createTeacher`, `getAllTeachers`, `updateTeacher`, `deleteTeacher`, `createTeacherStudentBulk` (also `$addToSet`s the class onto each student's `User.class`), `getTeacherStudents`. `teacherDashboard.service.js`: `getMyAssignments`, `getSubjectDashboard`, `getStudentsList`, `getChapterAnalytics`, `getStudentProgress`, `getWeakTopics`, `getActivityFeed` |
-| Models owned | `TeacherStudent` |
-| Collaborators | `User`, content models, `StudentTopicProgress`, `Session`, `getSubjectProgressData` |
+| Responsibility | Teacher accounts (created by principals or self-signup), teacher-student-subject assignments, teacher analytics dashboards, class join links with milestones |
+| Base paths | `/teacher`, `/teacher-students`, `/teacher-classes`, `/teacher-dashboard` |
+| Key functions | `teacher.service.js`: `createTeacher`, `getAllTeachers`, `updateTeacher`, `deleteTeacher`, `createTeacherStudentBulk` (also `$addToSet`s the class onto each student's `User.class`), `getTeacherStudents`. `teacherDashboard.service.js`: `getMyAssignments`, `getSubjectDashboard`, `getStudentsList`, `getChapterAnalytics`, `getStudentProgress`, `getWeakTopics`, `getActivityFeed`. `teacherClass.service.js`: `create`, `getPublic`, `join`, `listMine`, `setActive`, `getReport`, `getCertificate`, `_ensureSchool`, `_ensureSection` |
+| Models owned | `TeacherStudent` (`joinedVia` set for class-link joins), `TeacherClass` |
+| Collaborators | `User`, `School`, `Section`, content models, `UserAnswer`, `StudentTopicProgress`, `Session`, `getSubjectProgressData`, `notification.service.js` |
+| Notes | Class links (flow 8.10): joining creates an ordinary `TeacherStudent` row, so the dashboards need no changes. A teacher without a school gets a private `School` with `kind: 'independent'` on the first link. The class report unlocks at 10 students who practised after joining (`CLASS_REPORT_AT`), the certificate at 25 across all links (`CERTIFICATE_AT`) |
 
 ### 5.8 quiz
 
@@ -245,7 +248,7 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 
 ### 5.9 school
 
-- **Responsibility:** school and section CRUD. **Base paths:** `/school`, `/sections`. **Models owned:** `School` (unique `schoolCode`), `Section`. **Collaborators:** `Class`.
+- **Responsibility:** school and section CRUD. **Base paths:** `/school`, `/sections`. **Models owned:** `School` (unique `schoolCode`; `kind` is `school` or `independent`, the latter created for a self-signed-up teacher with `ownerTeacherId`), `Section`. **Collaborators:** `Class`.
 - **Key functions** (`school.service.js`): `createSchool`, `updateSchool`, `getAllSchools`, `getSchoolById`, `createSection`, `bulkCreateSections`, `getSectionsBySchool`, `getSectionsBySchoolAndClass`, `updateSection`, `deleteSection`.
 
 ### 5.10 principal
@@ -274,7 +277,7 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 |---|---|
 | Responsibility | Leaderboards, public stats, API log inspection, public feedback inbox with admin triage, SuperAdmin overview dashboards and user approval toggle, SuperAdmin live LLM control (AI System tab), daily achievement scheduler |
 | Base paths | `/leaderboard`, `/feedback`, `/logs`, `/stats`, `/admin/metrics`, `/admin/system/llm` |
-| Key functions | `supporting.service.js`: `getGlobalLeaderboard` and `getSubjectLeaderboard` (top 10 by distinct correct questions), `submitFeedback` (honeypot, DB write, Sheets mirror), `listFeedback`, `updateFeedback`, `getLogs`, `getLogStats`, `deleteAllLogs`, `getPublicStats`. `adminMetrics.service.js`: `getOverview`, `getUserMetrics`, `getNewUsers`, `getUserDetail`, `updateUserApproval`, `getContentMetrics`, `getQuestionJobMetrics`, `getEngagementMetrics`, `getFeedbackInsights`. `llmSystem.service.js`: `getStatus`, `listModels`, `testModel`, `activateModel`, `resetToEnvDefault` (proxies to the AI Service `/v1/admin/llm/*`, see 9) |
+| Key functions | `supporting.service.js`: `getGlobalLeaderboard` (top 10 by distinct correct questions answered since Monday 00:00 IST, with first names) and `getSubjectLeaderboard` (top 10, all-time), `submitFeedback` (honeypot, DB write, Sheets mirror), `listFeedback`, `updateFeedback`, `getLogs`, `getLogStats`, `deleteAllLogs`, `getPublicStats`. `adminMetrics.service.js`: `getOverview`, `getUserMetrics`, `getNewUsers`, `getUserDetail`, `updateUserApproval`, `getContentMetrics`, `getQuestionJobMetrics`, `getEngagementMetrics`, `getFeedbackInsights`. `llmSystem.service.js`: `getStatus`, `listModels`, `testModel`, `activateModel`, `resetToEnvDefault`, `setFeatureModel`, `resetFeatureModel` (proxies to the AI Service `/v1/admin/llm/*`, see 9) |
 | Models owned | `ApiLog`, `Feedback`, `Achievement` |
 | Collaborators | Almost every other module's models (read-only aggregations), `googleSheets.js`, `badge.service.js` |
 | Notes | Admin metrics run aggregations on every request; the `withCache` wrapper is a pass-through (`adminMetrics.service.js`). Time ranges are clamped to 7, 30 or 90 days, series spans to 366 days. The LLM routes store nothing in the Backend: the live choice and its history live in the AI Service (MongoDB `llm_settings`); the Backend validates input (`llmSystem.validator.js`: known provider, model id pattern) and sends the SuperAdmin's email as `requested_by` |
@@ -308,10 +311,38 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 
 ### 5.16 referral
 
-- **Responsibility:** one referral code per user; redemption on signup or via API, and both parties receive a streak freeze. **Base path:** `/referral`. **Models owned:** `Referral`.
-- **Key functions** (`referral.service.js`): `getOrCreateReferral`, `getReferralData`, `redeemReferral`, `_awardStreakFreeze`. **Collaborators:** `User`, `Streak`.
+| Aspect | Detail |
+|---|---|
+| Responsibility | One invite code per user, signup attribution (invite link or challenge), two-sided rewards once the friend has practised, practice-paper credits |
+| Base path | `/referral` (all routes `auth`) |
+| Key functions | `referral.service.js`: `getOrCreateReferral`, `attributeSignup`, `redeemReferral` (legacy API, same rules), `checkActivation`, `countAnswers`, `getReferralData`, `redeemPracticePaper`, `_notifyReferrer` (email), `_notifyGift` (bell) |
+| Models owned | `Referral` (code, `referrals[]` with `source`, `challengeId`, `joinedAt`, `activatedAt`, `rewardClaimed`; `paperCredits`, `papersUsed`, `totalRewards`) |
+| Collaborators | `User`, `UserAnswer`, `ChallengeAttempt`, `Chapter`, `streak.service.js` (`addBonusFreezes`), `questionPaper.service.js` (`generatePaper`), `notification.service.js`, `mailSender` |
+| Notes | Codes are 6 random characters from an alphabet without 0/O/1/I. See flow 8.8 for attribution and activation. Constants: `ACTIVATION_ANSWERS` 10, `MONTHLY_REWARD_CAP` 10, `NEW_ACCOUNT_WINDOW_MS` 24 h. A practice paper is 20 questions (8 easy, 8 medium, 4 hard) with an answer key; the credit is refunded if the paper cannot be generated |
 
-### 5.17 campaign
+### 5.17 challenge
+
+| Aspect | Detail |
+|---|---|
+| Responsibility | Challenge-a-friend links made from a finished session: public play without login, server-side scoring, guest claim after signup, results and scoreboard, owner emails |
+| Base path | `/challenges` (create, mine, claim and review need `auth`; view and play use `optionalAuth` with IP limiters) |
+| Key functions | `challenge.service.js`: `createFromSession`, `getPublic`, `submitAttempt`, `claimAttempt`, `getReview`, `listMine`, `_leaderboard`, `_creditOwner`, `_giftStatus`, `_notifyOwner` |
+| Models owned | `Challenge` (unique `code` and `sessionId`, frozen `questionIds`, `ownerScore`, `total`, `attemptsCount`), `ChallengeAttempt` (`answers[]`, `score`, `outcome` won/lost/tie, `claimTokenHash` with `select: false`) |
+| Collaborators | `Session`, `UserAnswer`, `Question`, content models, `User`, `referral.service.js`, `notification.service.js`, `mailSender` |
+| Notes | See flow 8.9. Uses the first answer per question from the session, multiple-choice only, 3 to 10 questions (`MIN_QUESTIONS`, `MAX_QUESTIONS`). The public payload never contains correct answers. Owner emails stop after 10 plays (`MAX_OWNER_EMAILS`) |
+
+### 5.18 notification
+
+| Aspect | Detail |
+|---|---|
+| Responsibility | In-app notification bell: record events, list, unread count, mark read; daily reminder and milestone job |
+| Base path | `/notifications` (all routes `auth`, any role) |
+| Key functions | `notification.service.js`: `notify` (fire-and-forget, never throws, retries once on a duplicate-key race), `list` (cursor on `lastAt`, page size 20, max 50), `unreadCount`, `markRead`, `toPublic` (words the row from `FORMAT`). `jobs/notificationScheduler.js`: `sendGiftReminders`, `sendTeacherMilestones`, `runDailyNotifications` |
+| Models owned | `Notification` |
+| Collaborators | Called by `challenge.service.js`, `referral.service.js`, `badge.service.js`, `teacherClass.service.js`; the job reads `Referral`, `TeacherClass` and `User` |
+| Notes | Grouping: one row per user, `type`, `groupKey` and IST day (`day` is `"once"` for one-time events), with `count` and up to 5 latest first names in `actors`. `seen: true` stores the row already read. Types: `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `badge_earned`, `class_joined`, `class_milestone`. Rows expire 60 days after `lastAt`. Email notifications are separate and unchanged |
+
+### 5.19 campaign
 
 | Aspect | Detail |
 |---|---|
@@ -325,7 +356,8 @@ Seventeen modules live under `src/modules/`. Base paths are relative to `/api/v1
 
 ### 6.1 Overview
 
-- One MongoDB database accessed through Mongoose; 36 distinct models: `User`, `Profile`, `OTP` in `src/shared/models/` plus the "Models owned" listed per module in section 5 (`OTP` is also defined in the auth module under the same model name). Full field lists: [Database Schema](./reference/database-schema.md).
+- One MongoDB database accessed through Mongoose; 42 distinct models: `User`, `Profile`, `OTP`, `UserActivityDay` in `src/shared/models/` plus the "Models owned" listed per module in section 5 (`OTP` is also defined in the auth module under the same model name). Full field lists: [Database Schema](./reference/database-schema.md).
+- Schema indexes are built at startup by `ensureIndexes()` (2), not by Mongoose's `autoIndex`, which does nothing under the `secondaryPreferred` read preference.
 - Reads use `readPreference: 'secondaryPreferred'` (`config/db.config.js`), so reads may be served by replicas and can lag writes when a replica set is used.
 - No multi-document transactions are used; consistency relies on unique indexes and atomic single-document updates.
 
@@ -364,6 +396,7 @@ erDiagram
         ObjectId class_id FK
         ObjectId subject_id FK "field is _subject_id"
         ObjectId school_id FK
+        ObjectId joinedVia FK "TeacherClass, class-link joins"
     }
     ParentStudent {
         ObjectId parent_id FK
@@ -372,6 +405,77 @@ erDiagram
         string relationship
     }
 ```
+
+Growth loop, class links and notifications:
+
+```mermaid
+erDiagram
+    User ||--o| Referral : "owns one code"
+    Referral ||--o{ ReferralEntry : "referrals array"
+    User ||--o{ Challenge : "ownerId"
+    Session ||--o| Challenge : "one per session"
+    Challenge ||--o{ ChallengeAttempt : "challengeId"
+    User ||--o{ ChallengeAttempt : "userId, null for guests"
+    User ||--o{ TeacherClass : "teacherId"
+    TeacherClass ||--o{ TeacherStudent : "joinedVia"
+    School ||--o{ TeacherClass : "schoolId"
+    User ||--o{ Notification : "userId"
+    User ||--o{ UserActivityDay : "one per IST day"
+    Referral {
+        ObjectId userId FK "unique"
+        string referralCode UK
+        number paperCredits
+        number papersUsed
+    }
+    ReferralEntry {
+        ObjectId referredUserId FK
+        string source "link or challenge"
+        date joinedAt
+        date activatedAt "null until 10 answers"
+        boolean rewardClaimed
+    }
+    Challenge {
+        string code UK
+        ObjectId ownerId FK
+        ObjectId sessionId FK "unique"
+        array questionIds
+        number ownerScore
+        number attemptsCount
+    }
+    ChallengeAttempt {
+        ObjectId challengeId FK
+        ObjectId userId FK
+        number score
+        string outcome "won, lost or tie"
+        string claimTokenHash "SHA-256"
+    }
+    TeacherClass {
+        string code UK
+        ObjectId teacherId FK
+        ObjectId classId FK
+        ObjectId subjectId FK
+        ObjectId sectionId FK
+        boolean active
+        number joinsCount
+    }
+    Notification {
+        ObjectId userId FK
+        string type
+        string groupKey
+        string day "IST date or once"
+        number count
+        date readAt
+        date lastAt "TTL 60 days"
+    }
+    UserActivityDay {
+        ObjectId userId FK
+        string day "IST YYYY-MM-DD"
+        date firstSeenAt
+        date lastSeenAt
+    }
+```
+
+`ReferralEntry` is an embedded array element of `Referral`, not a collection.
 
 Curriculum, question bank and practice:
 
@@ -493,7 +597,15 @@ erDiagram
 | `ChapterTopics` | unique `(chapterId, topicId, classId, subjectId, order)` | Includes `order`, so it does not by itself prevent a duplicate chapter-topic pair; ingestion upserts on `(chapterId, topicId)` |
 | `TeacherStudent` | unique `(teacher_id, student_id, class_id, _subject_id, school_id)` | Assignment identity; used for quiz access and dashboards |
 | `QuizAttempt` | unique `(studentId, quizId, attemptNumber)` | Attempt numbering |
-| Others | unique `SuggestionUpvote(suggestionId, userId)`, `DailyChallenge(userId, date)`, `Streak.userId`, `Goal.userId`, `Referral.userId` and `referralCode`; sparse unique `InlineFeedback(userId, feature)`, `SessionFeedback(userId, sessionId)` | One row per user per concern |
+| `Referral` | unique `userId`, unique `referralCode`, `referrals.referredUserId` | One code per user; "who referred this user?" runs after every answer batch until activation |
+| `Challenge`, `ChallengeAttempt` | unique `code`, unique `sessionId`, `ownerId`; attempts `(challengeId, score desc, createdAt)`, `(userId, challengeId)` | One challenge per session (a double tap returns the same one); scoreboard order; "already played" check |
+| `TeacherClass` | unique `code`, `teacherId`, `(teacherId, classId, subjectId, sectionId)`; `TeacherStudent.joinedVia` | Join lookups, link reuse, per-link stats |
+| `Notification` | unique `(userId, type, groupKey, day)`, `(userId, lastAt desc)`, `(userId, readAt)`, TTL 60 days on `lastAt` | The unique key makes grouping an atomic upsert; list and unread count; bounded retention |
+| `UserActivityDay` | unique `(userId, day)`, `(day, accountType)` | One row per user per IST day |
+| `EmailChangeRequest` | unique `userId`, TTL on `expiresAt` | One pending email change per user; expires after 10 minutes |
+| Others | unique `SuggestionUpvote(suggestionId, userId)`, `DailyChallenge(userId, date)`, `Streak.userId`, `Goal.userId`; sparse unique `InlineFeedback(userId, feature)`, `SessionFeedback(userId, sessionId)` | One row per user per concern |
+
+All of these are built by `ensureIndexes()` at startup. It only creates missing indexes and never drops one.
 
 ### 6.4 Source of truth vs derived data
 
@@ -504,16 +616,22 @@ erDiagram
 | `Chapter.ragIndexed` | Mirror of AI-side index state (set true on a 2xx upload response, never reset) | `_processChapterWithAI` |
 | `Question` | Source of truth once persisted (AI-generated or teacher-created) | `questions.service.js` |
 | `QuestionGenerationJob` | Control state for generation | `questions.service.js` |
-| `Session`, `UserAnswer` | Source of truth for practice | `progress.service.js` |
-| `StudentTopicProgress` | Derived, incremental (not recomputed from scratch) from `UserAnswer` plus `Question.topicIds` at session end | `calculateAndUpdateProgress` |
-| `Streak` | Derived from session-end events (dates in IST) | `streak.service.js` |
-| `Profile.achievements` | Derived from `Session` history by badge checks | `badge.service.js`, daily scheduler |
+| `Session`, `UserAnswer` | Source of truth for practice; session score and totals are re-synced from saved answers after each batch and at session end | `progress.service.js` |
+| `StudentTopicProgress` | Derived, incremental (not recomputed from scratch) from each newly saved `UserAnswer` batch plus `Question.topicIds` | `applyAnswersToProgress` via `_queueProgressUpdate` |
+| `Streak` | Derived from answer saves and session-end events (dates in IST); `streakFreezes.bonus` from referral rewards | `streak.service.js` |
+| `Profile.achievements` | Derived from `Session`, `Challenge`, `ChallengeAttempt` and `Referral` data by badge checks | `badge.service.js`, daily scheduler |
+| `Referral.referrals[].activatedAt`, `paperCredits` | Derived from the friend's answer count (practice plus answered challenge questions) | `referralService.checkActivation` |
+| `Challenge`, `ChallengeAttempt` | Source of truth for challenges; `Challenge.attemptsCount` is a counter (`$inc`) | `challenge.service.js` |
+| `TeacherClass.joinsCount` | Counter mirroring class-link `TeacherStudent` rows (`$inc`) | `teacherClass.service.js` |
+| `Notification` | Derived event log for the bell, worded at read time | `notification.service.js` |
 | `DailyChallenge` | Generated snapshot per user per IST date | `dailyChallenge.service.js` |
 | `Quiz.totalQuestions`, `Quiz.totalMarks` | Denormalised from `QuizQuestion` | `quiz.service.js` |
 | `QuizAttempt` score fields | Derived from `QuizAnswer` at submit | `submitQuiz` |
 | `Suggestion.upvoteCount` | Counter mirroring `SuggestionUpvote` rows (`$inc`) | `toggleUpvote` |
-| `User.class` | Partially synced from `TeacherStudent` bulk inserts | `createTeacherStudentBulk` |
+| `User.class` | Partially synced from `TeacherStudent` bulk inserts and class-link joins | `createTeacherStudentBulk`, `teacherClassService.join` |
 | `User.lastLoginAt`, `User.loginCount`, `ApiLog` | Telemetry | `recordLogin`, `apiLogBuffer.js` |
+| `UserActivityDay`, `User.lastActiveAt` | Telemetry: one row per signed-in user per IST day, written from the `auth` middleware (throttled to once per user per 15 minutes) | `activityTracker.js` |
+| `User.acquisition` | First-touch attribution sent with signup (`source`: referral, challenge, class or organic; `ref`; UTM fields; landing path) | `auth.service.js` |
 | `Feedback` | Source of truth; a Google Sheet row is a best-effort mirror | `supporting.service.js` |
 | Vectors, embeddings, AI conversations | Owned by the AI Service; the Backend stores only `ragIndexed` and proxies conversation calls | AI Service |
 
@@ -530,7 +648,7 @@ The Redis cache is effectively disabled: `src/shared/utils/cache.js` statically 
 
 ### 6.6 Data lifecycle
 
-- TTL expiry: `OTP` (5 min), `RefreshToken` (at `expiresAt`), `ApiLog` (30 days).
+- TTL expiry: `OTP` (5 min), `RefreshToken` (at `expiresAt`), `EmailChangeRequest` (at `expiresAt`, 10 min after the request), `ApiLog` (30 days), `Notification` (60 days after `lastAt`).
 - Deleting chapters removes `Chapter` and `ChapterTopics` rows and asks the AI Service to delete vectors; `Question`, `QuestionGenerationJob` and `StudentTopicProgress` rows for those chapters are not deleted (`deleteChapters`).
 - Deleting an account removes only `User` and `Profile` (`user.service.js` `deleteAccount`).
 - Draft quizzes are hard-deleted with their `QuizQuestion` rows; closed quizzes, and published quizzes whose deadline has passed (or with force), are soft-deleted (`isDeleted`, `deletedAt`).
@@ -548,7 +666,7 @@ Conventions:
 | Base path | Module | Auth / roles | Purpose |
 |---|---|---|---|
 | `/authenticate` | auth | Public with route limiters; `changepassword` needs `auth` | Signup, login, Google, refresh, logout, OTP, password flows |
-| `/profile` | user | `auth`; `GET /public/:userId` public | Own profile, picture, delete account |
+| `/profile` | user | `auth`; `GET /public/:userId` public; email-change routes 10 per 15 min | Own profile, name, verified email change, picture, delete account |
 | `/student` | user | `auth` + `isTeacherOrPrincipal` | School-managed student accounts |
 | `/classes`, `/subjects` | content | `auth` | Curriculum lists |
 | `/chapters` | content | `GET /class/:classId/subject/:subjectId` public; create, `create-with-pdf`, delete need `isTeacher`; `check-rag-status` needs `auth` | Chapters and PDF ingestion |
@@ -562,6 +680,7 @@ Conventions:
 | `/streaks`, `/daily-challenge`, `/badges`, `/session-feedback` | progress | `auth` | Engagement features |
 | `/teacher` | teacher | `auth` + `isPrincipal` | Teacher accounts |
 | `/teacher-students` | teacher | `auth` + `isTeacherOrPrincipal` | Assignments |
+| `/teacher-classes` | teacher | `GET /join/:code` public (120 per 10 min); `POST /join/:code` needs `auth` (students only, checked in the service); everything else `auth` + `isTeacher` | Class join links, report, certificate |
 | `/teacher-dashboard` | teacher | `auth` + `isTeacher` (router level) | Teacher analytics |
 | `/parent-students` | parent | Bulk and list: `isTeacherOrPrincipal`; unlink: `isParent` | Parent links |
 | `/parent-dashboard` | parent | `auth` + `isParent` (router level) | Child analytics |
@@ -569,13 +688,16 @@ Conventions:
 | `/principals` | principal | `auth` + `isSuperAdmin` (router level) | Principal accounts |
 | `/quiz` | quiz | `auth`; ownership and assignment checks in service | Quizzes and attempts |
 | `/school`, `/sections` | school | `auth`; writes need `isPrincipal` | Schools and sections |
-| `/leaderboard` | supporting | `auth` | Top-10 leaderboards |
+| `/leaderboard` | supporting | `auth` | Top 10 of this week (global, first names); top 10 all-time per subject |
 | `/feedback` | supporting | `POST /` public (limiter + `optionalAuth`); `/admin*` needs `isSuperAdmin` | Feedback inbox |
 | `/logs` | supporting | `auth` + SuperAdmin (inline check) | API log search, stats, purge |
 | `/stats` | supporting | Public | Public counters |
 | `/admin/metrics` | supporting | `auth` + `isSuperAdmin` (router level) | SuperAdmin dashboards, user approval toggle |
-| `/admin/system/llm` | supporting | `auth` + `isSuperAdmin` (router level); `POST /test` 10 per minute, `POST /active` and `/reset` 5 per 10 min | Live LLM status, model list, test, switch, reset to env default |
-| `/referral`, `/goals` | referral, goal | `auth` | Referral code, daily goal |
+| `/admin/system/llm` | supporting | `auth` + `isSuperAdmin` (router level); `POST /test` 10 per minute, `POST /active` and `/reset` 5 per 10 min, `POST /features/:feature[/reset]` 20 per 10 min | Live LLM status, model list, test, switch, reset to env default, per-feature model and temperature |
+| `/referral` | referral | `auth` | Invite code and summary, legacy redeem, practice-paper credit |
+| `/challenges` | challenge | `GET /:code` and `POST /:code/attempts` public with `optionalAuth` (120 and 20 per 10 min); create, `mine`, claim and review need `auth` | Challenge-a-friend links |
+| `/notifications` | notification | `auth` | Notification bell: list, unread count, mark read |
+| `/goals` | goal | `auth` | Daily goal |
 | `/question-paper` | question-paper | `auth`; `POST /public/generate` public | Papers and PDFs |
 | `/ai-assistant` | ai-assistant | `auth` + `isTeacher` | AI agent proxy, SSE, conversations, PDF export |
 | `/inline-feedback` | feedback | `auth` (POST limited to 10 per minute); sentiment reads need `isTeacherOrPrincipal` or `isSuperAdmin` | Feature reactions |
@@ -606,12 +728,12 @@ sequenceDiagram
     BE-->>FE: 200 verified or 400
     FE->>BE: POST /authenticate/signup (registerLimiter, Joi)
     BE->>DB: check userName and email unique
-    BE->>DB: Profile.create then User.create (bcrypt cost 10)
+    BE->>DB: Profile.create then User.create with acquisition (bcrypt cost 10)
     BE->>DB: RefreshToken.create (SHA-256 of token)
     opt referralCode present
-        BE->>DB: redeemReferral, streak freeze for both users
+        BE->>DB: attributeSignup: push friend onto inviter's Referral (no reward yet)
     end
-    BE-->>FE: 201 tokens and user
+    BE-->>FE: 201 tokens, user and referral
     FE->>BE: POST /authenticate/login (loginLimiter, userName or email)
     BE->>DB: find user with password, bcrypt.compare
     BE->>DB: revoke oldest token if 5 active, store new refresh token
@@ -631,12 +753,17 @@ sequenceDiagram
         BE-->>FE: 401 error noToken, tokenExpired or tokenInvalid
     else valid
         BE->>BE: req.user = id, email, accountType
+        BE-)DB: recordActivity: upsert UserActivityDay, set lastActiveAt (throttled, not awaited)
         BE-->>FE: handler response
     end
     FE->>BE: POST /authenticate/refresh (refreshToken)
     BE->>BE: jwt.verify refresh token
-    BE->>DB: find hashed token, not revoked, not expired
-    BE->>DB: revoke old record
+    BE->>DB: findOneAndUpdate hashed token where revoked is false, set revoked (atomic claim)
+    alt no match (missing or already used)
+        BE-->>FE: 401 REFRESH_TOKEN_REVOKED
+    else claimed record has expired
+        BE-->>FE: 401 REFRESH_TOKEN_EXPIRED
+    end
     BE->>DB: store new hashed refresh token
     BE-->>FE: 200 new accessToken and refreshToken
     FE->>BE: POST /authenticate/logout (refreshToken)
@@ -652,9 +779,10 @@ sequenceDiagram
 | Active refresh tokens per user | `MAX_REFRESH_TOKENS`, default 5; oldest revoked when exceeded | `storeRefreshToken` |
 | Revoke all | On password change and on password reset | `revokeAllUserTokens` |
 | Password reset token | 20 random bytes (hex), SHA-256 stored in `User.token`, expires after 5 min, link `FRONTEND_URL/update-password/<token>` | `generateResetToken` |
-| Google login | `verifyIdToken` against any of `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_IOS`; match by `googleId`, else link by email, else create a `Student` with `provider: 'google'` | `loginWithGoogle` |
+| Refresh reuse | Each refresh token works once: the claim and the revoke are one atomic update, so two refreshes sent in the same millisecond cannot both succeed | `rotateTokens` |
+| Google login | `verifyIdToken` against any of `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_IOS`; match by `googleId`, else link by email, else create a `Teacher` (when `accountType: 'Teacher'` is sent) or a `Student` with `provider: 'google'`. A new account also stores `acquisition` and is credited to `referralCode`'s owner. Response adds `isNewUser` and `referral` | `loginWithGoogle` |
 | Self-signup roles | Joi allows `Student`, `Teacher`, `Parent`, `Principal`; `Principal` is created with `approved: false` | `auth.validator.js`, `auth.service.js` |
-| Password policy | 8 to 128 characters with upper, lower, digit and one of `!@#$%^&*` | `auth.validator.js` |
+| Password policy | 8 to 128 characters with at least one letter and one number (signup, reset and change) | `auth.validator.js` |
 
 ### 8.2 Chapter PDF upload and AI ingestion
 
@@ -781,20 +909,26 @@ sequenceDiagram
         FE->>BE: GET /questions/batch/... (flow 8.3, starts on-demand generation if the bank is empty)
         FE->>BE: POST /user-answers/batch (1 to 10 answers)
         BE->>DB: UserAnswer.insertMany
+        BE->>DB: re-sync Session score and totals from saved answers
         BE-->>FE: 201
+        BE-)DB: per-user queue: applyAnswersToProgress (new answers only)
+        BE-)DB: streak recordPractice (IST date)
+        BE-)DB: referralService.checkActivation (flow 8.8)
     end
     FE->>BE: PATCH /sessions/:id/end (score, totalquestions)
-    BE->>DB: ownership check, set endedAt, score, totals
+    BE->>DB: ownership check, set endedAt, score and totals from saved answers (client numbers only if none were saved)
     BE-->>FE: 200 session
-    BE-)DB: setImmediate calculateAndUpdateProgress
     BE-)DB: setImmediate streak recordPractice (IST date)
     opt client requests badges
         FE->>BE: POST /badges/check
-        BE->>DB: evaluate 15 badge rules, append to Profile.achievements
+        BE->>DB: evaluate 21 badge rules, append to Profile.achievements
+        BE-)DB: one badge_earned notification per new badge, stored as read
     end
 ```
 
-`calculateAndUpdateProgress` groups the session's answers by every topic in `Question.topicIds` and updates one `StudentTopicProgress` per (subject, chapter, topic):
+Progress is applied as answers are saved, not at session end, so a session left by closing the tab still counts. Updates for one user run one at a time through an in-process queue (`_queueProgressUpdate`), so two batches saved close together cannot overwrite each other. `endSession` does not recompute progress, which would count answers twice.
+
+`applyAnswersToProgress` groups the new answers by every topic in `Question.topicIds` and updates one `StudentTopicProgress` per (subject, chapter, topic):
 
 | Step | Rule | Source |
 |---|---|---|
@@ -909,6 +1043,116 @@ sequenceDiagram
 
 Related: `POST /inline-feedback` upserts one reaction per user and feature (10 per minute limiter); `GET /behavioral-prompt/check` decides whether to show a prompt; session reactions and NPS go to `/session-feedback` (NPS shown at the 5th session and every 20 sessions after, `sessionFeedback.service.js`).
 
+### 8.8 Referral attribution and activation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant FE as Frontend
+    participant BE as Backend
+    participant DB as MongoDB
+    FE->>BE: POST /authenticate/signup or /google with referralCode (or a challenge claim)
+    BE->>DB: find Referral by code, reject self, accounts older than 24 h and already-referred users
+    BE->>DB: push entry (source link or challenge, joinedAt, activatedAt null)
+    BE-)DB: friend_joined notification for the inviter
+    loop each saved answer batch, challenge play or claim, referral screen load
+        BE->>DB: pending entry for this friend? (activatedAt null)
+        BE->>DB: countAnswers = UserAnswer count + answered ChallengeAttempt questions
+        alt at least 10
+            BE->>DB: count inviter's rewarded friends this calendar month
+            BE->>DB: atomic set activatedAt (only the first request wins), rewardClaimed = under cap
+            BE->>DB: friend: +1 paperCredits, +1 streakFreezes.bonus
+            opt inviter under the monthly cap of 10
+                BE->>DB: inviter: +1 paperCredits, +1 totalRewards, +1 streakFreezes.bonus
+                BE-)BE: email the inviter
+            end
+            BE-)DB: gift_unlocked notifications (friend, and inviter when rewarded)
+        end
+    end
+    FE->>BE: POST /referral/rewards/practice-paper (chapterId)
+    BE->>DB: atomic papersUsed + 1 where papersUsed is below paperCredits
+    BE->>BE: questionPaperService.generatePaper (20 questions, answer key)
+    BE-->>FE: 201 paper, or refund the credit and return the error
+```
+
+| Rule | Value | Source |
+|---|---|---|
+| Answers to activate | 10 (practice answers plus non-empty answers in challenges played on the account) | `ACTIVATION_ANSWERS`, `countAnswers` |
+| Attribution window | Account created less than 24 h ago; one referrer per user, first wins | `NEW_ACCOUNT_WINDOW_MS`, `attributeSignup` |
+| Monthly cap | 10 rewarded friends per referrer per calendar month (UTC); the friend is rewarded either way | `MONTHLY_REWARD_CAP` |
+| Self-healing | Opening the referral screen re-checks the user and up to 5 of their friends who joined in the last 14 days, then returns fresh credit counts | `getReferralData` |
+| Reminder | One `gift_reminder` notification per friend still short of 10 answers, 20 h to 7 days after joining (5 pm IST job) | `notificationScheduler.js` |
+| Milestone badges | Squad Starter, Squad Leader, Class Captain at 1, 3, 5 activated friends | `badge.service.js` |
+
+### 8.9 Challenge a friend: create, play, claim
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Owner
+    participant G as Friend (guest)
+    participant BE as Backend
+    participant DB as MongoDB
+    O->>BE: POST /challenges (sessionId)
+    BE->>DB: session owned by caller, first answer per question, MCQ only, 3 to 10
+    BE->>DB: Challenge.create with random code (unique sessionId: a double tap returns the same one)
+    BE-->>O: 201 code and share link /c/CODE
+    G->>BE: GET /challenges/CODE (optionalAuth, 120 per 10 min)
+    BE-->>G: questions without answers, options shuffled, top 5 scoreboard
+    G->>BE: POST /challenges/CODE/attempts (answers, name) (20 per 10 min)
+    BE->>DB: grade against Question.correctAnswer, outcome vs ownerScore
+    BE->>DB: ChallengeAttempt.create with SHA-256 of a random claim token
+    BE->>DB: Challenge.attemptsCount + 1
+    BE-)O: email (first 10 plays only) and challenge_played notification
+    BE-->>G: 201 score, rank, outcome, claimToken
+    G->>BE: signs up, then POST /challenges/attempts/ID/claim (claimToken)
+    BE->>DB: verify token hash, set userId, unset claimTokenHash
+    BE->>DB: attributeSignup to the owner (source challenge), then checkActivation
+    BE-->>G: code, claimed, referral, gift progress
+```
+
+- A signed-in player is linked at once (no claim token) and keeps the first score if they play again. The owner cannot play their own challenge.
+- `GET /challenges/:code/review` returns answers and explanations only to the owner or to someone who has played.
+- Badges: Challenger (someone played your challenge), Challenge Champion (you beat an owner's score).
+
+### 8.10 Teacher class join link
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant T as Teacher
+    participant S as Student
+    participant BE as Backend
+    participant DB as MongoDB
+    T->>BE: POST /teacher-classes (classId, subjectId, sectionName, expectedStudents)
+    opt teacher has no schoolId
+        BE->>DB: School.create kind independent, set teacher schoolId
+    end
+    BE->>DB: upsert Section by name (if given), reuse the active link or create one with a random code
+    BE-->>T: 201 link /join/CODE
+    S->>BE: GET /teacher-classes/join/CODE (public)
+    BE-->>S: teacher, class, subject, joined count (no student names)
+    S->>BE: POST /teacher-classes/join/CODE (auth, students only)
+    BE->>DB: TeacherStudent.create with joinedVia, joinsCount + 1
+    BE->>DB: add the class to the student's User.class (student schoolId stays unset)
+    BE-)T: class_joined notification
+    T->>BE: GET /teacher-classes/mine
+    BE->>DB: per link: joined, practised after joining, active this week
+    BE-->>T: links, totals, milestones (report at 10, certificate at 25)
+```
+
+A link that is turned off (`PATCH /teacher-classes/:id` with `active: false`) answers joins with 410. The daily 5 pm IST job sends each teacher a one-time `class_milestone` notification when a report or the certificate unlocks.
+
+### 8.11 Notification bell
+
+| Step | Behaviour | Source |
+|---|---|---|
+| Write | `notify(userId, { type, groupKey, actor, data, link, once, seen })` upserts on `(userId, type, groupKey, day)`: `$inc count`, keep the last 5 actor first names, replace `data`, `link`, `lastAt`, and mark unread (or read when `seen`). `once` events use `day: "once"` and `$setOnInsert`, so they are stored a single time | `notification.service.js` |
+| Race | A duplicate-key error from two first writes retries once as an update | `notify` |
+| Read | `GET /notifications` sorts by `lastAt` desc and pages with `before=<nextCursor>`; each row is worded from its type, count, actors and `data` | `list`, `toPublic` |
+| Mark read | `POST /notifications/read` with `ids` or `all: true`; returns the new unread count | `markRead` |
+| Expiry | TTL index removes rows 60 days after `lastAt` | `notification.model.js` |
+
 ## 9. Integration with AI Service
 
 All calls go to `process.env.AI_ENDPOINT` + `/v1/...`. `correlationHeaders()` (`src/shared/utils/requestContext.js`) adds `x-correlation-id` from AsyncLocalStorage and `x-api-key` from `AI_SERVICE_API_KEY` when set. `proxyAiService()` wraps `fetchWithTimeout` (default 30 s) and maps errors: abort to `AppError(504, 'AI_TIMEOUT')`, network failure to `502 AI_SERVICE_ERROR`, non-2xx to `502` with the AI `detail` or `message`. No outbound call has an automatic retry in the Backend; the only retry setting is `max_retries` forwarded to the AI Service for tier-1 generation.
@@ -925,11 +1169,11 @@ All calls go to `process.env.AI_ENDPOINT` + `/v1/...`. `correlationHeaders()` (`
 | `ai-assistant.service.js` `streamAgentRequest` | `POST /v1/ai-agent/stream` | Yes | 10 min until response headers, none after | Blocking until headers, then piped as SSE |
 | `ai-assistant.service.js` `getAvailableTasks` | `GET /v1/ai-agent/tasks` | Yes | None | Blocking: 500 |
 | `ai-assistant.service.js` `checkHealth` | `GET /v1/ai-agent/health` | Yes | None effective (a `timeout` option is passed, which `fetch` ignores) | Returns `unhealthy` instead of throwing |
-| `ai-assistant.service.js` `getTeacherClasses` | `GET /v1/ai-agent/classes` | No | None | Blocking error |
-| `ai-assistant.service.js` `getGeneration` (used by `exportPDF`) | `GET /v1/ai-agent/generation/:id` | No | None | 404 `GENERATION_NOT_FOUND` on non-2xx |
-| `ai-assistant.service.js` conversations | `POST/GET /v1/conversations`, `GET/POST /v1/conversations/:id/messages`, `DELETE /v1/conversations/:id` | No | None | Blocking: 502 or 503 |
-| `llmSystem.service.js` `getStatus`, `listModels`, `resetToEnvDefault` | `GET /v1/admin/llm/status`, `GET /v1/admin/llm/models`, `POST /v1/admin/llm/reset` | Yes | 20 s, 30 s, 20 s | Blocking. Own `callAi` wrapper, not `proxyAiService`: AI `400`/`409`/`503`/`504` pass through with the AI `detail`; other non-2xx become 502 |
-| `llmSystem.service.js` `testModel`, `activateModel` | `POST /v1/admin/llm/test`, `POST /v1/admin/llm/active` | Yes | 100 s, 110 s (above the AI Service's 90 s `LLM_TEST_TIMEOUT`) | Same as above; `activated: false` comes back as 200 (nothing switched) |
+| `ai-assistant.service.js` `getTeacherClasses` | `GET /v1/ai-agent/classes` | Yes | None | Blocking error |
+| `ai-assistant.service.js` `getGeneration` (used by `exportPDF`) | `GET /v1/ai-agent/generation/:id` | Yes | None | 404 `GENERATION_NOT_FOUND` on non-2xx |
+| `ai-assistant.service.js` conversations | `POST/GET /v1/conversations`, `GET/POST /v1/conversations/:id/messages`, `DELETE /v1/conversations/:id` | Yes | None | Blocking: 502 or 503 |
+| `llmSystem.service.js` `getStatus`, `listModels`, `resetToEnvDefault`, `resetFeatureModel` | `GET /v1/admin/llm/status`, `GET /v1/admin/llm/models`, `POST /v1/admin/llm/reset`, `POST /v1/admin/llm/features/{feature}/reset` | Yes | 20 s, 30 s, 20 s, 20 s | Blocking. Own `callAi` wrapper, not `proxyAiService`: AI `400`/`404`/`409`/`503`/`504` pass through with the AI `detail`; other non-2xx become 502 |
+| `llmSystem.service.js` `testModel`, `activateModel`, `setFeatureModel` | `POST /v1/admin/llm/test`, `POST /v1/admin/llm/active`, `POST /v1/admin/llm/features/{feature}` | Yes | 100 s, 110 s, 110 s (above the AI Service's 90 s `LLM_TEST_TIMEOUT`) | Same as above; `activated: false` comes back as 200 (nothing switched) |
 
 Request/response contracts are documented in `shared-contracts` and in [Integration](../reference/integration.md).
 
@@ -950,7 +1194,7 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | `AI_ENDPOINT` | AI Service base URL (no path) | content, questions, progress, ai-assistant, supporting (`llmSystem.service.js`), `index.js` |
 | `AI_SERVICE_API_KEY` | Sent as `x-api-key` | `requestContext.js` |
 | `SENDGRID_API_KEY`, `EMAIL` | SendGrid API key and verified sender address | `mailSender.js` |
-| `FRONTEND_URL` | Base for password-reset links (default local dev URL) | `auth.service.js` |
+| `FRONTEND_URL` | Base for password-reset links (default local dev URL) and for invite links, challenge links and email buttons (default: the production site) | `auth.service.js`, `referral.service.js`, `challenge.service.js` |
 | `BACKEND_URL` | Keep-alive target and unsubscribe-link base (falls back to a hard-coded production URL) | `keepAlive.js`, `unsubscribeToken.js` |
 | `QUESTION_*` (10 variables) | Question-generation tuning (table in 8.3) | `questions.service.js` |
 | `MASTERY_MIN_EVIDENCE` | Distinct-question evidence gate (default 8) | `progress.service.js` |
@@ -967,7 +1211,7 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | Mechanism | Behaviour | File |
 |---|---|---|
 | Token transport | `Authorization: Bearer`. `auth` also looks at `req.cookies.token`, but no cookie parser is installed and the server never sets cookies | `src/shared/middleware/auth.js` |
-| `auth` | 401 with `error: noToken`, `tokenExpired` or `tokenInvalid`; sets `req.user` to the decoded claims | `auth.js` |
+| `auth` | 401 with `error: noToken`, `tokenExpired` or `tokenInvalid`; sets `req.user` to the decoded claims, then calls `recordActivity` (upsert today's `UserActivityDay`, set `User.lastActiveAt`; at most once per user per 15 min, always on the first request of a new IST day; not awaited; a failure is logged and retried on the next request) | `auth.js`, `src/shared/utils/activityTracker.js` |
 | `optionalAuth` | Attaches `req.user` when a valid token is present; never rejects | `auth.js` |
 | Role guards | `isStudent`, `isTeacher`, `isPrincipal`, `isParent`, `isNormalUser`, `isTeacherOrPrincipal` (all also admit `SuperAdmin`), `isSuperAdmin` (only `SuperAdmin`); 403 on mismatch | `auth.js` |
 | Ownership helper | `canAccessUser(reqUser, ownerId)`: owner, or any of `SuperAdmin`, `Teacher`, `Principal`, `Parent` | `src/shared/utils/access.js` |
@@ -977,9 +1221,9 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 |---|---|---|
 | `SuperAdmin` | Not creatable through the API | Admin metrics, logs, feedback inbox, suggestions moderation, campaigns, principal accounts, live LLM selection |
 | `Principal` | Self-signup (`approved: false`) or SuperAdmin via `/principals` | School dashboards, teacher accounts, schools and sections |
-| `Teacher` | Self-signup or principal via `/teacher` | Content upload, question generation, quizzes, papers, AI assistant, teacher dashboards |
+| `Teacher` | Self-signup (email or Google) or principal via `/teacher` | Content upload, question generation, quizzes, papers, AI assistant, teacher dashboards, class join links |
 | `Parent` | Self-signup or teacher/principal via `/parent-students/bulk` | Parent dashboard for linked children |
-| `Student` | Self-signup, Google login, or teacher/principal via `/student/create` | Practice, quizzes, progress |
+| `Student` | Self-signup, Google login, or teacher/principal via `/student/create` | Practice, quizzes, progress, challenges, joining class links |
 | `NormalUser` | Enum value only (not selectable in the signup schema) | Guard exists (`isNormalUser`) |
 
 The `approved` flag is changed by `PATCH /admin/metrics/users/:id/approval`; see [Authentication](./development/authentication.md).
@@ -997,7 +1241,7 @@ The `approved` flag is changed by `PATCH /admin/metrics/users/:id/approval`; see
 | Route limiter | 429 | `{ success: false, message }` (global limiter uses the library default body) |
 | Unknown route | 404 | `{ success: false, message: 'Route not found: ...', code: 'NOT_FOUND' }` |
 
-`errorHandler` (`src/shared/middleware/errorHandler.js`) also maps Mongoose `ValidationError` to 400 `VALIDATION_ERROR`, `CastError` to 400 `INVALID_ID`, duplicate key 11000 to 409 `DUPLICATE_KEY`, and JWT errors to 401. Module error classes: `AppError` (shared, `isOperational`), `AIAssistantError` (extends `AppError`), and `AuthError`, `CampaignError`, `ContentError`, `GoalError`, `ParentError`, `ParentDashboardError`, `PrincipalAccountError`, `PrincipalDashboardError`, `ProgressError`, `ShareCardError`, `QuestionPaperError`, `QuestionsError`, `QuizError`, `ReferralError`, `SchoolError`, `SupportingError`, `TeacherError`, `TeacherDashboardError`, `UserError` (each extends `Error` with `statusCode` and `code`). The quiz controller builds its own error responses. See also [Error Handling](./development/error-handling.md).
+`errorHandler` (`src/shared/middleware/errorHandler.js`) also maps Mongoose `ValidationError` to 400 `VALIDATION_ERROR`, `CastError` to 400 `INVALID_ID`, duplicate key 11000 to 409 `DUPLICATE_KEY`, and JWT errors to 401. Module error classes: `AppError` (shared, `isOperational`), `AIAssistantError` (extends `AppError`), and `AuthError`, `CampaignError`, `ChallengeError`, `ContentError`, `GoalError`, `ParentError`, `ParentDashboardError`, `PrincipalAccountError`, `PrincipalDashboardError`, `ProgressError`, `ShareCardError`, `QuestionPaperError`, `QuestionsError`, `QuizError`, `ReferralError`, `SchoolError`, `SupportingError`, `TeacherClassError`, `TeacherError`, `TeacherDashboardError`, `UserError` (each extends `Error` with `statusCode` and `code`). The quiz controller builds its own error responses. See also [Error Handling](./development/error-handling.md).
 
 ### 10.4 Logging and observability
 
@@ -1027,14 +1271,20 @@ All limiters use `express-rate-limit` with the default in-memory store, keyed by
 | `reactionLimiter` | 1 min | 10 | `POST /inline-feedback` (after `auth`) | `feedback/routes/inlineFeedback.routes.js` |
 | `testLimiter` | 1 min | 10 | `POST /admin/system/llm/test` (after `auth` + `isSuperAdmin`) | `supporting/routes/llmSystem.routes.js` |
 | `switchLimiter` | 10 min | 5 | `POST /admin/system/llm/active`, `POST /admin/system/llm/reset` | `supporting/routes/llmSystem.routes.js` |
+| `featureLimiter` | 10 min | 20 | `POST /admin/system/llm/features/:feature`, `POST /admin/system/llm/features/:feature/reset` | `supporting/routes/llmSystem.routes.js` |
+| `emailChangeLimiter` | 15 min | 10 | `POST /profile/email/request-change`, `POST /profile/email/confirm-change` (after `auth`) | `user/routes/profile.routes.js` |
+| `viewLimiter` | 10 min | 120 | `GET /challenges/:code` | `challenge/routes/challenge.routes.js` |
+| `playLimiter` | 10 min | 20 | `POST /challenges/:code/attempts` | `challenge/routes/challenge.routes.js` |
+| `joinViewLimiter` | 10 min | 120 | `GET /teacher-classes/join/:code` | `teacher/routes/teacherClass.routes.js` |
 
 ### 10.6 Email via SendGrid
 
 - `mailSender(email, title, body, options)` calls `@sendgrid/mail` `send()` with `from: EMAIL` and optional custom headers (`src/shared/utils/mailSender.js`). SMTP is not used.
-- Transactional mail: OTP (sent in the `OTP` pre-save hook, awaited, so a send failure fails `/sendotp`), password reset link (awaited), password-change confirmation (fire-and-forget).
-- Broadcast mail: campaigns (5.17) exclude users with `active: false` or `emailOptOut: true`, send in batches of 50 with `Promise.allSettled` and a 300 ms pause, and add `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers.
+- Transactional mail: OTP (sent in the `OTP` pre-save hook, awaited, so a send failure fails `/sendotp`), password reset link (awaited), password-change confirmation (fire-and-forget), email-change code to the new address and a notice to the old one.
+- Activity mail (skipped for users with `emailOptOut`): the challenge owner for each of the first 10 plays, and the inviter when a friend's referral gift unlocks. Both use `notificationTemplate.js`; failures are only logged.
+- Broadcast mail: campaigns (5.19) exclude users with `active: false` or `emailOptOut: true`, send in batches of 50 with `Promise.allSettled` and a 300 ms pause, and add `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers.
 - Unsubscribe tokens are stateless: `base64url(userId).base64url(HMAC-SHA256(userId, JWT_SECRET))`, verified with `timingSafeEqual`, no expiry (`src/shared/utils/unsubscribeToken.js`).
-- Templates: `src/shared/templates/email/` (`emailVerificationTemplate.js`, `passwordReset.js`, `passwordUpdate.js`, `campaignTemplate.js`).
+- Templates: `src/shared/templates/email/` (`emailVerificationTemplate.js`, `passwordReset.js`, `passwordUpdate.js`, `emailChange.js`, `notificationTemplate.js`, `campaignTemplate.js`).
 
 ### 10.7 Security measures
 
@@ -1043,12 +1293,13 @@ All limiters use `express-rate-limit` with the default in-memory store, keyed by
 | Headers | `helmet()` defaults |
 | CORS | Origin reflected, credentials allowed; no cookies are issued by the server |
 | Passwords | bcrypt cost 10; `password` field `select: false` on `User` |
-| Stored tokens | Refresh tokens and password-reset tokens stored as SHA-256 hashes |
-| Token revocation | Refresh-token rotation; revoke-all on password change or reset |
-| Input validation | Joi on auth, content, questions, teacher, parent, principal routes (46 route definitions); regex inputs escaped in log search (`escapeRegex`) |
+| Stored tokens | Refresh tokens, password-reset tokens, email-change codes and challenge claim tokens stored as SHA-256 hashes |
+| Token revocation | Single-use refresh tokens (atomic claim on rotation); revoke-all on password change or reset |
+| Input validation | Joi on auth, profile, content, questions, teacher, parent, principal, challenge, notification and admin LLM routes (67 route definitions); regex inputs escaped in log search (`escapeRegex`) |
+| Public play and join pages | Challenge questions are served without answers and scored on the server; class join pages show no student names; both are IP rate limited |
 | Uploads | PDF MIME filter and 50 MB limit, memory storage, never written to disk |
 | Log hygiene | Sensitive keys masked, bodies truncated, ApiLog TTL 30 days |
-| Spam controls | Honeypot field and 5-per-hour limiter on public feedback |
+| Spam controls | Honeypot field and 5-per-hour limiter on public feedback; referral rewards only after 10 answers, only for accounts under 24 h old, capped at 10 per referrer per month; challenge owner emails capped at 10 |
 | AI Service auth | Shared `x-api-key` on calls built with `correlationHeaders()` |
 
 ### 10.8 Server-side rendering (PDF/PNG)
@@ -1060,22 +1311,26 @@ All limiters use `express-rate-limit` with the default in-memory store, keyed by
 | Job | Trigger | Defined in | What it does |
 |---|---|---|---|
 | Achievement sweep | `node-cron` `35 11 * * *` (server local time, no `timezone` option) | `src/modules/supporting/jobs/achievementScheduler.js` | Loads every user ID and runs `badgeService.checkAndAwardBadges` sequentially as a safety net for `POST /badges/check` |
+| Daily notifications | `node-cron` `0 17 * * *` with `timezone: 'Asia/Kolkata'` (5 pm IST) | `src/modules/notification/jobs/notificationScheduler.js` | `sendGiftReminders`: one `gift_reminder` per invited friend who joined 20 h to 7 days ago and is still short of 10 answers (settles the gift instead if they already qualify). `sendTeacherMilestones`: one-time `class_milestone` notifications for unlocked class reports and certificates |
 | Keep-alive | `node-cron` `*/14 * * * *` | `src/shared/jobs/keepAlive.js` | `GET` the Backend's own `/ping` via `node-fetch` so the host does not idle; results ignored |
 | Question generation | Poll with an empty pool, prefetch threshold, admin trigger, or upload pre-warm | `questions.service.js` | Fire-and-forget promise per (chapter, type, difficulty) job; state in `QuestionGenerationJob` |
-| Post-session updates | `setImmediate` after `PATCH /sessions/:id/end` | `progress.service.js` | `calculateAndUpdateProgress` and `streakService.recordPractice` |
+| Post-answer updates | After each `POST /user-answers/batch` | `progress.service.js` `_queueProgressUpdate` | Per-user promise chain: `applyAnswersToProgress`, `streakService.recordPractice`, `referralService.checkActivation` |
+| Post-session update | `setImmediate` after `PATCH /sessions/:id/end` | `progress.service.js` | `streakService.recordPractice` |
+| Notifications, owner emails | Fire-and-forget calls from challenge, referral, badge and class-link code | `notification.service.js`, `challenge.service.js`, `referral.service.js` | Never awaited by the request; failures are logged |
+| Activity tracking | Every request that passes `auth` (throttled) | `src/shared/utils/activityTracker.js` | Upsert `UserActivityDay`, set `User.lastActiveAt`; throttle state is an in-memory map (capped at 50,000 users, then cleared) |
 | Campaign send | `POST /campaign/:id/send` returns immediately | `campaign.controller.js`, `campaign.service.js` | Batched SendGrid sends, status `sending` then `sent` or `failed` |
 | ApiLog flush | 2 s timer (unref'd) or 50 buffered entries; also on SIGTERM/SIGINT | `src/shared/utils/apiLogBuffer.js` | `ApiLog.insertMany` |
-| Startup warm-ups | After `app.listen` | `index.js` | Study-hierarchy cache pre-warm, AI Service `/ping` |
+| Startup work | After `app.listen` and the DB connection | `index.js` | `ensureIndexes()` (background), study-hierarchy cache pre-warm, AI Service `/ping` |
 
-Both cron jobs start through side-effect imports at the top of `index.js`. There is no job queue or distributed lock; every running instance schedules its own copy.
+All three cron jobs start through side-effect imports at the top of `index.js`. There is no job queue or distributed lock; every running instance schedules its own copy.
 
 ## 12. Testing
 
 | Item | Detail |
 |---|---|
 | Framework | Jest 30 in native ESM mode (`NODE_OPTIONS=--experimental-vm-modules`); no Jest config file at the repo root (defaults) |
-| Layout | `src/modules/<module>/tests/*.service.test.js`: 12 files covering `auth`, `content`, `principal` (2), `progress`, `question-paper`, `questions`, `quiz`, `school`, `supporting`, `teacher`, `user`; roughly 310 `it`/`test` cases (grep count) |
-| No tests | `ai-assistant`, `campaign`, `feedback`, `goal`, `parent`, `referral`; no controller, route or middleware tests |
+| Layout | `src/modules/<module>/tests/*.test.js`: 20 files covering `auth` (3: service, refresh rotation, activity tracker), `challenge`, `content`, `notification`, `principal` (2), `progress`, `question-paper`, `questions`, `quiz`, `referral`, `school`, `supporting` (3: service, LLM service, LLM validator), `teacher` (2: service, class links), `user`; roughly 420 `it`/`test` cases (grep count) |
+| No tests | `ai-assistant`, `campaign`, `feedback`, `goal`, `parent`; no controller, route or middleware tests |
 | Mocking | `jest.unstable_mockModule` declared before `await import()` of the service; Mongoose models mocked by module path; `logger.js` disables file and Loki transports when `NODE_ENV=test` |
 | Commands | `npm test` (all), `NODE_OPTIONS=--experimental-vm-modules npx jest path/to/file.test.js` (single file), `npm run lint`, `npm run lint:fix` |
 | CI | No CI workflow in the repo |
@@ -1087,19 +1342,19 @@ More detail: [Testing](./development/testing.md).
 
 Runtime and scaling:
 
-1. Single-process design. Background generation, campaign sends and post-session updates are in-memory promises; a restart loses them. Generation recovers through the 5-minute stale restart and 2-minute failed cooldown; campaigns stay in `sending` and cannot be re-sent through the API (`sendCampaign` rejects `sending`).
-2. Per-instance in-memory state: rate-limit counters, the study-hierarchy cache and the ApiLog buffer. Running more than one instance would multiply effective rate limits, let caches diverge and run each cron job once per instance.
+1. Single-process design. Background generation, campaign sends, queued post-answer progress updates and fire-and-forget notifications are in-memory promises; a restart loses them. Generation recovers through the 5-minute stale restart and 2-minute failed cooldown; a missed referral activation is settled later by the next answer, the referral screen or the daily job; campaigns stay in `sending` and cannot be re-sent through the API (`sendCampaign` rejects `sending`).
+2. Per-instance in-memory state: rate-limit counters, the study-hierarchy cache, the ApiLog buffer, the per-user progress queue and the activity-tracker throttle map. Running more than one instance would multiply effective rate limits, let caches diverge, allow concurrent progress updates for one user, and run each cron job once per instance (one-time notifications are deduplicated by their unique index; the badge sweep is not).
 3. The global rate limiter is registered before `cors`, so a global 429 carries no CORS headers and browsers report it as a CORS failure (`index.js`).
 4. `DBConnection()` runs inside the `app.listen` callback, so the port accepts traffic before MongoDB is connected; Mongoose buffers queries until then.
 5. Graceful shutdown flushes API logs and closes the HTTP server but does not close the Mongo connection or wait for background tasks (10 s failsafe exit).
 6. Each PDF/PNG render launches its own Chromium instance; there is no browser pool.
 7. The Redis cache is a no-op (6.5); admin metrics and leaderboards run full aggregations on every request.
-8. Time zones are mixed: cron uses server local time, streaks and daily challenges use IST date strings, and dashboard "today" stats use server-local midnight (`progress.service.js`).
+8. Time zones are mixed: the badge sweep cron uses server local time while the notification cron is pinned to IST; streaks, daily challenges, activity days, notification grouping, the weekly leaderboard and the time-of-day badges use IST; the referral monthly cap uses UTC calendar months; dashboard "today" stats use server-local midnight (`progress.service.js`).
 
 Data integrity:
 
 9. Leaderboards and mastery are derived from stored practice answers; quiz answers are graded on the server.
-10. `StudentTopicProgress` is updated incrementally at session end rather than recomputed, so it depends on each session being finalized exactly once.
+10. `StudentTopicProgress` is updated incrementally from each saved answer batch rather than recomputed, so it depends on each batch being applied exactly once (a restart between the save and the queued update loses that update).
 11. `Session` stores `subject` and `chapter` as strings; the `chapterId` sent at creation is used for validation but not persisted, and `getLastIncompleteSession` selects `subjectId`/`chapterId` fields that are not in the schema.
 12. `UserAnswer.difficulty` is lowercase (`easy`, `medium`, `hard`) while `Question`, `Session` and `QuestionGenerationJob` use capitalised values.
 13. Chapter and account deletion do not cascade (6.6).
@@ -1110,19 +1365,18 @@ Defects present at this commit:
 
 16. `POST /quiz/:quizId/start` calls `quizService.startQuizAttempt`, which is not defined in `quiz.service.js`, and nothing else creates `QuizAttempt` documents, so starting a quiz returns 500 "Failed to start quiz".
 17. `getTeacherClassInsights` reads `req.user._id`, but the JWT claims carry `id`, so `GET /topic-progress/teacher/class-insights` fails with 500.
-18. In `auth.service.js` `signup`, the referral-failure branch calls `logger.warn` without importing `logger`; a failed referral redemption surfaces as a 500 after the user has already been created.
-19. `resetPasswordSchema` validates `newPassword` and `confirmPassword`, while `password.controller.js` compares `password` with `confirmPassword` and saves `password`.
-20. `goalService.recordProgress` has no callers, so `Goal.currentProgress` is never advanced on the server.
-21. The `retry` query parameter of the batch endpoint is not used by `_handleNoQuestions`.
+18. `resetPasswordSchema` validates `newPassword` and `confirmPassword`, while `password.controller.js` compares `password` with `confirmPassword` and saves `password`.
+19. `goalService.recordProgress` has no callers, so `Goal.currentProgress` is never advanced on the server.
+20. The `retry` query parameter of the batch endpoint is not used by `_handleNoQuestions`.
 
 Integration and tooling:
 
-22. Conversation, `ai-agent/classes` and `ai-agent/generation/:id` calls use a bare `fetch` instead of the shared request helpers, so they carry no correlation ID and have no timeout; no AI call is retried by the Backend.
-23. `supporting.service.js` imports `googleSheets.js`, which loads its Google credentials synchronously at import time; the process cannot start without them.
-24. Profile pictures are not uploaded anywhere (Cloudinary call commented out) and WhatsApp delivery is a logging mock.
-25. `npm test` uses POSIX inline environment syntax and needs a POSIX shell (Git Bash, WSL) on Windows.
-26. `scripts/` is gitignored, so seed and maintenance scripts referenced in repo docs may not exist in a given checkout.
-27. Joi validation covers 46 of 198 route definitions; the rest rely on controller and service checks.
+21. Conversation, `ai-agent/classes`, `ai-agent/tasks`, `ai-agent/health` and `ai-agent/generation/:id` calls use a bare `fetch` (with `correlationHeaders`) instead of `fetchWithTimeout`, so they have no effective timeout; no AI call is retried by the Backend.
+22. `supporting.service.js` imports `googleSheets.js`, which loads its Google credentials synchronously at import time; the process cannot start without them.
+23. Profile pictures are not uploaded anywhere (Cloudinary call commented out) and WhatsApp delivery is a logging mock.
+24. `npm test` uses POSIX inline environment syntax and needs a POSIX shell (Git Bash, WSL) on Windows.
+25. `scripts/` is gitignored, so seed and maintenance scripts referenced in repo docs may not exist in a given checkout.
+26. Joi validation covers 67 of 225 route definitions; the rest rely on controller and service checks.
 
 ## 14. Related docs
 

@@ -25,16 +25,18 @@ dist/
 │   ├── index-[hash].css         # Compiled CSS
 │   └── [Page]-[hash].js         # Lazy-loaded route chunks
 ├── index.html                   # Prerendered: /
-├── for-schools/index.html       # Prerendered: /for-schools
-├── free-paper-generator/index.html  # Prerendered: /free-paper-generator
-├── try/index.html               # Prerendered: /try
-├── blog/index.html              # Prerendered: /blog
-├── signup/index.html            # Prerendered: /signup
+├── for-schools/index.html       # Prerendered: /for-schools/
+├── about/index.html             # Prerendered: /about/ (also /pricing/, /how-it-works/)
+├── try/index.html               # Prerendered: /try/
+├── blog/<slug>/index.html       # Prerendered: each blog post
+├── class/.../index.html         # Prerendered: class hubs, subjects, chapters
+├── fonts/*.woff2                # Self-hosted fonts (preloaded by index.html)
+├── favicon.ico, favicon.svg, apple-touch-icon.png, icons/
 ├── sw.js                        # PWA service worker
-└── sitemap.xml / robots.txt
+└── sitemap.xml / robots.txt / _redirects
 ```
 
-> **Prerendering:** `vite-prerender-plugin` runs after the JS build and outputs real HTML for each public route. Googlebot and other crawlers receive fully rendered HTML on first byte without needing to execute JavaScript.
+> **Prerendering:** `vite-prerender-plugin` runs after the JS build and outputs real HTML for each public route: 501 routes (23 static and blog pages plus 478 class, subject and chapter pages). Googlebot and other crawlers receive fully rendered HTML on first byte without needing to execute JavaScript.
 
 ---
 
@@ -205,10 +207,11 @@ For single-page apps, configure your server to redirect all routes to `index.htm
   status = 200
 ```
 
-Or create `public/_redirects`:
+This repo already ships a generated `public/_redirects` (written by `npm run sitemap`, which `npm run build` runs first). It 301s each slash-less prerendered path to its trailing-slash form, then ends with the SPA catch-all:
 ```
 /*    /index.html   200
 ```
+Don't edit it by hand. `index.html` also redirects slash-less public URLs in the browser, for hosts that ignore `_redirects`.
 
 ---
 

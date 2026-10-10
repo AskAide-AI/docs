@@ -1,7 +1,7 @@
 # Dependencies
 
 > Track all external dependencies in the AskAideAI frontend.
-> Last Updated: April 17, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -27,6 +27,9 @@
 | @headlessui/react | ^1.7.18 | Unstyled accessible components |
 | lucide-react | ^0.344.0 | Icon library |
 | react-icons | ^5.5.0 | Additional icons |
+| qrcode.react | ^4.2.0 | QR code for teacher class links (`TeacherClassLinks.jsx`) |
+
+> **Fonts** are not npm packages: Fraunces, Inter Tight and JetBrains Mono are self-hosted `woff2` files in `public/fonts/` (Fontsource builds, OFL; licences in `public/fonts/LICENSES.txt`).
 
 > **Note:** `@mui/material`, `@emotion/react`, and `@emotion/styled` have been removed from active use. The last three admin components that used MUI (`ChapterTopicView`, `ChapterUpload`, `ChapterManagement`) were migrated to pure Tailwind CSS. MUI packages remain in `package.json` but are no longer imported anywhere in `src/`.
 

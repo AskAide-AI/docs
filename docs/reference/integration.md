@@ -94,6 +94,7 @@ This document covers how the three services (Frontend, Backend, AI Service) inte
 | 10 | `src/modules/ai-assistant/services/ai-assistant.service.js` | `GET /v1/ai-agent/tasks` | GET | Available AI tasks | 30s |
 | 11 | `src/modules/supporting/services/llmSystem.service.js` | `GET /v1/admin/llm/status`, `GET /v1/admin/llm/models` | GET | SuperAdmin AI System tab: live LLM status, model suggestions | 20s / 30s |
 | 12 | `src/modules/supporting/services/llmSystem.service.js` | `POST /v1/admin/llm/test`, `/active`, `/reset` | POST (JSON) | Test a model; switch the live LLM instantly (or back to env default) | 100s test / 110s activate / 20s reset |
+| 13 | `src/modules/supporting/services/llmSystem.service.js` | `POST /v1/admin/llm/features/{feature}`, `/features/{feature}/reset` | POST (JSON) | Give one AI feature its own model and/or temperature, or make it follow the live model again | 110s set / 20s reset |
 
 ---
 
@@ -381,11 +382,14 @@ These flows are entirely Backend-frontend with no AI involvement:
 
 | Flow | Description |
 |---|---|
-| Study Session | Frontend → Backend (POST /sessions, GET /questions/batch, POST /user-answers/batch, PATCH /sessions/:id/end) |
+| Study Session | Frontend → Backend (POST /sessions, GET /questions/batch, POST /user-answers/batch — one answer per call, as each is given — PATCH /sessions/:id/end) |
 | Quiz Flow | Full quiz CRUD + attempt lifecycle — Backend only |
-| Question Paper | Backend generates PDF via Puppeteer — no AI service |
-| Auth (JWT) | Login, register, token refresh — Backend only |
-| User Management | Profile CRUD, role assignment — Backend only |
+| Question Paper | Backend generates PDF via Puppeteer — no AI service (also used for the Refer & Earn practice paper, `POST /referral/rewards/practice-paper`) |
+| Auth (JWT) | Login, signup (optional `referralCode` + `acquisition`, teacher self-signup), Google sign-in, single-use refresh-token rotation — Backend only |
+| User Management | Profile CRUD, name change, verified email change (`/profile/name`, `/profile/email/*`), role assignment — Backend only |
+| Referrals & Challenges | Invite codes, referral rewards after 10 answers, challenge-a-friend links played without login (`/referral/*`, `/challenges/*`) — Backend only |
+| Teacher Class Links | Create/close links, public join info, student join (`/teacher-classes/*`) — Backend only |
+| Notifications | In-app bell: list, unread count, mark read (`/notifications/*`), written by Backend services and a daily 5 pm IST job — Backend only |
 
 ---
 
@@ -408,12 +412,11 @@ All Backend endpoints return:
 {
   "success": false,
   "message": "Error description",
-  "error": {
-    "code": "ERROR_CODE",
-    "statusCode": 400
-  }
+  "code": "ERROR_CODE"
 }
 ```
+
+Joi validation failures return `{ success: false, message: "Validation failed", error: { errors: [{ field, message }] } }`; the auth middleware's `401`s carry `error: "noToken" | "tokenExpired" | "tokenInvalid"` instead of `code`.
 
 ### 4.3 AI Service Error
 
@@ -817,9 +820,10 @@ DATABASE_URL=mongodb://...
 JWT_SECRET=...
 AI_ENDPOINT=http://localhost:8000
 AI_SERVICE_API_KEY=your_shared_ai_key
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
+FRONTEND_URL=http://localhost:5173   # base of links in emails and of invite, challenge and class-join links
+CLOUD_NAME=...
+API_KEY=...
+API_SECRET=...
 ```
 
 ### Frontend (`.env`)

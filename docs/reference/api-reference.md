@@ -24,6 +24,14 @@
   - [School & Sections](#13-school--sections)
   - [AI Assistant](#14-ai-assistant)
   - [Supporting](#15-supporting)
+  - [Inline Feedback](#16-inline-feedback)
+  - [Behavioral Prompt](#17-behavioral-prompt)
+  - [Suggestions / Feature Requests](#18-suggestions--feature-requests)
+  - [Admin Metrics](#19-admin-metrics)
+  - [AI System (LLM)](#20-ai-system-llm)
+  - [Challenges](#21-challenges)
+  - [Teacher Class Links](#22-teacher-class-links)
+  - [Notifications](#23-notifications)
 - [AI Service API (`/`)](#ai-service-api)
   - [Document Management](#1-document-management)
   - [Search & RAG](#2-search--rag)
@@ -34,6 +42,7 @@
   - [Admin LLM](#7-admin-llm)
 - [Error Codes](#error-codes)
 - [Rate Limits](#rate-limits)
+- [Appendix: Data Models](#appendix-data-models)
 
 ---
 
@@ -59,12 +68,13 @@ All Backend endpoints return responses wrapped in:
 
 ```json
 {
-  "success": true | false,
-  "data": { ... },
-  "message": "optional message",
-  "error": "optional error details"
+  "success": true,
+  "message": "Human-readable message",
+  "data": { ... }
 }
 ```
+
+Errors use `{ "success": false, "message": "...", "code": "ERROR_CODE" }` (see [Error Response Format](#error-response-format)). Exceptions: `POST /authenticate/login`, `/signup`, `/google` and `/refresh` return `tokens` and `user` at the top level instead of under `data`, and the leaderboard endpoints return `{ success, data }` without a `message`.
 
 ---
 
@@ -72,19 +82,21 @@ All Backend endpoints return responses wrapped in:
 
 ### JWT Token
 
-- Obtained via `POST /authenticate/login` or `POST /authenticate/signup`
+- Obtained via `POST /authenticate/login`, `POST /authenticate/signup` or `POST /authenticate/google`
 - Accepted via Cookie (`token=<jwt>`), Header (`Authorization: Bearer <jwt>`), or Body (`{ token }`)
-- **accessToken** expires after 2 hours; **refreshToken** expires after 7 days (rotated on use)
+- **accessToken** expires after 2 hours; **refreshToken** expires after 7 days
+- Refresh tokens are **single-use**: `POST /authenticate/refresh` claims the old token atomically and returns a new pair, so a second refresh with the same token fails with `401`
 - Admin-protected endpoints require `accountType: "SuperAdmin"`
 
 ### Role-Based Access
 
 | Role | Access Level |
 |------|-------------|
-| `Student` | Own data, quizzes, sessions |
-| `Teacher` | Teacher dashboard, assignments, analytics |
-| `Admin` | Full access |
-| `Parent` | Child data, progress overview |
+| `Student` | Own data, practice sessions, quizzes, challenges, referrals |
+| `Teacher` | Teacher dashboard, quizzes, question papers, AI assistant, class join links |
+| `Principal` | School-scoped dashboards, school, section and teacher management |
+| `Parent` | Linked children's data and progress overview |
+| `SuperAdmin` | Full access; passes every role guard |
 
 ---
 
@@ -98,24 +110,34 @@ Base: `/api/v1/authenticate/`
 
 #### POST `/login`
 
-Login with email and password.
+Login with username (or email) and password.
+
+**Rate limit:** 10 per 15 minutes (shared with `/google`).
 
 **Request:**
 ```json
 {
-  "email": "user@example.com",
+  "userName": "john",
   "password": "secret123"
 }
 ```
+
+`userName` accepts either the username or the email address.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "message": "Login successful",
+  "tokens": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+    "expiresIn": "2h"
+  },
   "user": {
     "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
     "userName": "john",
+    "name": "John Doe",
     "email": "user@example.com",
     "accountType": "Student",
     "image": "https://..."
@@ -123,7 +145,7 @@ Login with email and password.
 }
 ```
 
-**Errors:** 400 (missing fields), 401 (invalid credentials), 404 (user not found)
+**Errors:** 400 (missing fields, user does not exist), 401 (invalid credentials), 429 (too many attempts)
 
 ---
 
@@ -155,17 +177,41 @@ Backend health check (excluded from rate limiting).
 
 #### POST `/signup`
 
-Register a new user.
+Register a new user. The new account is signed in straight away (tokens are returned).
+
+**Rate limit:** 10 per hour.
 
 **Request:**
 ```json
 {
   "userName": "john",
+  "name": "John Doe",
   "email": "john@example.com",
-  "password": "Secret@123",
-  "accountType": "Student"
+  "password": "Secret123",
+  "confirmPassword": "Secret123",
+  "accountType": "Student",
+  "referralCode": "K7QM2P",
+  "acquisition": {
+    "source": "referral",
+    "ref": "K7QM2P",
+    "utmSource": "whatsapp",
+    "landingPath": "/signup",
+    "firstSeenAt": "2026-10-09T10:15:00.000Z"
+  }
 }
 ```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `userName` | Yes | 3–50 characters, unique |
+| `name` | Yes | 2–100 characters |
+| `email` | Yes | Valid email, unique |
+| `password` | Yes | 8–128 characters, see requirements below |
+| `confirmPassword` | Yes | Must equal `password` |
+| `accountType` | Send it | `Student`, `Teacher` (teacher self-signup), `Parent` or `Principal` (Principal accounts wait for approval). Optional in request validation, but the account has no default type, so a signup without it fails |
+| `contactNumber` | No | 10–15 characters: digits, spaces, `-`, optional leading `+` |
+| `referralCode` | No | A friend's invite code (max 10 chars). Credits the new account to that friend |
+| `acquisition` | No | First-touch attribution (`UserAcquisition`): `source` (`referral` \| `challenge` \| `class` \| `organic`), `ref`, `utmSource`, `utmMedium`, `utmCampaign`, `landingPath`, `firstSeenAt`. All optional |
 
 **Password requirements:**
 - Minimum 8 characters
@@ -175,23 +221,124 @@ Register a new user.
 ```json
 {
   "success": true,
-  "message": "User registered successfully"
+  "message": "User registered successfully",
+  "tokens": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+  },
+  "user": { "_id": "64f1a2b3c4d5e6f7a8b9c0d1", "userName": "john", "accountType": "Student", "...": "..." },
+  "referral": { "attributed": true, "referrerName": "Riya" }
 }
 ```
 
-**Errors:** 400 (missing fields), 409 (email already exists)
+`referral` is `null` when no `referralCode` was sent. A bad or stale code **never fails signup**: it comes back as `{ "attributed": false, "reason": "INVALID_CODE" }` (other reasons: `MISSING`, `SELF`, `USER_NOT_FOUND`, `NOT_NEW`, `ALREADY_REFERRED`).
+
+**Errors:** 400 (validation failed, `USERNAME_TAKEN`, `EMAIL_TAKEN`), 429 (too many attempts)
+
+---
+
+#### POST `/google`
+
+Sign in, or sign up, with a Google ID token. The Backend verifies the token with Google, then finds the account by Google ID, else links it by email, else creates a new account.
+
+**Rate limit:** 10 per 15 minutes (shared with `/login`).
+
+**Request:**
+```json
+{
+  "idToken": "<Google ID token>",
+  "accountType": "Teacher",
+  "referralCode": "K7QM2P",
+  "acquisition": { "source": "referral", "ref": "K7QM2P" }
+}
+```
+
+`accountType` (`Student` | `Teacher`), `referralCode` and `acquisition` are optional and are used **only when this call creates the account**. A new account is a `Teacher` when `accountType: "Teacher"` is sent (teacher Google signup), otherwise a `Student`.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "tokens": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+    "expiresIn": "2h"
+  },
+  "user": { "_id": "64f1a2b3c4d5e6f7a8b9c0d1", "accountType": "Teacher", "...": "..." },
+  "isNewUser": true,
+  "referral": { "attributed": true, "referrerName": "Riya" }
+}
+```
+
+`referral` follows the same rules as `/signup` and is `null` for an existing account or when no code was sent.
+
+**Errors:** 400 (`GOOGLE_NO_EMAIL`, `GOOGLE_EMAIL_UNVERIFIED`), 401 (`INVALID_GOOGLE_TOKEN`), 429 (too many attempts), 500 (`GOOGLE_NOT_CONFIGURED`)
+
+---
+
+#### POST `/refresh`
+
+Exchange a refresh token for a new access + refresh token pair. Refresh tokens are **single-use**: the old token is claimed and revoked in one atomic step, so if two requests send the same token at the same moment only one gets new tokens.
+
+**Request:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "tokens": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
+    "expiresIn": "2h"
+  }
+}
+```
+
+**Errors:** 401 (`INVALID_REFRESH_TOKEN`, `REFRESH_TOKEN_REVOKED` — already used or logged out, `REFRESH_TOKEN_EXPIRED`, `USER_NOT_FOUND`)
+
+> **Client note:** with several tabs open, refresh once and share the result. The web app takes a cross-tab lock before refreshing and reuses tokens another tab has just saved, so tabs never race with the same refresh token.
+
+---
+
+#### POST `/logout`
+
+Revoke a refresh token. The access token stays valid until it expires.
+
+**Request:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully",
+  "data": null
+}
+```
 
 ---
 
 #### POST `/changepassword`
 
-Change password for logged-in user.
+Change password for logged-in user. Revokes all of the user's refresh tokens.
 
 **Request:**
 ```json
 {
-  "oldPassword": "OldSecret@123",
-  "newPassword": "NewSecret@456"
+  "oldPassword": "OldSecret123",
+  "newPassword": "NewSecret456",
+  "confirmPassword": "NewSecret456"
 }
 ```
 
@@ -234,13 +381,16 @@ Request a password reset email.
 
 #### POST `/reset-password`
 
-Reset password with token from email.
+Reset password with token from email. Revokes all of the user's refresh tokens.
+
+**Rate limit:** 5 per 15 minutes (shared with `/reset-password-token`).
 
 **Request:**
 ```json
 {
-  "password": "NewSecret@456",
-  "token": "abc123def456"
+  "token": "abc123def456",
+  "newPassword": "NewSecret456",
+  "confirmPassword": "NewSecret456"
 }
 ```
 
@@ -332,6 +482,83 @@ Update profile fields.
   "data": { "..." : "updated profile" }
 }
 ```
+
+---
+
+#### PUT `/name`
+
+Change the display name. No verification is needed, because the name is not used to sign in. Extra spaces are collapsed.
+
+**Request:**
+```json
+{
+  "name": "Aarav Sharma"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Name updated",
+  "data": { "name": "Aarav Sharma" }
+}
+```
+
+**Errors:** 400 (name not 2–100 characters)
+
+---
+
+#### POST `/email/request-change`
+
+Start changing the login email. A 6-digit code is emailed to the **new** address; nothing on the account changes until the code is confirmed. The code is valid for 10 minutes.
+
+**Rate limit:** 10 per 15 minutes (shared with `/email/confirm-change`), and at most one code per 60 seconds.
+
+**Request:**
+```json
+{
+  "email": "new.address@example.com"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "We sent a 6-digit code to new.address@example.com",
+  "data": {
+    "newEmail": "new.address@example.com",
+    "expiresInMinutes": 10
+  }
+}
+```
+
+**Errors:** 400 (`SAME_EMAIL`), 409 (`EMAIL_TAKEN` — another account uses it), 429 (`CODE_TOO_SOON` — within 60 s of the last code), 502 (`EMAIL_SEND_FAILED` — the code could not be sent; nothing was saved)
+
+---
+
+#### POST `/email/confirm-change`
+
+Finish the change with the code sent to the new address. The login email switches and the old address gets a notice.
+
+**Request:**
+```json
+{
+  "code": "482915"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Email updated",
+  "data": { "email": "new.address@example.com" }
+}
+```
+
+**Errors:** 400 (`WRONG_CODE` — the message says how many tries are left; `CODE_EXPIRED` — expired or no pending change), 409 (`EMAIL_TAKEN` — taken in the meantime), 429 (`TOO_MANY_ATTEMPTS` — 5 wrong codes; request a new code)
 
 ---
 
@@ -1274,7 +1501,7 @@ Dashboard progress overview.
 
 ### 8. Gamification
 
-Base: `/api/v1/gamification/`
+Base: `/api/v1/` — there is no single gamification prefix; each path below is the full path under `/api/v1` (`/streaks`, `/daily-challenge`, `/badges`, `/leaderboard`, `/goals`, `/referral`). All require auth.
 
 ---
 
@@ -1288,15 +1515,25 @@ Get current streak info.
 ```json
 {
   "success": true,
+  "message": "Streak data fetched successfully",
   "data": {
     "currentStreak": 5,
     "longestStreak": 12,
-    "lastActiveDate": "2024-06-20",
-    "freezeCount": 2,
-    "maxFreezes": 3
+    "lastPracticeDate": "2026-10-09",
+    "totalPracticeDays": 23,
+    "streakFreezes": {
+      "available": 2,
+      "total": 1,
+      "bonus": 1,
+      "resetsOn": "2026-10-12T18:30:00.000Z"
+    },
+    "practiceDates": ["2026-10-05", "2026-10-06", "2026-10-09"],
+    "practicedToday": false
   }
 }
 ```
+
+`streakFreezes.total` is the free weekly freeze allowance (reset every Monday); `bonus` counts earned freezes ("streak shields" from referral gifts), which never reset and are spent only after the weekly one. `available` = unused weekly freezes + `bonus`.
 
 ---
 
@@ -1459,9 +1696,7 @@ Check and award any newly earned badges.
 
 #### GET `/leaderboard`
 
-Get global leaderboard.
-
-**Query:** `?limit=50&sort=-score`
+Top 10 learners of **this week**, counted from Monday 00:00 IST, so a student who joined today can still catch up. Ranked by correct answers (each question counted once per student). Names are first names only. No query parameters.
 
 **Response (200):**
 ```json
@@ -1469,22 +1704,23 @@ Get global leaderboard.
   "success": true,
   "data": [
     {
-      "rank": 1,
-      "userId": "64f1...",
-      "userName": "top_student",
-      "image": "https://...",
-      "score": 9850,
-      "streak": 15
+      "userId": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "name": "Aarav",
+      "totalScore": 42,
+      "totalQuestions": 50,
+      "accuracy": 84
     }
   ]
 }
 ```
 
+The array is already sorted (rank = position). `totalScore` is correct answers this week, `totalQuestions` distinct questions answered this week, `accuracy` a percentage.
+
 ---
 
 #### GET `/leaderboard/subject/:subjectId`
 
-Get leaderboard for a specific subject.
+Top 10 for one subject, **all-time**.
 
 **Params:** `subjectId`
 
@@ -1494,14 +1730,17 @@ Get leaderboard for a specific subject.
   "success": true,
   "data": [
     {
-      "rank": 1,
-      "userId": "64f1...",
-      "userName": "math_whiz",
-      "score": 4200
+      "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "userId": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "totalScore": 120,
+      "totalQuestions": 150,
+      "accuracy": 80
     }
   ]
 }
 ```
+
+**Errors:** 400 (missing subject ID)
 
 ---
 
@@ -1547,42 +1786,101 @@ Update daily goal.
 
 ---
 
+#### Referral rewards — how they work
+
+- Every user has a 6-character invite code (`A–Z` and `2–9`, without look-alike characters). The invite link is `{FRONTEND_URL}/signup?ref=CODE`.
+- A new account is credited to the inviter when it signs up with `referralCode` (`POST /authenticate/signup` or `/google`), redeems a code with `POST /referral/redeem/:code` shortly after signing up, or claims a challenge play (`POST /challenges/attempts/:attemptId/claim`, see [§21](#21-challenges)). Only brand-new accounts can be credited.
+- **Nothing is rewarded at signup.** When the referred friend has answered **10 questions** (practice answers plus answers in challenges they played), the friend is marked active and **both** people get +1 practice-paper credit (`paperCredits`) and +1 bonus streak freeze (`streakFreezes.bonus`). Each person who gets the gift also gets a `gift_unlocked` notification ([§23](#23-notifications)).
+- Referrer rewards are capped per calendar month; a friend activated past the cap still gets their own gift, and the referral entry shows `rewardClaimed: false`.
+
+---
+
 #### GET `/referral/my-code`
 
-Get user's referral code.
+The signed-in user's invite code, link, rewards and friends. Opening it also settles any gift that is due but was not recorded yet (for the user and for recently joined friends), so the credits shown are current.
 
 **Response (200):**
 ```json
 {
   "success": true,
+  "message": "Referral data fetched",
   "data": {
-    "code": "JOHN2024",
-    "referralCount": 3,
-    "rewardsEarned": 300
+    "referralCode": "K7QM2P",
+    "referralLink": "https://askaide.in/signup?ref=K7QM2P",
+    "shareText": "AskAide try karo 📚 ... https://askaide.in/signup?ref=K7QM2P",
+    "activationAnswers": 10,
+    "totalReferrals": 3,
+    "activeReferrals": 1,
+    "totalRewards": 1,
+    "rewards": { "paperCredits": 1, "papersUsed": 0, "papersAvailable": 1 },
+    "milestones": [
+      { "count": 1, "badgeId": "squad_starter", "title": "Squad Starter", "reached": true },
+      { "count": 3, "badgeId": "squad_leader", "title": "Squad Leader", "reached": false },
+      { "count": 5, "badgeId": "class_captain", "title": "Class Captain", "reached": false }
+    ],
+    "referredBy": { "name": "Riya", "activated": false, "answered": 6 },
+    "referrals": [
+      { "name": "Kabir", "joinedAt": "2026-10-09T08:00:00.000Z", "source": "challenge", "status": "active", "rewardClaimed": true },
+      { "name": "Meera", "joinedAt": "2026-10-08T12:30:00.000Z", "source": "link", "status": "joined", "rewardClaimed": false }
+    ]
   }
 }
 ```
+
+`referredBy` is `null` unless someone invited this user; `answered` is capped at `activationAnswers`. Each `referrals[].source` is `link` (invite link/code) or `challenge` (joined by playing a challenge); `status` is `joined` until that friend answers 10 questions, then `active`. Names are first names only. Shape: `ReferralSummary` in shared contracts.
 
 ---
 
 #### POST `/referral/redeem/:code`
 
-Redeem a referral code.
+Apply a friend's invite code to the signed-in account after signup. Same rules as `referralCode` at signup: only for new accounts.
 
-**Params:** `code` — referral code string
+**Params:** `code` — invite code
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "message": "Referral redeemed successfully",
+  "message": "You joined with Riya's invite! Answer 10 questions and you both get a gift.",
   "data": {
-    "xpEarned": 100
+    "success": true,
+    "message": "You joined with Riya's invite! Answer 10 questions and you both get a gift."
   }
 }
 ```
 
-**Errors:** 400 (invalid code), 400 (cannot refer yourself), 409 (already redeemed)
+**Errors:** 400 (`SELF` — your own code, `NOT_NEW` — account too old, `ALREADY_REFERRED`), 404 (`INVALID_CODE`)
+
+---
+
+#### POST `/referral/rewards/practice-paper`
+
+Spend one practice-paper credit on a 20-question practice paper (with answer key) for a chapter. If the paper can't be made (for example the chapter has no questions yet), the credit is given back.
+
+**Request:**
+```json
+{
+  "chapterId": "64f1a2b3c4d5e6f7a8b9c0d5"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Practice paper ready",
+  "data": {
+    "paperId": "6704c1a2b3c4d5e6f7a8b9c0",
+    "title": "Chemical Reactions and Equations — Practice Paper",
+    "questionsSelected": 20,
+    "papersAvailable": 0
+  }
+}
+```
+
+Download the paper with `GET /question-paper/:paperId/pdf`.
+
+**Errors:** 400 (`INVALID_CHAPTER`, `NO_CREDITS` — no practice papers left), 404 (`CHAPTER_NOT_FOUND`)
 
 ---
 
@@ -3105,9 +3403,546 @@ Deletes the saved choice and goes back to the env default.
 
 **Rate limit:** 5 per 10 minutes (shared with `/active`).
 
-**Response (200):** `data` = `{ activated, changed, test: null, status }`.
+**Response (200):** `data` = `{ activated, changed, test: null, status }`. Features that have their own model keep it.
 
 **Errors:** `409` a switch is already running · `503` the saved choice could not be cleared.
+
+---
+
+#### POST `/features/:feature`
+
+Gives one AI feature its own model and/or temperature ("Model per feature" in the AI System tab). `:feature` is one of `ingestion`, `questions`, `assistant_chat`, `assistant_content`, `insights`. Send `provider` + `model` together, or only a `temperature` (0–2) to stay on the live model. The AI Service runs the three checks on exactly that combination and saves it only if all pass.
+
+**Rate limit:** 20 per 10 minutes (shared with `/features/:feature/reset`).
+
+**Request:**
+```json
+{ "provider": "openrouter", "model": "openai/gpt-4o-mini", "temperature": 0.4 }
+```
+
+**Response (200):** `data` = `{ activated, changed, test, status, feature }` (`LlmFeatureSwitchResult`), where `feature` is what that feature runs now. `GET /status` also lists every feature under `features`.
+
+**Errors:** `400` bad combination, unknown provider or key not configured · `404` unknown feature · `409` a switch is already running · `503` the choice could not be saved.
+
+---
+
+#### POST `/features/:feature/reset`
+
+Deletes the feature's own choice; it follows the live model again at the provider's default temperature.
+
+**Response (200):** `data` = `LlmFeatureSwitchResult`.
+
+`POST /test` also accepts `temperature` and `feature` (with `feature` and no model, it tests what that feature runs now).
+
+---
+
+### 21. Challenges
+
+Base: `/api/v1/challenges/`
+
+"Challenge a friend": a student turns a finished practice session into a link (`{FRONTEND_URL}/c/CODE`). Friends play the same questions **without logging in**, see who won, and sign in to see the answers. A guest's play can be claimed after signup, which credits the challenge owner as the new account's inviter ([Referral rewards](#referral-rewards--how-they-work)). Challenge answers count towards the referral gift. Shapes: `ChallengeSummary`, `PublicChallenge`, `ChallengeAttemptResult`, `ChallengeClaimResult`, `ChallengeReview`, `MyChallenge`, `ChallengeGiftStatus` in shared contracts.
+
+| Endpoint | Auth | Rate limit |
+|----------|------|------------|
+| `POST /` | Required | Global only |
+| `GET /mine` | Required | Global only |
+| `GET /:code` | Optional | 120 per 10 min |
+| `POST /:code/attempts` | Optional | 20 per 10 min |
+| `POST /attempts/:attemptId/claim` | Required | Global only |
+| `GET /:code/review` | Required | Global only |
+
+---
+
+#### POST `/`
+
+Create a challenge from one of your finished practice sessions. Uses the session's first multiple-choice answers (up to 10). Calling it again for the same session returns the same challenge.
+
+**Request:**
+```json
+{
+  "sessionId": "6704b1a2b3c4d5e6f7a8b9c0"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Challenge ready to share",
+  "data": {
+    "code": "M4RT9K",
+    "url": "https://askaide.in/c/M4RT9K",
+    "ownerName": "Aarav",
+    "ownerScore": 7,
+    "total": 10,
+    "className": "10th",
+    "classLabel": "Class 10",
+    "subjectName": "Science",
+    "chapterName": "Chemical Reactions and Equations",
+    "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+    "subjectId": "64f1a2b3c4d5e6f7a8b9c0d3",
+    "chapterId": "64f1a2b3c4d5e6f7a8b9c0d5",
+    "attemptsCount": 0,
+    "shareText": "Maine Science ... me 7/10 score kiya 🔥 Tum beat kar sakte ho? ... 👉 https://askaide.in/c/M4RT9K"
+  }
+}
+```
+
+**Errors:** 400 (`INVALID_SESSION`, `NOT_ENOUGH_QUESTIONS` — fewer than 3 multiple-choice answers in the session), 403 (`UNAUTHORIZED` — not your session), 404 (`SESSION_NOT_FOUND`)
+
+---
+
+#### GET `/mine`
+
+Challenges the signed-in student has sent, each with its best players.
+
+**Response (200):** `data` = array of `ChallengeSummary` fields plus `createdAt` and `players: [{ name, score }]` (best 5).
+
+---
+
+#### GET `/:code`
+
+Public play payload. Questions come **without answers**. Works with or without a token; with a token, `isOwner` and `myAttempt` reflect the signed-in user.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Challenge fetched",
+  "data": {
+    "code": "M4RT9K",
+    "ownerName": "Aarav",
+    "ownerScore": 7,
+    "total": 10,
+    "subjectName": "Science",
+    "chapterName": "Chemical Reactions and Equations",
+    "...": "other ChallengeSummary fields",
+    "isOwner": false,
+    "myAttempt": null,
+    "questions": [
+      { "_id": "64q1...", "questionText": "Which of these is a combination reaction?", "options": ["...", "...", "...", "..."] }
+    ],
+    "leaderboard": [
+      { "name": "Aarav", "score": 7, "isOwner": true, "isMe": false },
+      { "name": "Kabir", "score": 8, "isOwner": false, "isMe": false }
+    ]
+  }
+}
+```
+
+`myAttempt` is `{ score, outcome }` once the signed-in user has played. `leaderboard` is the top 5.
+
+**Errors:** 404 (`CHALLENGE_NOT_FOUND`), 429 (too many requests)
+
+---
+
+#### POST `/:code/attempts`
+
+Play a challenge. No login needed; the answers are scored on the server.
+
+**Request:**
+```json
+{
+  "name": "Kabir",
+  "answers": [
+    { "questionId": "64q1a2b3c4d5e6f7a8b9c0d1", "selected": "2Mg + O₂ → 2MgO" }
+  ]
+}
+```
+
+`name` (optional, max 60 characters) is used for guests; signed-in players appear under their first name. `answers` holds up to 20 items; `selected` may be `null` for a skipped question.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Attempt scored",
+  "data": {
+    "attemptId": "6705c1a2b3c4d5e6f7a8b9c0",
+    "code": "M4RT9K",
+    "score": 8,
+    "total": 10,
+    "ownerName": "Aarav",
+    "ownerScore": 7,
+    "outcome": "won",
+    "rank": 1,
+    "players": 2,
+    "claimToken": "9f2c...48 hex characters...",
+    "gift": null
+  }
+}
+```
+
+- `outcome` is from the player's side: `won`, `lost` or `tie`. `rank` is 1-based with the owner included; `players` = owner + attempts.
+- **Guests** get a single-use `claimToken` (48 hex characters) to claim the play after signing up. Signed-in players get `claimToken: null`; their play is linked to the account straight away.
+- A signed-in player who already played gets their **first** result back with `alreadyPlayed: true`.
+- `gift` (`ChallengeGiftStatus`) appears for signed-in players who were referred: `{ from, unlocked, justUnlocked, answered, goal }`, where `answered` counts practice and challenge answers (capped at `goal`, 10). A play can unlock the gift on the spot (`justUnlocked: true`).
+- The owner gets a `challenge_played` notification.
+
+**Errors:** 400 (`OWN_CHALLENGE` — the owner can't play their own challenge; validation), 404 (`CHALLENGE_NOT_FOUND`), 429 (too many attempts)
+
+---
+
+#### POST `/attempts/:attemptId/claim`
+
+Link a guest's play to the account they just signed up or logged in with. If the account is new, the challenge owner is credited as its inviter, and the play's answers count towards the referral gift.
+
+**Request:**
+```json
+{
+  "claimToken": "9f2c...48 hex characters..."
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Attempt saved to your account",
+  "data": {
+    "code": "M4RT9K",
+    "claimed": true,
+    "referral": { "attributed": true, "referrerName": "Aarav" },
+    "gift": { "from": "Aarav", "unlocked": false, "justUnlocked": false, "answered": 8, "goal": 10 }
+  }
+}
+```
+
+`claimed: false` (without `referral`/`gift`) when the owner claims their own play or the account already played this challenge (the first score is kept). Claiming again with the same account returns `claimed: true`. `gift` is `null` when nobody referred the player. Use `code` to open the results page.
+
+**Errors:** 400 (`INVALID_ATTEMPT`), 403 (`INVALID_CLAIM_TOKEN`), 404 (`ATTEMPT_NOT_FOUND`, `CHALLENGE_NOT_FOUND`), 409 (`ALREADY_CLAIMED` — linked to another account)
+
+---
+
+#### GET `/:code/review`
+
+Results page: every question with the correct answer, explanation and the caller's choice, plus the scoreboard. Only for the owner or someone who has played (and, for guests, claimed) the challenge.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Challenge results fetched",
+  "data": {
+    "code": "M4RT9K",
+    "...": "other ChallengeSummary fields",
+    "isOwner": false,
+    "myScore": 8,
+    "outcome": "won",
+    "questions": [
+      {
+        "_id": "64q1...",
+        "questionText": "Which of these is a combination reaction?",
+        "options": ["...", "...", "...", "..."],
+        "correctAnswer": "2Mg + O₂ → 2MgO",
+        "explanation": "Two reactants combine to form a single product.",
+        "selected": "2Mg + O₂ → 2MgO",
+        "isCorrect": true
+      }
+    ],
+    "leaderboard": [ { "name": "Kabir", "score": 8, "isOwner": false, "isMe": true } ]
+  }
+}
+```
+
+`outcome` is `null` for the owner. `leaderboard` is the top 20.
+
+**Errors:** 403 (`PLAY_FIRST`), 404 (`CHALLENGE_NOT_FOUND`)
+
+---
+
+### 22. Teacher Class Links
+
+Base: `/api/v1/teacher-classes/`
+
+A teacher creates a join link for one class + subject (+ optional section) and shares it with the class (WhatsApp, copy, or a QR code). Students who open `{FRONTEND_URL}/join/CODE` and join are linked to the teacher exactly like a school-created teacher–student link (a `TeacherStudent` row with `joinedVia` = the link), so they appear in every Teacher Dashboard view. The student's `schoolId` is left unset, so their own practice is not restricted. Shapes: `ClassLinkSummary`, `MyClassLinks`, `ClassLinkPublic`, `ClassJoinResult`, `ClassReport`, `TeacherCertificate` in shared contracts.
+
+| Endpoint | Auth |
+|----------|------|
+| `POST /`, `GET /mine`, `PATCH /:id`, `GET /:id/report`, `GET /certificate` | Teacher |
+| `GET /join/:code` | Public (120 per 10 min) |
+| `POST /join/:code` | Any signed-in user; only students can join |
+
+---
+
+#### POST `/`
+
+Create a class link, or get the active one that already exists for the same class, subject and section. A teacher who has no school yet gets a private independent school set up first.
+
+**Request:**
+```json
+{
+  "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+  "subjectId": "64f1a2b3c4d5e6f7a8b9c0d3",
+  "sectionName": "B",
+  "expectedStudents": 35
+}
+```
+
+`sectionName` (max 20 characters) and `expectedStudents` (1–300) are optional.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Class link ready",
+  "data": {
+    "code": "P8HV3D",
+    "url": "https://askaide.in/join/P8HV3D",
+    "label": "Class 10 · Science · B",
+    "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+    "subjectId": "64f1a2b3c4d5e6f7a8b9c0d3",
+    "className": "10th",
+    "subjectName": "Science",
+    "sectionName": "B",
+    "shareText": "..."
+  }
+}
+```
+
+`shareText` is a ready-to-send English + Hindi message for the class or parents' group.
+
+**Errors:** 400 (`INVALID_CLASS`, `INVALID_SUBJECT` — the subject is not part of this class), 404 (`TEACHER_NOT_FOUND`)
+
+---
+
+#### GET `/mine`
+
+The teacher's links with join and practice counts, and progress towards the class report and the Champion Teacher certificate.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Class links fetched",
+  "data": {
+    "links": [
+      {
+        "id": "6705d1a2b3c4d5e6f7a8b9c0",
+        "code": "P8HV3D",
+        "label": "Class 10 · Science · B",
+        "...": "other ClassLinkSummary fields",
+        "active": true,
+        "expectedStudents": 35,
+        "joined": 18,
+        "practised": 11,
+        "activeThisWeek": 6,
+        "reportUnlocked": true,
+        "createdAt": "2026-10-10T05:00:00.000Z"
+      }
+    ],
+    "totals": { "joined": 18, "practised": 11 },
+    "milestones": [
+      { "key": "class_report", "count": 10, "title": "Class progress report", "reached": true },
+      { "key": "certificate", "count": 25, "title": "AskAide Champion Teacher certificate", "reached": false }
+    ]
+  }
+}
+```
+
+`practised` counts students who joined through the link **and** answered questions after joining.
+
+---
+
+#### PATCH `/:id`
+
+Turn one of your links off (close it) or back on. Closed links can't be joined.
+
+**Request:**
+```json
+{ "active": false }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Class link turned off",
+  "data": { "id": "6705d1a2b3c4d5e6f7a8b9c0", "code": "P8HV3D", "active": false }
+}
+```
+
+**Errors:** 400 (`INVALID_LINK`), 404 (`LINK_NOT_FOUND` — not found or not yours)
+
+---
+
+#### GET `/:id/report`
+
+Per-student report for one link: `{ label, teacherName, generatedAt, joined, practised, students: [{ name, joinedAt, answered, accuracy, lastPractisedAt }] }`.
+
+**Errors:** 403 (`REPORT_LOCKED` — fewer than 10 students have practised), 404 (`LINK_NOT_FOUND`)
+
+---
+
+#### GET `/certificate`
+
+Champion Teacher certificate data: `{ teacherName, studentsPractised, questionsAnswered, classes, issuedAt, certificateId }`.
+
+**Errors:** 403 (`CERTIFICATE_LOCKED` — fewer than 25 students have practised across the teacher's links)
+
+---
+
+#### GET `/join/:code`
+
+Public info for the join page. No login needed.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Class fetched",
+  "data": {
+    "code": "P8HV3D",
+    "active": true,
+    "teacherName": "Mrs. Gupta",
+    "className": "10th",
+    "classLabel": "Class 10",
+    "subjectName": "Science",
+    "sectionName": "B",
+    "label": "Class 10 · Science · B",
+    "schoolName": null,
+    "joinedCount": 18
+  }
+}
+```
+
+`schoolName` is `null` for a teacher without a school. A closed link still returns, with `active: false`.
+
+**Errors:** 404 (`LINK_NOT_FOUND`), 429 (too many requests)
+
+---
+
+#### POST `/join/:code`
+
+The signed-in student joins the class. Joining twice is harmless. The teacher gets a `class_joined` notification.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "You joined the class",
+  "data": {
+    "code": "P8HV3D",
+    "alreadyJoined": false,
+    "teacherName": "Mrs. Gupta",
+    "label": "Class 10 · Science · B",
+    "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
+    "subjectId": "64f1a2b3c4d5e6f7a8b9c0d3",
+    "subjectName": "Science"
+  }
+}
+```
+
+When `alreadyJoined` is `true` the message is "You are already in this class".
+
+**Errors:** 403 (`ONLY_STUDENTS` — teacher, parent or other non-student accounts), 404 (`LINK_NOT_FOUND`), 410 (`LINK_INACTIVE` — the teacher closed the link)
+
+---
+
+### 23. Notifications
+
+Base: `/api/v1/notifications/`
+
+**Auth required for all endpoints** (any role). The in-app notification bell. Rows are written by the Backend when:
+
+| `type` | When |
+|--------|------|
+| `challenge_played` | A friend played your challenge |
+| `friend_joined` | A new account joined with your invite link or challenge |
+| `gift_unlocked` | A referral gift unlocked (for the friend, and for the inviter when rewarded) |
+| `gift_reminder` | Daily job: a referred friend who joined about a day ago (within the last week) still has questions left before the gift (sent once) |
+| `badge_earned` | You earned a badge |
+| `class_joined` | Students joined a teacher's class link |
+| `class_milestone` | Daily job: a teacher's class report or certificate unlocked (sent once) |
+
+The daily job runs at **5 pm IST**. Events of the same type and target on the same IST day are grouped into one row (`count` > 1, e.g. "Kabir and 2 others played your challenge"); `title` and `body` are written from the grouped data when the list is read. One-time events never repeat. Rows are deleted 60 days after their last event. Shapes: `NotificationItem`, `NotificationList`, `NotificationReadResult` in shared contracts.
+
+---
+
+#### GET `/`
+
+The signed-in user's notifications, newest first (by `lastAt`).
+
+**Query:**
+
+| Param | Notes |
+|-------|-------|
+| `before` | Optional ISO date: the `nextCursor` from the previous page |
+| `limit` | Optional, 1–50, default 20 |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Notifications fetched",
+  "data": {
+    "items": [
+      {
+        "id": "6705e1a2b3c4d5e6f7a8b9c0",
+        "type": "challenge_played",
+        "icon": "⚔️",
+        "title": "Kabir beat your challenge! 😤",
+        "body": "Kabir 8/10 · you 7/10 in Chemical Reactions and Equations",
+        "link": "/c/M4RT9K/results",
+        "count": 1,
+        "read": false,
+        "lastAt": "2026-10-10T11:20:00.000Z",
+        "createdAt": "2026-10-10T11:20:00.000Z"
+      }
+    ],
+    "hasMore": false,
+    "nextCursor": null,
+    "unread": 1
+  }
+}
+```
+
+`link` is the in-app path to open (or `null`). Pass `nextCursor` as `before` to get the next page.
+
+**Errors:** 400 (invalid `before` or `limit`)
+
+---
+
+#### GET `/unread-count`
+
+The number on the bell. The web app polls it every 60 seconds while the tab is visible.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Unread count fetched",
+  "data": { "unread": 3 }
+}
+```
+
+---
+
+#### POST `/read`
+
+Mark notifications read, either some by id or all of them.
+
+**Request:**
+```json
+{ "ids": ["6705e1a2b3c4d5e6f7a8b9c0"] }
+```
+or
+```json
+{ "all": true }
+```
+
+`ids` holds up to 100 ids. One of `ids` or `all` is required.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Notifications marked read",
+  "data": { "updated": 1, "unread": 2 }
+}
+```
+
+**Errors:** 400 (neither `ids` nor `all`, or an invalid id)
 
 ---
 
@@ -3766,7 +4601,7 @@ http_requests_total{method="POST",endpoint="/query"} 1520
 
 ### 7. Admin LLM
 
-Live LLM switching. ✅ Called only by the Backend's SuperAdmin routes `/api/v1/admin/system/llm/*` (Backend §20), which add `requested_by`. Request/response types: `LlmStatus`, `LlmTestRequest`, `LlmTestResult`, `LlmActivateRequest`, `LlmSwitchResult`, `LlmModelList` in shared contracts.
+Live LLM switching. ✅ Called only by the Backend's SuperAdmin routes `/api/v1/admin/system/llm/*` (Backend §20), which add `requested_by`. Request/response types: `LlmStatus`, `LlmTestRequest`, `LlmTestResult`, `LlmActivateRequest`, `LlmSwitchResult`, `LlmFeatureRequest`, `LlmFeatureSwitchResult`, `LlmModelList` in shared contracts.
 
 Every AI feature uses one shared, switchable LLM client, so a switch takes effect instantly with no restart; in-flight calls finish on the old client. The choice is saved in MongoDB `llm_settings` (scoped per deployment) and read once at startup; with none, `LLM_PROVIDER` + that provider's model variable is used. API keys stay in env only.
 
@@ -3782,7 +4617,7 @@ Live provider/model, `source` (`database` / `env`), who set it and when, the pre
 
 Plain / JSON / MCQ-schema checks. Empty body tests the live model. Never changes anything.
 
-**Request:** `{ "provider"?: "openrouter", "model"?: "openai/gpt-4o-mini" }`
+**Request:** `{ "provider"?: "openrouter", "model"?: "openai/gpt-4o-mini", "temperature"?: 0.4, "feature"?: "questions" }` — with `feature` and no model, tests what that feature runs now; `temperature` runs the checks at that temperature.
 
 **Response (200):** `{ ok, provider, model, total_ms, checks: [{ name, ok, latency_ms, sample?, error?, skipped? }] }`
 
@@ -3804,7 +4639,23 @@ Re-runs the three checks on the candidate; only if all pass, saves the choice th
 
 #### POST `/v1/admin/llm/reset`
 
-Deletes the saved choice and swaps back to the env default. **Request:** `{ "requested_by"?: "..." }` · **Response:** `LlmSwitchResult`.
+Deletes the saved choice and swaps back to the env default. Features with their own model keep it. **Request:** `{ "requested_by"?: "..." }` · **Response:** `LlmSwitchResult`.
+
+---
+
+#### POST `/v1/admin/llm/features/{feature}`
+
+Give one feature (`ingestion`, `questions`, `assistant_chat`, `assistant_content`, `insights`) its own model and/or temperature. `provider` + `model` together, or only `temperature` to stay on the live model. Runs the three checks on exactly that combination; only if all pass, saves it to `llm_settings` and swaps it in instantly.
+
+**Request:** `{ "provider"?: "openrouter", "model"?: "openai/gpt-4o-mini", "temperature"?: 0.4, "requested_by"?: "..." }` · **Response:** `LlmFeatureSwitchResult` (`LlmSwitchResult` plus `feature`).
+
+**Errors:** `400` bad combination · `404` unknown feature · `409` a switch is already running · `503` can't save.
+
+---
+
+#### POST `/v1/admin/llm/features/{feature}/reset`
+
+Deletes the feature's own choice; it follows the live model at the provider's default temperature. **Request:** `{ "requested_by"?: "..." }` · **Response:** `LlmFeatureSwitchResult`.
 
 ---
 
@@ -3851,11 +4702,17 @@ Deletes the saved choice and swaps back to the env default. **Request:** `{ "req
 ```json
 {
   "success": false,
-  "error": "Validation failed",
-  "message": "email is required",
-  "statusCode": 400
+  "message": "Answer at least 3 multiple-choice questions to send a challenge",
+  "code": "NOT_ENOUGH_QUESTIONS"
 }
 ```
+
+`code` is a stable machine-readable value (for example `DUPLICATE_KEY`, `INVALID_ID`, or a module-specific code such as `NO_CREDITS` or `LINK_INACTIVE`); show `message` to users. Two other shapes exist:
+
+- **Request validation** (Joi): `400` with `{ "success": false, "message": "Validation failed", "error": { "errors": [{ "field": "...", "message": "..." }] } }`.
+- **Auth middleware**: `401` with `{ "success": false, "message": "Token has expired", "error": "tokenExpired" }` (also `noToken`, `tokenInvalid`). Clients refresh on `tokenExpired`.
+
+Rate-limited requests (`429`) return `{ "success": false, "message": "Too many ... Please try again ..." }`.
 
 ---
 
@@ -3863,20 +4720,21 @@ Deletes the saved choice and swaps back to the env default. **Request:** `{ "req
 
 | Endpoint Group | Limit | Window |
 |---------------|-------|--------|
-| Authentication (`/authenticate/*`) | 10 req | 15 min |
-| AI generation (`/ai-assistant/*`) | 30 req | 1 hour |
-| File uploads (`/chapters/create-with-pdf`) | 10 req | 1 hour |
-| Quiz start | 5 req | 1 hour |
+| General API (all routes, per IP; skips `/api-docs`, `/ping` and localhost) | 500 req | 5 min |
+| Login (`/authenticate/login`, `/authenticate/google`) | 10 req | 15 min |
+| Signup (`/authenticate/signup`) | 10 req | 1 hour |
+| Password reset (`/authenticate/reset-password-token`, `/reset-password`) | 5 req | 15 min |
+| Email change (`/profile/email/request-change`, `/confirm-change`) | 10 req | 15 min |
+| Public challenge view (`GET /challenges/:code`) | 120 req | 10 min |
+| Public challenge play (`POST /challenges/:code/attempts`) | 20 req | 10 min |
+| Class link join info (`GET /teacher-classes/join/:code`) | 120 req | 10 min |
+| Inline feedback (`/inline-feedback`) | 10 req | 1 min |
+| Feedback form (`POST /feedback`) | 5 req | 1 hour |
 | AI System model test (`/admin/system/llm/test`) | 10 req | 1 min |
 | AI System switch / reset (`/admin/system/llm/active`, `/reset`) | 5 req | 10 min |
-| General API | 100 req | 15 min |
+| AI System per-feature model (`/admin/system/llm/features/*`) | 20 req | 10 min |
 
-Rate limit headers returned:
-```
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 87
-X-RateLimit-Reset: 1718901600
-```
+Most limiters send the IETF draft-8 `RateLimit` and `RateLimit-Policy` headers instead of the legacy `X-RateLimit-*` headers. A rate-limited request gets `429`.
 
 ---
 
@@ -3887,10 +4745,17 @@ X-RateLimit-Reset: 1718901600
 {
   _id: string;
   userName: string;
+  name: string;
   email: string;
-  accountType: "Student" | "Teacher" | "Admin" | "Parent";
+  accountType: "Student" | "Teacher" | "Principal" | "Parent" | "SuperAdmin" | "NormalUser";
   image?: string;
   class?: string;          // Class ObjectId
+  acquisition?: {          // first-touch attribution sent at signup (UserAcquisition)
+    source?: "referral" | "challenge" | "class" | "organic";
+    ref?: string;
+    utmSource?: string; utmMedium?: string; utmCampaign?: string;
+    landingPath?: string; firstSeenAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

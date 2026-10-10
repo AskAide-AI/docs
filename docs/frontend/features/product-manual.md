@@ -43,6 +43,15 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 - **Class & Section Support**: Flexible hierarchy (School -> Class -> Section).
 - **Roster Management**: Bulk upload and management of Teachers and Students.
 - **Curriculum Management**: Upload Textbook PDFs to automatically extract Chapters and Topics via AI.
+- **Class Links**: Teachers sign up on their own and bring students in with a link or QR code, no admin needed.
+
+### Friends, Classes & Notifications
+- **Challenge a Friend**: Send the questions you just practised on WhatsApp. Friends play without logging in and see who won.
+- **Refer & Earn**: Invite friends with your link. When a friend practises enough on a new account, you both get a free practice paper and a streak shield.
+- **Notifications**: A bell tells you when a friend plays your challenge, a friend joins, a gift unlocks, you earn a badge, or students join your class.
+
+### Public Pages
+- **About**, **How It Works** (how questions are made and checked) and **Pricing** pages, plus a free trial on `/try` and SEO pages per class, subject and chapter.
 
 ---
 
@@ -62,13 +71,44 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
     *   Click "Start Learning".
     *   Answer questions in the interactive interface.
     *   View real-time feedback and explanations.
-5.  **Finish**: "End Session" to save progress and view the **Session Result Summary**.
+5.  **Finish**: "End Session" to save progress and view the **Session Result Summary**. Any new badge shows first, then the result card.
+
+*Notes*:
+*   Every answer is saved as soon as you give it. You can switch tabs or apps without a warning, and leaving early still records the session.
+*   If you tried a chapter on the free trial (`/try`) and then signed up, your first session opens on that chapter.
 
 #### **Workflow 2: Review Progress**
 1.  **Navigate**: Go to the **Progress** tab (`/progress`).
 2.  **Overview**: View "Subject Cards" showing overall coverage and mastery.
 3.  **Deep Dive**: Click a Subject to view **Chapter-wise breakdown**.
 4.  **AI Coach**: Read the **"AI Insights"** panel for personalized study recommendations.
+
+#### **Workflow 3: Challenge a Friend**
+1.  **Finish a session** with at least 3 answers.
+2.  **Send**: Tap **Challenge on WhatsApp** at the bottom of the result card (or copy the link).
+3.  **Your friend plays**: They open the link, type their name and answer the same questions. No login needed.
+4.  **See who won**: Your friend sees the result and the scoreboard. Joining free shows the right answers with explanations.
+5.  **Get notified**: The bell tells you when they play.
+
+#### **Workflow 4: Refer & Earn**
+1.  **Navigate**: Open **Refer & Earn** (`/referral`).
+2.  **Invite**: Share your invite link or copy the invite message. Any link you share from the app carries your invite code.
+3.  **Gift**: When your friend answers enough questions on a new account, you both get a free practice paper and a streak shield. Challenge answers count too.
+4.  **Redeem**: Under **Your gifts**, pick a chapter to download your practice paper. See your squad badges, friends who joined and challenges you sent.
+
+#### **Workflow 5: Join Your Teacher's Class**
+1.  **Open the link** your teacher shared (`/join/...`).
+2.  **Join**: Tap to join. New students sign up with Google or email first and are joined automatically.
+3.  **Practise**: Start practice with the class and subject already picked.
+
+#### **Notifications**
+*   Tap the bell to see your notifications. On a phone, the bell is next to the dashboard greeting, and the **Menu** tab shows the unread count.
+*   Opening the list marks everything read. Tap a notification to go to it.
+*   New notifications can pop up as a short message, but never during practice or a quiz.
+
+#### **Profile**
+*   **Name**: Tap **Edit** next to your name, change it and save.
+*   **Email**: Tap **Change**, enter the new address, then enter the 6-digit code sent there. Your email changes only after the code is confirmed.
 
 ---
 
@@ -100,6 +140,17 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 *Monitors student performance and guides learning.*
 > **Status**: *Dashboard currently uses mock data. Full analytics integration depends on "Teacher-Student Linking" data.*
 
+#### **Workflow: Sign Up as a Teacher**
+1.  **Navigate**: Open "Teacher? Create a free teacher account" on the login or sign-up page (`/signup?role=teacher`), or the teacher link on **For Schools**.
+2.  **Create**: Sign up with email or Google. You land on the teacher home (`/teacher`).
+
+#### **Workflow: Bring Your Class In with a Link**
+1.  **Navigate**: On the teacher home, tap **Create your class link** (no students yet) or **Invite students** (`/teacher/classes`).
+2.  **Create**: Pick the class and subject. Section name and class size are optional.
+3.  **Share**: Send the link to your class or parents' WhatsApp group, copy it, or download the QR code for the projector.
+4.  **Track**: Each link shows how many students joined, practised and were active this week. Turn a link off when you're done.
+5.  **Unlock**: Once enough students practise, open the printable class progress report. Reach the goal across your classes to earn the printable Champion Teacher certificate.
+
 #### **Core Workflow (Planned/In-Progress)**
 1.  **Dashboard**: Login to see an overview of assigned Classes/Sections.
 2.  **Class Analytics**: View aggregate performance (e.g., "Class 10-A is struggling with Geometry").
@@ -119,7 +170,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 ### **Tech Stack**
 - **Frontend**: React (Vite), TailwindCSS, Redux Toolkit, React Router, HeadlessUI.
 - **Backend (API)**: Node.js, Express, MongoDB (Mongoose).
-- **Authentication**: JWT (Access/Refresh tokens) stored in HTTP-only cookies (or local storage depending on implementation, verified as JWT).
+- **Authentication**: JWT access and refresh tokens stored in `localStorage`. The access token is refreshed automatically, once at a time across all open tabs.
 
 ### **Key Data Structures**
 - **Topic Mastery**: A calculated score (0-100%) based on correct answers/total attempts for a specific topic tag.
@@ -129,7 +180,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 ### **Important File Paths**
 | Context | Files |
 | :--- | :--- |
-| **Routes** | `src/routes.jsx` (or `App.jsx` route definitions) |
+| **Routes** | `src/App.jsx` (nested teacher and principal routes in their dashboard components) |
 | **Study Logic** | `src/components/study/StudyConfig.jsx`, `src/api/study.api.js` |
 | **Auth Logic** | `src/store/slices/authSlice.js`, `src/components/auth/` |
 | **Admin Panel** | `src/components/admin/` |

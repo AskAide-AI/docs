@@ -19,10 +19,10 @@ Think of it as a **personal tutor** that:
 
 | User | What They Do |
 |------|-------------|
-| **Students** | Practice questions, track their progress, see what they've mastered |
-| **Teachers** | Create quizzes, monitor student performance, identify weak topics in the class |
+| **Students** | Practice questions, track their progress, see what they've mastered, challenge and invite friends |
+| **Teachers** | Bring a class in with a join link, create quizzes, monitor student performance, identify weak topics in the class |
 | **Schools** | Manage classes, sections, and teacher-student assignments |
-| **Parents** | View their child's learning progress (coming soon) |
+| **Parents** | View their linked child's learning progress |
 
 ---
 
@@ -47,6 +47,18 @@ Teachers see a subject-level view showing:
 - Which chapters are being practiced
 - Which topics the class struggles with
 - Individual student progress
+
+### 🔗 Class Join Links
+A teacher shares one link with the class. Students who join show up in the teacher dashboard right away. A teacher can sign up on their own; no school setup is needed. Once 10 students have practised, a class report unlocks; at 25, a Champion Teacher certificate.
+
+### ⚔️ Challenge a Friend
+After practice, a student sends the same questions to friends as a challenge link. Friends can play without an account, and everyone sees the scoreboard.
+
+### 🎁 Invite Friends
+When a friend joins with your invite and answers 10 questions, you both get a free practice paper and a streak shield.
+
+### 🔔 Notifications
+A bell in the app shows when friends play your challenge or join with your invite, when you earn a badge, and, for teachers, when students join a class.
 
 ---
 
@@ -171,7 +183,7 @@ Granular topic-level progress tracking is implemented: every `UserAnswer` stores
 | Phase 2 — Weakness detector (chapter/subject progress + AI insights APIs) | Show students where they struggle | ✅ Completed |
 | Phase 3 — Cognitive State Engine (Bayesian Knowledge Tracing, retention/decay, adaptive review) | Predictive, personalized learning | 🔮 Future |
 
-Dashboard thresholds: 🟢 Mastered >80% · 🟡 Practicing 60–80% · 🟠 Learning 35–60% · 🔴 Weak &lt;35%.
+Dashboard thresholds: 🟢 Mastered ≥80% · 🟡 Practicing 60–80% · 🟠 Learning 40–60% · 🔴 Weak &lt;40%.
 
 ## Engineering Standards Maturity
 
@@ -183,4 +195,4 @@ Backend engineering standards are codified as explicit team **Skills** to keep f
 
 ---
 
-*Last Updated: 2026-04-19 (merged with Backend Overview for PM)*
+*Last Updated: 2026-10-10 (merged with Backend Overview for PM on 2026-04-19)*

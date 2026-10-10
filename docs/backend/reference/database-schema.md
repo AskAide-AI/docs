@@ -1,7 +1,7 @@
 # AskAide AI - Database Schema
 
-**Last Updated:** 2026-02-02  
-**Database:** MongoDB with Mongoose ODM
+**Last Updated:** 2026-10-10  
+**Database:** MongoDB with Mongoose ODM (42 models)
 
 ---
 
@@ -24,6 +24,11 @@ Class (1) ──→ (N) Subject (1) ──→ (N) Chapter (N) ←──→ (M) T
                                           │
                                           ↓
                                     UserAnswer ──→ StudentTopicProgress
+
+User ──→ Referral (one code) ──→ referrals[] (invited friends)
+User ──→ Challenge (from one Session) ──→ (N) ChallengeAttempt
+User (teacher) ──→ TeacherClass (join link) ──→ (N) TeacherStudent (joinedVia)
+User ──→ (N) Notification, (N) UserActivityDay
 ```
 
 ---
@@ -36,17 +41,28 @@ Class (1) ──→ (N) Subject (1) ──→ (N) Chapter (N) ←──→ (M) T
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | _id | ObjectId | PRIMARY KEY | Auto-generated |
-| email | String | UNIQUE, REQUIRED | User email |
-| password | String | REQUIRED | bcrypt hashed |
+| userName | String | UNIQUE, REQUIRED | Login name |
+| email | String | UNIQUE, REQUIRED | User email (can be changed after verifying a code) |
+| password | String | REQUIRED for `provider: 'email'`, `select: false` | bcrypt hashed |
+| provider | String | ENUM, DEFAULT: email | email, google |
+| googleId | String | INDEX, SPARSE | Google account ID |
+| accountType | String | REQUIRED, ENUM | SuperAdmin, Principal, Parent, Teacher, Student, NormalUser |
 | name | String | REQUIRED | Display name |
-| role | String | REQUIRED, ENUM | student, teacher, principal, parent, admin |
-| classId | ObjectId | REF: Class | For students |
-| schoolId | ObjectId | REF: School | For institutional users |
-| isActive | Boolean | DEFAULT: true | Soft delete flag |
+| active | Boolean | DEFAULT: true | Account active flag |
+| approved | Boolean | DEFAULT: true | `false` for self-signed-up principals until approved |
+| emailOptOut | Boolean | DEFAULT: false | Opted out of emails |
+| additionalDetails | ObjectId | REF: Profile, REQUIRED | Profile document |
+| class | [ObjectId] | REF: Class | Classes the student can practise |
+| subject | [ObjectId] | REF: Subject | Subjects |
+| schoolId | ObjectId | REF: School | For institutional users and teachers with class links |
+| lastLoginAt | Date | | Last login |
+| loginCount | Number | DEFAULT: 0 | Logins |
+| lastActiveAt | Date | | Last signed-in request (updated at most every 15 minutes) |
+| acquisition | Object | | First-touch attribution: `source` (referral, challenge, class, organic), `ref`, `utmSource`, `utmMedium`, `utmCampaign`, `landingPath`, `firstSeenAt` |
 | createdAt | Date | AUTO | Timestamp |
 | updatedAt | Date | AUTO | Timestamp |
 
-**Indexes:** `email` (unique)
+**Indexes:** `userName` (unique), `email` (unique), `googleId` (sparse)
 
 ---
 
@@ -67,9 +83,12 @@ Class (1) ──→ (N) Subject (1) ──→ (N) Chapter (N) ←──→ (M) T
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| name | String | REQUIRED | School name |
-| address | String | | Physical address |
-| isActive | Boolean | DEFAULT: true | Soft delete flag |
+| schoolName | String | REQUIRED | School name |
+| schoolCode | String | REQUIRED, UNIQUE | School code |
+| address, phone, email, website, board | String | | Contact and board details |
+| kind | String | ENUM, DEFAULT: school | `school`, or `independent` for the private school created for a self-signed-up teacher's first class link |
+| ownerTeacherId | ObjectId | REF: User | Teacher who owns an `independent` school |
+| createdAt | Date | DEFAULT: now | Timestamp |
 
 ---
 
@@ -251,12 +270,38 @@ masteryScore = (easyCorrect × 0.25 + mediumCorrect × 0.35 + hardCorrect × 0.4
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| teacherId | ObjectId | REF: User, REQUIRED | Teacher user reference |
-| studentId | ObjectId | REF: User, REQUIRED | Student user reference |
-| sectionId | ObjectId | REF: Section | Section reference |
+| teacher_id | ObjectId | REF: User, REQUIRED | Teacher user reference |
+| student_id | ObjectId | REF: User, REQUIRED | Student user reference |
+| class_id | ObjectId | REF: Class, REQUIRED | Class |
+| _subject_id | ObjectId | REF: Subject, REQUIRED | Subject |
+| school_id | ObjectId | REF: School, REQUIRED | School |
+| section_id | ObjectId | REF: Section | Section reference |
+| joinedVia | ObjectId | REF: TeacherClass, INDEX | Set when the student joined through a class link |
 | createdAt | Date | AUTO | Assignment date |
 
-**Indexes:** `{ teacherId, studentId }` (unique compound)
+**Indexes:** `{ teacher_id, student_id, class_id, _subject_id, school_id }` (unique compound), `joinedVia`
+
+---
+
+### TeacherClass
+**File:** `src/modules/teacher/models/teacherClass.model.js`
+
+A teacher's class join link (`/join/:code`).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| code | String | REQUIRED, UNIQUE, uppercase | Join code |
+| teacherId | ObjectId | REF: User, REQUIRED, INDEX | Teacher |
+| schoolId | ObjectId | REF: School, REQUIRED | Teacher's school (or independent school) |
+| classId | ObjectId | REF: Class, REQUIRED | Class |
+| subjectId | ObjectId | REF: Subject, REQUIRED | Subject |
+| sectionId | ObjectId | REF: Section, DEFAULT: null | Optional section |
+| className, subjectName, sectionName | String | | Copied in for the public join page |
+| expectedStudents | Number | MIN: 1, MAX: 300 | Class size the teacher expects |
+| active | Boolean | DEFAULT: true | Turned-off links reject joins (410) |
+| joinsCount | Number | DEFAULT: 0 | Students who joined |
+
+**Indexes:** `code` (unique), `teacherId`, `{ teacherId, classId, subjectId, sectionId }`
 
 ---
 
@@ -284,6 +329,40 @@ masteryScore = (easyCorrect × 0.25 + mediumCorrect × 0.35 + hardCorrect × 0.4
 | verified | Boolean | DEFAULT: false | Verification status |
 
 **Indexes:** TTL index on `expiresAt`
+
+---
+
+### UserActivityDay
+**File:** `src/shared/models/userActivityDay.model.js`
+
+One row per user per IST calendar day on which they made any signed-in request. Written by the `auth` middleware (`src/shared/utils/activityTracker.js`), at most once per user every 15 minutes.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| userId | ObjectId | REF: User, REQUIRED | User reference |
+| day | String | REQUIRED | `YYYY-MM-DD` in Asia/Kolkata |
+| accountType | String | | Role at the time |
+| firstSeenAt | Date | | First request that day |
+| lastSeenAt | Date | | Latest recorded request that day |
+
+**Indexes:** `{ userId, day }` (unique compound), `{ day, accountType }`
+
+---
+
+### EmailChangeRequest
+**File:** `src/modules/user/models/emailChangeRequest.model.js`
+
+A pending change of a user's login email. The code goes to the new address; the email changes only after it is entered.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| userId | ObjectId | REF: User, REQUIRED, UNIQUE | One pending request per user (asking again replaces it) |
+| newEmail | String | REQUIRED, lowercase | Requested address |
+| codeHash | String | REQUIRED | SHA-256 of the 6-digit code (the code is never stored) |
+| attempts | Number | DEFAULT: 0 | Wrong tries (max 5) |
+| expiresAt | Date | REQUIRED | 10 minutes after the request |
+
+**Indexes:** `userId` (unique), TTL index on `expiresAt`
 
 ---
 
@@ -447,12 +526,93 @@ masteryScore = (easyCorrect × 0.25 + mediumCorrect × 0.35 + hardCorrect × 0.4
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| userId | ObjectId | REF: User, REQUIRED | User who owns the code |
-| code | String | REQUIRED, UNIQUE | Referral code |
-| redeemedBy | [ObjectId] | REF: User | Users who redeemed this code |
-| createdAt | Date | AUTO | Timestamp |
+| userId | ObjectId | REF: User, REQUIRED, UNIQUE | User who owns the code |
+| referralCode | String | REQUIRED, UNIQUE, uppercase | 6-character invite code (no 0/O/1/I) |
+| referrals | [Object] | | Invited friends, see below |
+| totalRewards | Number | DEFAULT: 0 | Friends who earned this user a reward |
+| paperCredits | Number | DEFAULT: 0, MIN: 0 | Practice-paper credits earned (both sides get one per activated friend) |
+| papersUsed | Number | DEFAULT: 0, MIN: 0 | Credits spent |
+| createdAt, updatedAt | Date | AUTO | Timestamps |
 
-**Indexes:** `{ code }` (unique)
+**`referrals[]` entries:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| referredUserId | ObjectId (REF: User) | The friend |
+| referredName | String | Friend's name at signup |
+| source | String (ENUM: link, challenge; DEFAULT: link) | How the friend arrived |
+| challengeId | ObjectId (REF: Challenge) | Set when `source` is `challenge` |
+| joinedAt | Date | When the friend was credited |
+| activatedAt | Date (DEFAULT: null) | Set once the friend has answered 10 questions; rewards are given then |
+| rewardClaimed | Boolean (DEFAULT: false) | `false` when the friend activated but the referrer was over the monthly cap |
+
+**Indexes:** `userId` (unique), `referralCode` (unique), `referrals.referredUserId`
+
+---
+
+### Challenge
+**File:** `src/modules/challenge/models/challenge.model.js`
+
+A challenge-a-friend link (`/c/:code`): the questions a student answered in one session, frozen with their score.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| code | String | REQUIRED, UNIQUE, uppercase | Share code |
+| ownerId | ObjectId | REF: User, REQUIRED, INDEX | Student who sent it |
+| ownerName | String | REQUIRED | Owner's first name |
+| sessionId | ObjectId | REF: Session, REQUIRED, UNIQUE | One challenge per session |
+| classId, subjectId, chapterId | ObjectId | REF: Class / Subject / Chapter | Context |
+| className, subjectName, chapterName | String | | Copied in for the public page |
+| questionIds | [ObjectId] | REF: Question | 3 to 10 multiple-choice questions, in order |
+| ownerScore | Number | REQUIRED, MIN: 0 | Owner's correct answers |
+| total | Number | REQUIRED, MIN: 1 | Number of questions |
+| attemptsCount | Number | DEFAULT: 0 | Plays so far |
+| lastAttemptAt | Date | | Latest play |
+
+**Indexes:** `code` (unique), `sessionId` (unique), `ownerId`
+
+---
+
+### ChallengeAttempt
+**File:** `src/modules/challenge/models/challengeAttempt.model.js`
+
+One friend's play of a challenge. Guests play without an account and claim the attempt after signing up.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| challengeId | ObjectId | REF: Challenge, REQUIRED | Challenge |
+| userId | ObjectId | REF: User, DEFAULT: null | Player, null until a guest claims |
+| name | String | | Guest's typed name, or the account's first name |
+| answers | [Object] | | `{ questionId, selected, isCorrect }` per question |
+| score | Number | REQUIRED, MIN: 0 | Correct answers (graded on the server) |
+| total | Number | REQUIRED | Number of questions |
+| outcome | String | REQUIRED, ENUM | won, lost, tie (from the player's side) |
+| claimTokenHash | String | `select: false` | SHA-256 of the single-use claim token; removed once claimed |
+| claimedAt | Date | | When the attempt was linked to an account |
+
+**Indexes:** `{ challengeId, score: -1, createdAt: 1 }`, `{ userId, challengeId }`
+
+---
+
+### Notification
+**File:** `src/modules/notification/models/notification.model.js`
+
+One row in a user's notification bell. Events with the same type and `groupKey` on the same IST day fold into one row.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| userId | ObjectId | REF: User, REQUIRED | Who sees it |
+| type | String | REQUIRED, ENUM | challenge_played, friend_joined, gift_unlocked, gift_reminder, badge_earned, class_joined, class_milestone |
+| groupKey | String | REQUIRED | Target the events are grouped by (for example a challenge code or a class link) |
+| day | String | REQUIRED | IST `YYYY-MM-DD`, or `once` for one-time events |
+| count | Number | | Events folded into the row |
+| actors | [String] | | First names behind the events, newest last (max 5) |
+| data | Mixed | | Latest event's details, used to word the row |
+| link | String | | Where tapping it goes |
+| readAt | Date | | Null while unread |
+| lastAt | Date | | Latest event |
+
+**Indexes:** `{ userId, type, groupKey, day }` (unique compound), `{ userId, lastAt: -1 }`, `{ userId, readAt }`, TTL on `lastAt` (60 days)
 
 ---
 
@@ -462,7 +622,7 @@ masteryScore = (easyCorrect × 0.25 + mediumCorrect × 0.35 + hardCorrect × 0.4
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | userId | ObjectId | REF: User, REQUIRED, UNIQUE | Student reference |
-| dailyGoal | Number | DEFAULT: 10 | Questions per day target |
+| dailyGoal | Number | DEFAULT: 20 | Questions per day target |
 | lastResetDate | Date | | Last daily reset timestamp |
 | createdAt | Date | AUTO | Timestamp |
 | updatedAt | Date | AUTO | Timestamp |
@@ -491,9 +651,13 @@ masteryScore = (easyCorrect × 0.25 + mediumCorrect × 0.35 + hardCorrect × 0.4
 | userId | ObjectId | REF: User, REQUIRED, UNIQUE | Student reference |
 | currentStreak | Number | DEFAULT: 0 | Consecutive days practiced |
 | longestStreak | Number | DEFAULT: 0 | All-time best streak |
-| lastPracticedDate | Date | | Last practice date |
-| freezesAvailable | Number | DEFAULT: 0 | Streak freezes available |
-| freezesUsed | Number | DEFAULT: 0 | Freezes consumed |
+| lastPracticeDate | String | DEFAULT: null | Last practice date, `YYYY-MM-DD` (IST) |
+| streakFreezes.total | Number | DEFAULT: 1 | Weekly freezes allowed |
+| streakFreezes.used | Number | DEFAULT: 0 | Weekly freezes used this week |
+| streakFreezes.bonus | Number | DEFAULT: 0, MIN: 0 | Earned freezes (referral rewards); never reset, spent after the weekly one |
+| weeklyFreezeResetDate | Date | DEFAULT: next Monday | When `used` resets |
+| practiceDates | [String] | | Last 90 days of practice dates |
+| totalPracticeDays | Number | DEFAULT: 0 | Days practised |
 
 ---
 
@@ -619,21 +783,17 @@ Database indexes are critical for query performance. The following indexes have 
 
 ---
 
-### Index Creation Script
+### Index Creation at Startup
 
-**File:** `scripts/createIndexes.js`
+**File:** `src/shared/utils/ensureIndexes.js`
 
-To create all indexes in production:
+The server builds every index declared in the models itself. After the database connects, `index.js` calls `ensureIndexes()` in the background, which runs `Model.createIndexes()` for every registered model.
 
-```bash
-node scripts/createIndexes.js
-```
+- Mongoose's automatic index build does nothing when the connection uses the `secondaryPreferred` read preference (as `config/db.config.js` does). `createIndexes()` is a write, so it reaches the primary.
+- Existing indexes are left alone; nothing is dropped.
+- A model whose indexes fail is logged and does not stop the server.
 
-This script will:
-1. Connect to MongoDB
-2. Create all indexes defined in models
-3. Display index creation status
-4. Show final index summary
+No manual script is needed. (`scripts/` is gitignored, so an older `scripts/createIndexes.js` may not exist in a given checkout.)
 
 ---
 
@@ -680,7 +840,7 @@ Target metrics:
 
 ---
 
-*Last Updated: 2026-05-04*
+*Last Updated: 2026-10-10*
 
 *See [ARCHITECTURE.md](../architecture) for how models are used in the application.*
 

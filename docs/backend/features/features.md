@@ -1,21 +1,36 @@
 # AskAide AI - Features
 
-**Last Updated:** 2026-06-29
+**Last Updated:** 2026-10-10
 
 ---
 
 ## User Authentication
 **Status:** ✅ Completed  
-**Description:** Users can register, login via email/password or OTP, and manage accounts securely with JWT tokens.  
+**Description:** Users can register (students, teachers, parents and principals), log in with email/password or Google, verify their email with an OTP, and stay signed in with JWT access tokens and single-use refresh tokens. Teachers can sign up on their own, by email or Google. Signup accepts an invite code and first-touch attribution details.  
 **Endpoints:**
-- `POST /api/v1/user/signup` - User registration
-- `POST /api/v1/user/login` - Email/password login
-- `POST /api/v1/user/request-otp` - OTP request
-- `POST /api/v1/user/verify-otp` - OTP verification
-- `POST /api/v1/user/logout` - Session logout
+- `POST /api/v1/authenticate/signup` - User registration
+- `POST /api/v1/authenticate/login` - Email/password login
+- `POST /api/v1/authenticate/google` - Google sign-in (creates a Student, or a Teacher when asked)
+- `POST /api/v1/authenticate/sendotp` - OTP request
+- `POST /api/v1/authenticate/verify-email` - OTP verification
+- `POST /api/v1/authenticate/refresh` - Refresh the token pair (each refresh token works once)
+- `POST /api/v1/authenticate/logout` - Session logout
 
-**Dependencies:** MongoDB, JWT, bcrypt, Nodemailer  
-**Added:** 2024-01-15
+**Dependencies:** MongoDB, JWT, bcrypt, google-auth-library, SendGrid  
+**Added:** 2024-01-15 (Google sign-in, teacher self-signup and single-use refresh tokens added 2026)
+
+---
+
+## Profile Editing
+**Status:** ✅ Completed  
+**Description:** Users can change their display name, and change their login email after entering a 6-digit code sent to the new address. The account keeps its old email until the code is confirmed; the old address is then told about the change. Codes expire after 10 minutes and allow 5 tries.  
+**Endpoints:**
+- `PUT /api/v1/profile/name` - Change display name
+- `POST /api/v1/profile/email/request-change` - Send a code to the new email
+- `POST /api/v1/profile/email/confirm-change` - Confirm the code and switch the email
+
+**Dependencies:** EmailChangeRequest model, SendGrid  
+**Added:** 2026-10-04
 
 ---
 
@@ -178,6 +193,23 @@
 
 ---
 
+## Teacher Class Join Links
+**Status:** ✅ Completed  
+**Description:** A teacher creates a join link per class and subject (and optional section) and shares it with the class. Students who join appear in the teacher dashboard like any assigned student. A teacher who signed up alone gets a private school set up automatically. The teacher sees how many students joined, practised after joining, and were active this week. A class report unlocks when 10 students have practised, and a Champion Teacher certificate when 25 have. Links can be turned off.  
+**Endpoints:**
+- `POST /api/v1/teacher-classes` - Create (or reuse) a class link
+- `GET /api/v1/teacher-classes/mine` - Links with join and practice counts, milestones
+- `GET /api/v1/teacher-classes/join/:code` - Public join page data
+- `POST /api/v1/teacher-classes/join/:code` - Student joins the class
+- `PATCH /api/v1/teacher-classes/:id` - Turn a link on or off
+- `GET /api/v1/teacher-classes/:id/report` - Class report (after 10 students practised)
+- `GET /api/v1/teacher-classes/certificate` - Certificate data (after 25 students practised)
+
+**Dependencies:** TeacherClass, TeacherStudent, School, Section, UserAnswer models  
+**Added:** 2026-10-10
+
+---
+
 ## Quiz Mode
 **Status:** ✅ Completed  
 **Description:** Async quiz system for teachers to create, publish, and manage quizzes with auto-grading. Students can attempt quizzes with configurable time limits, multiple attempts, and view results.  
@@ -238,13 +270,43 @@
 
 ## Referral System
 **Status:** ✅ Completed  
-**Description:** Users can generate referral codes and redeem them for rewards.  
+**Description:** Every user has a 6-character invite code and link. A new account that signs up with the link (email or Google), or that plays a friend's challenge and then signs up, is credited to the inviter. Nothing is given at signup: once the friend has answered 10 questions (practice answers and challenge answers both count), both people get a free practice paper credit and a streak shield (bonus streak freeze). Rewards are capped at 10 friends per inviter per month, and only accounts less than a day old can be credited. Milestone badges unlock at 1, 3 and 5 practising friends.  
 **Endpoints:**
-- `GET /api/v1/referral/my-code` - Get user's referral code
-- `POST /api/v1/referral/redeem/:code` - Redeem a referral code
+- `GET /api/v1/referral/my-code` - Code, link, friends, rewards and milestones
+- `POST /api/v1/referral/redeem/:code` - Apply a code after signup (new accounts only)
+- `POST /api/v1/referral/rewards/practice-paper` - Spend a credit on a 20-question practice paper
 
-**Dependencies:** Referral model, MongoDB  
-**Added:** 2026-04-18
+**Dependencies:** Referral, UserAnswer, ChallengeAttempt, Streak models; question paper service  
+**Added:** 2026-04-18 (activation-based rewards 2026-10-10)
+
+---
+
+## Challenge a Friend
+**Status:** ✅ Completed  
+**Description:** After a practice session, a student can turn the multiple-choice questions they just answered (3 to 10) into a challenge link. Friends play it without logging in; answers are scored on the server and never sent to the page. A guest who signs up afterwards keeps their result, and the new account counts as the sender's referral. The sender sees the scoreboard and gets an email for the first 10 plays. Badges: Challenger and Challenge Champion.  
+**Endpoints:**
+- `POST /api/v1/challenges` - Create a challenge from a session
+- `GET /api/v1/challenges/mine` - Challenges sent, with top players
+- `GET /api/v1/challenges/:code` - Public play page (no answers)
+- `POST /api/v1/challenges/:code/attempts` - Submit a play (guest or signed in)
+- `POST /api/v1/challenges/attempts/:attemptId/claim` - Link a guest play to the new account
+- `GET /api/v1/challenges/:code/review` - Answers, explanations and scoreboard
+
+**Dependencies:** Challenge, ChallengeAttempt, Session, UserAnswer, Question models; referral service  
+**Added:** 2026-10-10
+
+---
+
+## In-App Notifications
+**Status:** ✅ Completed  
+**Description:** A notification bell inside the app. It shows when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift. Notifications are kept for 60 days after their last event. Emails continue to go out as before.  
+**Endpoints:**
+- `GET /api/v1/notifications` - List notifications, newest first
+- `GET /api/v1/notifications/unread-count` - Unread count for the bell
+- `POST /api/v1/notifications/read` - Mark some or all as read
+
+**Dependencies:** Notification model, node-cron  
+**Added:** 2026-10-10
 
 ---
 
@@ -267,7 +329,7 @@
 
 ## Streak Tracking
 **Status:** ✅ Completed  
-**Description:** Tracks consecutive daily practice streaks. Students can purchase streak freezes to maintain streaks.  
+**Description:** Tracks consecutive daily practice streaks (IST dates). Each student gets one free streak freeze per week, used automatically when exactly one day is missed. Bonus freezes earned from referrals never reset and are used after the weekly one.  
 **Endpoints:**
 - `GET /api/v1/streaks/:userId` - Get current streak info
 - `POST /api/v1/streaks/:userId/use-freeze` - Use a streak freeze
@@ -292,13 +354,25 @@
 
 ## Badge/Achievement System
 **Status:** ✅ Completed  
-**Description:** Real-time badge awards with achievements unlocked on practice milestones. Nightly cron safety net for missed checks.  
+**Description:** Real-time badge awards with 21 achievements unlocked on practice milestones, streaks, study time, challenges and invites. Night Owl and Early Bird are judged by Indian time (IST). New badges also appear in the notification bell. Daily cron safety net for missed checks.  
 **Endpoints:**
 - `GET /api/v1/badges/:userId` - Get user badges
 - `POST /api/v1/badges/check` - Real-time badge check
 
 **Dependencies:** Achievement model, Achievement scheduler job  
 **Added:** 2026-04-18
+
+---
+
+## Leaderboard
+**Status:** ✅ Completed  
+**Description:** Top 10 students of the current week (from Monday 00:00 IST) by distinct questions answered correctly, shown with first names, so a new student can catch up. A per-subject leaderboard ranks all-time results.  
+**Endpoints:**
+- `GET /api/v1/leaderboard` - This week's top 10
+- `GET /api/v1/leaderboard/subject/:subjectId` - Top 10 for a subject
+
+**Dependencies:** UserAnswer model, MongoDB aggregation  
+**Added:** 2024-02-15 (weekly ranking 2026-10-10)
 
 ---
 
@@ -389,9 +463,9 @@
 **Status:** 📋 Planned  
 **Description:** Auto-insert review questions for decaying topics during practice.
 
-### Social Login
+### More Social Logins
 **Status:** 📋 Planned  
-**Description:** Google and GitHub OAuth integration.
+**Description:** GitHub OAuth integration (Google sign-in is already available).
 
 ### Two-Factor Authentication
 **Status:** 📋 Planned  

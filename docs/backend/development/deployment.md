@@ -215,23 +215,24 @@ docker-compose logs -f api
 - [ ] All environment variables configured
 - [ ] MongoDB production database accessible
 - [ ] JWT_SECRET is unique and secret
-- [ ] MAIL_* and EMAIL credentials configured for email features
+- [ ] SENDGRID_API_KEY and EMAIL (a SendGrid verified sender) configured for email features
+- [ ] FRONTEND_URL set, so reset, invite and challenge links point at the live site
 - [ ] AI_ENDPOINT (base URL only) and AI_SERVICE_API_KEY configured
 - [ ] QUESTION_PREFETCH_AHEAD, QUESTION_MIN_NEW_PER_RUN, QUESTION_LOW_YIELD_LIMIT, QUESTION_HARD_CAP configured for question generation
 - [ ] Rate limiting configured appropriately
 - [ ] CORS origins updated for production domains
 - [ ] Redis server configured (optional but recommended)
-- [ ] Database indexes created (run `node scripts/createIndexes.js`)
 - [ ] Cache configuration verified (if using Redis)
 
 ---
 
 ## Post-Deployment Steps
 
-### Create Database Indexes
+### Check Database Indexes
+The server builds all schema indexes itself after it connects to MongoDB (`ensureIndexes()` in `index.js`). No manual script is needed. Check the startup log for `MongoDB indexes ensured`, or for `Some MongoDB indexes could not be built` with the failing models.
+
 ```bash
-# Create all optimized indexes
-node scripts/createIndexes.js
+pm2 logs askaide-api | grep -i "indexes"
 ```
 
 ### Verify Cache Connection (if using Redis)

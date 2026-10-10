@@ -6,14 +6,30 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
-### Changed
-- **Registration rate limit raised 3 → 10 req/hour** (2026-07-14) — `registerLimiter` in `src/modules/auth/routes/auth.routes.js`. The old 3/hour was too tight for classroom onboarding and shared-IP schools; the message copy is unchanged.
-- **Login rate limit raised 5 → 10 req/15min** (2026-07-05) — `loginLimiter` in the same file; still returns the server message verbatim on 429.
-
 ### Added
+- **In-app notifications** (2026-10-10) — new `notification` module with `GET /notifications`, `GET /notifications/unread-count` and `POST /notifications/read`. Events are grouped per user, type, target and IST day, and rows expire 60 days after their last event. Written on challenge plays, referral joins, referral gifts (both sides), badges and class-link joins. A daily job at 5 pm IST (`notificationScheduler.js`) sends gift reminders and teacher milestone notices.
+- **Teacher class join links** (2026-10-10) — `teacher` module, routes at `/teacher-classes`. A teacher creates a `/join/:code` link per class + subject (+ section); a student who joins gets a normal `TeacherStudent` row (`joinedVia`). A self-signed-up teacher gets a private `independent` school on the first link. Class report unlocks at 10 students who practised after joining, Champion Teacher certificate at 25. Google signup accepts `accountType: 'Teacher'` when it creates the account.
+- **Challenge a friend** (2026-10-10) — new `challenge` module, routes at `/challenges`. A finished session becomes a `/c/:code` link; friends play the same multiple-choice questions without logging in, scored on the server. Guests get a single-use claim token that links the attempt to the account they sign up with. The owner is emailed for the first 10 plays. New badges: Challenger, Challenge Champion, Squad Starter, Squad Leader, Class Captain.
+- **Referral rewards after activation** (2026-10-10) — email and Google signup both credit a new account (under 24 hours old) to its inviter, from an invite link or a challenge. Both sides get one practice-paper credit and one bonus streak freeze once the friend has answered 10 questions; practice answers and answered challenge questions both count. At most 10 rewarded friends per referrer per month. New `POST /referral/rewards/practice-paper` spends a credit. Opening the referral screen re-checks recently joined friends and returns fresh credit counts. Signup stores first-touch `acquisition` details on the user.
+- **Daily-active tracking** (2026-10-07) — the `auth` middleware records one `useractivitydays` row per user per IST day and sets `User.lastActiveAt`. Writes are throttled to once per user every 15 minutes, are not awaited, and never fail the request.
+- **Profile name and email change** (2026-10-04) — `PUT /profile/name`, `POST /profile/email/request-change` and `POST /profile/email/confirm-change`. The email changes only after the 6-digit code sent to the new address is entered; the code expires after 10 minutes and allows 5 tries. Both email routes are limited to 10 requests per 15 minutes per IP.
 - **Public question preview + chapter counts** (2026-07-12) — question module now exposes a public preview endpoint and per-chapter question counts consumed by the admin Chapter Management screen.
 - **Admin "Generate Questions" trigger** (2026-07-12) — admins can trigger question generation for a chapter on demand from the admin UI.
 - **`correctAnswer` in `getPublicQuestionsBatch`** (2026-07-10) — the public questions batch response now includes `correctAnswer` (tests updated accordingly).
+
+### Fixed
+- **Leaderboard ranks this week** (2026-10-10) — `GET /leaderboard` now ranks answers from Monday 00:00 IST and returns each student's first name.
+- **Public question preview matches more chapters** (2026-10-05) — the slug match ignores a Social Studies strand prefix ("Geography: ") and pools questions from duplicate chapters with the same name.
+- **Night Owl / Early Bird badges use IST** (2026-10-05) — the session hour is now read in `Asia/Kolkata`, not UTC.
+- **Refresh tokens are single-use** (2026-10-04) — `/authenticate/refresh` claims and revokes the token in one atomic update, so two refreshes sent at the same moment cannot both get new tokens. A failed referral during signup no longer breaks the signup.
+- **Schema indexes built at startup** (2026-10-04) — after connecting, the server calls `createIndexes()` for every model in the background. Mongoose's automatic index build does not run under the `secondaryPreferred` read preference, so TTL and unique indexes (for example on refresh tokens and question-generation jobs) were missing. Duplicate index declarations on refresh tokens, goals and referrals were removed.
+- **Study configuration ignores bad class IDs** (2026-10-04) — blank or invalid `classIds` no longer cause a 500.
+
+### Changed
+- **Password rule relaxed** (2026-10-04) — 8 to 128 characters with at least one letter and one number. Applies to signup, reset and change.
+- **Answer options shuffled** (2026-10-04) — the practice and free-trial batches shuffle each question's options as well as the question order.
+- **Registration rate limit raised 3 → 10 req/hour** (2026-07-14) — `registerLimiter` in `src/modules/auth/routes/auth.routes.js`. The old 3/hour was too tight for classroom onboarding and shared-IP schools; the message copy is unchanged.
+- **Login rate limit raised 5 → 10 req/15min** (2026-07-05) — `loginLimiter` in the same file; still returns the server message verbatim on 429.
 
 ---
 
@@ -330,6 +346,22 @@ All notable changes to this project are documented in this file.
 A focused, month-by-month view of changes to the **public API surface** (the release notes above track the full project; this section tracks endpoints only).
 
 ### 2026
+
+**October 2026 — Added**
+- `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read` — In-app notification bell
+- `POST /teacher-classes`, `GET /teacher-classes/mine`, `GET /teacher-classes/certificate`, `GET|POST /teacher-classes/join/:code`, `PATCH /teacher-classes/:id`, `GET /teacher-classes/:id/report` — Teacher class join links
+- `POST /challenges`, `GET /challenges/mine`, `GET /challenges/:code`, `POST /challenges/:code/attempts`, `POST /challenges/attempts/:attemptId/claim`, `GET /challenges/:code/review` — Challenge a friend
+- `POST /referral/rewards/practice-paper` — Spend a referral practice-paper credit
+- `PUT /profile/name`, `POST /profile/email/request-change`, `POST /profile/email/confirm-change` — Name and verified email change
+- `POST /admin/system/llm/features/:feature`, `POST /admin/system/llm/features/:feature/reset` — Per-feature model choice (SuperAdmin)
+
+**October 2026 — Changed**
+- `POST /authenticate/signup` — Accepts `acquisition`; returns `referral`
+- `POST /authenticate/google` — Accepts `referralCode`, `accountType` (`Student` or `Teacher`) and `acquisition`; returns `isNewUser` and `referral`
+- `POST /authenticate/refresh` — Refresh tokens are single-use (atomic claim)
+- `GET /referral/my-code` — Returns rewards, milestones, friends list and `referredBy`
+- `GET /leaderboard` — Ranks this week (from Monday 00:00 IST) and returns first names
+- `GET /streaks/:userId` — `streakFreezes` includes earned `bonus` freezes
 
 **June 2026 — Added**
 - `GET /topic-progress/ai-insights/teacher/class` — Teacher class-level aggregated insight

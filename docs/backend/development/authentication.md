@@ -1,6 +1,6 @@
 # AskAide AI - Authentication
 
-**Last Updated:** 2026-07-01
+**Last Updated:** 2026-10-10
 
 ---
 
@@ -20,20 +20,20 @@
 - **Payload:**
   ```json
   {
-    "userId": "ObjectId",
+    "id": "ObjectId",
     "email": "user@example.com",
-    "role": "student",
+    "accountType": "Student",
     "iat": 1704384000,
-    "exp": 1704470400
+    "exp": 1704391200
   }
   ```
 
 ### Refresh Token
 - **Type:** JWT
 - **Expiry:** 7 days
-- **Usage:** Rotated on each `/refresh` call — old token invalidated, new one issued
+- **Usage:** Single-use. Each `/refresh` call claims the token and revokes it in one atomic database update, then issues a new pair. A second request with the same token (even one sent at the same moment) gets `401 REFRESH_TOKEN_REVOKED`
 - **Max active:** 5 per user (multi-device support)
-- **Storage:** SHA-256 hashed in MongoDB
+- **Storage:** SHA-256 hashed in MongoDB; a TTL index removes records after `expiresAt`
 
 ---
 
@@ -79,9 +79,10 @@
            │
            ▼
 3. Server verifies & rotates:
-   - Find hashed refreshToken in DB
+   - Claim the hashed refreshToken in one atomic update
+     (match: not revoked → set revoked); no match → 401
+   - If the claimed token has expired → 401
    - Issue new accessToken + new refreshToken
-   - Invalidate old refreshToken
            │
            ▼
 4. Return new token pair (same shape as login)
@@ -91,16 +92,35 @@
 
 ```
 1. Client sends POST /api/v1/authenticate/google
-   Body: { idToken }  (Google ID token)
+   Body: { idToken, referralCode?, accountType?, acquisition? }
            │
            ▼
 2. Server verifies with Google
    - Finds user by googleId
    - OR links by matching email
-   - OR auto-creates a Student account
+   - OR auto-creates an account: a Teacher if accountType is
+     'Teacher', otherwise a Student
            │
            ▼
-3. Return { user, tokens } — same shape as login
+3. For a new account only: store acquisition details and credit
+   the account to the owner of referralCode (never fails the login)
+           │
+           ▼
+4. Return { user, tokens, isNewUser, referral } — same shape as login
+```
+
+### Signup
+
+```
+POST /api/v1/authenticate/signup
+Body: { userName, email, password, confirmPassword, name,
+        accountType?, contactNumber?, referralCode?, acquisition? }
+- accountType: Student, Teacher, Parent or Principal (Teachers can
+  sign up on their own and create class join links)
+- Principal accounts start with approved: false
+- A valid referralCode credits the new account to its inviter;
+  a bad or stale code is ignored and never fails the signup
+- Returns { user, tokens, referral } (auto-login)
 ```
 
 ### Password Change
@@ -118,16 +138,31 @@ POST /api/v1/authenticate/verify-email
 Body: { email, otp }    (OTP TTL: 5 min)
 ```
 
+### Changing the Login Email
+
+```
+POST /api/v1/profile/email/request-change   Body: { email }
+  - Emails a 6-digit code to the NEW address; the account is unchanged
+POST /api/v1/profile/email/confirm-change   Body: { code }
+  - Switches the login email and tells the old address
+```
+
+- Code: SHA-256 hash only, expires after 10 minutes, 5 wrong tries, re-send once a minute
+- Both routes: 10 requests per 15 minutes per IP
+- The new address is re-checked for uniqueness (case-insensitive) at confirm time
+- Google sign-in matches by Google ID, so it keeps working after the change
+
 ---
 
 ## Protected Routes
 
 ### Middleware: `src/shared/middleware/auth.js`
 
-JWT is accepted from **any** of:
-- **Cookie:** `token=<jwt>`
-- **Header:** `Authorization: Bearer <token>`
-- **Body:** `{ token: "<jwt>" }`
+JWT is accepted from either of:
+- **Header:** `Authorization: Bearer <token>` (what the frontend uses)
+- **Cookie:** `token=<jwt>` (read only if a cookie parser has populated `req.cookies`; the server never sets this cookie)
+
+On success, `auth` also records the user as active today: one `useractivitydays` row per user per IST day plus `User.lastActiveAt`. The write happens at most once per user every 15 minutes, is not awaited, and a failure never fails the request. `optionalAuth` (used by public routes such as challenge play) does not record activity.
 
 ### Available Role Guards (all also allow `SuperAdmin`)
 
@@ -179,9 +214,9 @@ All under `/api/v1/authenticate/`:
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/login` | POST | Rate-limited | `{ userName, password }` → `{ user, tokens }` |
-| `/signup` | POST | Rate-limited | `{ name, email, password, role }` → `{ user, tokens }` |
-| `/google` | POST | Rate-limited | Google ID token auth → `{ user, tokens }` |
-| `/refresh` | POST | None | `{ refreshToken }` → new token pair |
+| `/signup` | POST | Rate-limited | `{ userName, email, password, confirmPassword, name, accountType?, referralCode?, acquisition? }` → `{ user, tokens, referral }` |
+| `/google` | POST | Rate-limited | `{ idToken, referralCode?, accountType?, acquisition? }` → `{ user, tokens, isNewUser, referral }` |
+| `/refresh` | POST | None | `{ refreshToken }` → new token pair (each refresh token works once) |
 | `/logout` | POST | None | `{ refreshToken }` → revoke token |
 | `/changepassword` | POST | auth | Password change (revokes all refresh tokens) |
 | `/reset-password-token` | POST | None | Send reset email |
@@ -194,7 +229,7 @@ All under `/api/v1/authenticate/`:
 
 1. **Never log tokens** — Exclude from API logger
 2. **Use HTTPS** in production
-3. **Short access token expiry** (2h) with refresh token rotation
+3. **Short access token expiry** (2h) with single-use, rotating refresh tokens
 4. **Password change/reset revokes all sessions**
 5. **Rate limiting:** login 10 req/15min, signup 10 req/hour
 

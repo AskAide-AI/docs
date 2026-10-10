@@ -149,7 +149,7 @@ The `useQuestionPolling` hook (see `src/hooks/useQuestionPolling.js`) drives que
 ## Batch Endpoint Response Format
 
 `GET /questions/batch/chapter/:chapterId/type/:type/difficulty/:difficulty/session/:sessionId`
-[`src/api/endpoints.js:33`]
+[`src/api/endpoints.js:37`]
 
 The endpoint is a **fast status check** — it NEVER blocks on AI generation. The batch result lives inside the standard envelope:
 
@@ -276,6 +276,19 @@ await selectDropdownOption(page, 'Chapter', 'Light');
 > **Chapter dropdown is DISABLED until Subject is selected.**
 > **Start button is DISABLED until Class + Subject + Chapter are selected.**
 
+### Pre-filled configurations
+
+The config can arrive already filled in. Automation should check the trigger text before selecting:
+
+| Source | How it arrives |
+|--------|----------------|
+| Progress page "Start Learning" | `location.state.preselectConfig` |
+| Onboarding wizard | `location.state.preselectConfig` (`mcq` / `Medium` defaults) |
+| Joined class (`/join/:code`) or challenge results | `location.state.preselectConfig` |
+| Chapter tried on `/try` before signup | `localStorage` key `askaide:tryChoice` (kept 24 h, read once by `Home.jsx` or the onboarding wizard, then cleared) |
+
+To start from a blank config in a test, clear `askaide:tryChoice` first.
+
 ---
 
 ## Disabled State Detection
@@ -372,6 +385,19 @@ async function startStudySession(page, config) {
 
 ---
 
+## During and After a Session
+
+| Behaviour | Detail |
+|-----------|--------|
+| Answer saving | Each answer is sent on its own (`POST /user-answers/batch` with one answer) right after it is given. A failed save goes to `localStorage.unsyncedAnswers` and is retried when `Home` mounts or the next session starts. |
+| Tab or app switch | No dialog. Switching tabs does not interrupt the test flow. |
+| In-app navigation | Clicking the Navbar, BottomNav or mobile menu during a session opens the "leave session?" `ConfirmDialog`. |
+| Leaving without End Session | The session is ended for the student: `PATCH /sessions/:id/end` on in-app navigation, or a `keepalive` fetch on `pagehide` when the tab closes. Sessions with no answers are not ended. |
+| Practice tour | Starts after the first answer (about 1.8 s later), not when the session loads. Automation may need to dismiss it after answering the first question. |
+| Result card | New badges pop up first; the result card opens after the last one is dismissed. With 3+ answers, the footer shows **Challenge on WhatsApp** (shorter label "Challenge a friend" below 360 px) and a copy-link button. |
+
+---
+
 ## Option Values Reference
 
 ### Question Types
@@ -407,8 +433,10 @@ async function startStudySession(page, config) {
       </span>
     </button>
     
-    <!-- Options List (Listbox.Options) - appears on click -->
-    <ul role="listbox" class="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl ...">
+    <!-- Options List (Listbox.Options) - appears on click.
+         Inline style max-height: 280px, tall enough for all 7 classes
+         (6th–12th) without an inner scroll. -->
+    <ul role="listbox" style="position: absolute; z-index: 50; max-height: 280px; overflow-y: auto; ...">
       
       <!-- Individual Option (Listbox.Option) -->
       <li role="option" class="cursor-pointer select-none py-2.5 pl-10 pr-4 ...">

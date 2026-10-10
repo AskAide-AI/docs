@@ -1,7 +1,7 @@
 # Styling Guide
 
 > Styling approach and guidelines for the AskAideAI frontend.
-> Last Updated: June 25, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -99,8 +99,13 @@ All tokens shift to dark equivalents. The accent becomes `#8FBFA8` (lighter gree
 ## Typography
 
 ### Font Family
-- **Default:** System font stack (Tailwind default)
-- **Headings:** Same as body
+| Role | Family | Tailwind class | JS constant (`src/constants/fonts.js`) |
+|------|--------|----------------|------------------------------|
+| Display / headings | Fraunces | `font-display`, `font-serif` | `serif` |
+| Body | Inter Tight | `font-body`, `font-sans` (default) | `sans` |
+| Labels, numbers | JetBrains Mono | `font-mono` | `mono` |
+
+The fonts are **self-hosted** variable `woff2` files in `public/fonts/` (Fontsource builds, OFL licences in `public/fonts/LICENSES.txt`). `index.html` declares them with `@font-face` and preloads the four latin files, so first visits paint in the final font with no re-draw. The latin-ext files load only when a page uses those glyphs (for example the rupee sign). Don't add a Google Fonts `<link>`: it brings back the late font swap and layout shift.
 
 ### Font Sizes
 | Element | Class | Size |
@@ -138,6 +143,21 @@ All tokens shift to dark equivalents. The accent becomes `#8FBFA8` (lighter gree
   <Card />
 </div>
 ```
+
+### Small Phones (320px)
+
+Design for 320px wide screens too, and check 320, 360, 375 and 412px. The app root clips horizontal overflow, so content that is too wide gets cut off rather than causing a side scroll.
+
+- **Auto-fit grids:** cap the minimum column at the container width, or a 280px column overflows a 320px phone:
+  ```jsx
+  // ❌ Overflows below 280px of content width
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'
+  // ✅ One full-width column on small phones
+  gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))'
+  ```
+- **Fixed-width third-party widgets:** Google's sign-in button takes a pixel width. Use `auth/FitGoogleLogin.jsx`, which measures its container, instead of a hard-coded `width="380"`.
+- **Tight rows:** use `clamp()` for gaps and padding (e.g. `gap: 'clamp(8px, 3.4vw, 14px)'` in the dashboard streak strip), let titles truncate (`min-w-0` + `truncate`) and keep buttons `shrink-0`.
+- **Long labels:** swap to a shorter label below 360px with `min-[360px]:` variants (the result card's "Challenge a friend" / "Challenge on WhatsApp").
 
 ---
 

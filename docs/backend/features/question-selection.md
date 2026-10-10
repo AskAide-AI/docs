@@ -7,7 +7,7 @@ When a student requests questions for a practice session, the backend uses a **n
 ## How Questions Are Selected
 
 1. **Within a Session**: Questions are **distinct** — the same question won't repeat in the same session
-2. **Selection**: Questions are fetched from the existing DB pool (shuffled in JS, not via `$sample`)
+2. **Selection**: Questions are fetched from the existing DB pool (shuffled in JS with Fisher-Yates, not via `$sample`). Each question's answer options are shuffled too, so the correct answer is not always in the same position
 3. **Exclusion**: Already-answered questions in this session are excluded
 4. **No questions left?** The backend enters the generation state machine (see below)
 

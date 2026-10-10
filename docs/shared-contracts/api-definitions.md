@@ -8,8 +8,10 @@ This document is the **cross-repo contract** (request/response shapes, base URLs
 
 | Environment | Backend (Express) | AI Service (FastAPI) |
 |-------------|------------------|----------------------|
-| **Local Development** | `http://localhost:4000/api/v1` | `http://localhost:8000` |
-| **Production** | `https://askaideaibackend.onrender.com/api/v1` | `https://ai-service.askaide.ai` |
+| **Local Development** | `http://localhost:4000/api/v1` | `http://localhost:8000/v1` |
+| **Production** | `https://askaideaibackend.onrender.com/api/v1` | `https://ai-service.askaide.ai/v1` |
+
+AI Service health/ops probes (`/ping`, `/health*`, `/metrics`) sit at the host root, outside `/v1`.
 
 ## Authentication
 
@@ -62,8 +64,12 @@ All role guards also allow `SuperAdmin`.
 | Scope | Limit |
 |-------|-------|
 | Backend Global | 500 req / 5 min per IP (skip: `/api-docs`, `/ping`, localhost) |
-| Backend Login | 10 req / 15 min |
-| Backend Signup | 3 req / hour |
+| Backend Login (`/login`, `/google`) | 10 req / 15 min |
+| Backend Signup | 10 req / hour |
+| Backend Password reset (`/reset-password-token`, `/reset-password`) | 5 req / 15 min |
+| Backend Email change (`/profile/email/*`) | 10 req / 15 min |
+| Backend Public challenge view (`GET /challenges/:code`) and class join info (`GET /teacher-classes/join/:code`) | 120 req / 10 min each |
+| Backend Public challenge play (`POST /challenges/:code/attempts`) | 20 req / 10 min |
 | AI Service | 200 req / 60s per IP (skip: `/ping`, `/health`) |
 
 ---
@@ -75,19 +81,19 @@ All role guards also allow `SuperAdmin`.
 | Method | Path | Auth | Body / Notes |
 |--------|------|------|-------------|
 | POST | `/login` | loginLimiter | `{ userName, password }` → `{ user, tokens: { accessToken, refreshToken, expiresIn } }` |
-| POST | `/signup` | registerLimiter | `{ name, email, password, role }` → `{ user, tokens }` |
-| POST | `/google` | loginLimiter | `{ idToken }` (Google ID token) → `{ user, tokens }`. Verifies the token with Google, then **finds by googleId**, else **links by email**, else **auto-creates a `Student`**. Same response shape as `/login`. |
+| POST | `/signup` | registerLimiter | `{ userName, name, email, password, confirmPassword, accountType?: 'Student' \| 'Teacher' \| 'Parent' \| 'Principal', contactNumber?, referralCode?, acquisition?: UserAcquisition }` → `{ user, tokens, referral: ReferralAttribution \| null }`. Principal accounts wait for approval. A bad/stale `referralCode` never fails signup; it just comes back `attributed: false`. |
+| POST | `/google` | loginLimiter | `{ idToken, referralCode?, acquisition?: UserAcquisition, accountType?: 'Student' \| 'Teacher' }` (Google ID token) → `{ user, tokens, isNewUser, referral: ReferralAttribution \| null }`. Verifies the token with Google, then **finds by googleId**, else **links by email**, else **auto-creates a `Student`**. `referralCode`/`acquisition` are used only when this call creates the account. |
 | POST | `/refresh` | none | `{ refreshToken }` → `{ tokens: { accessToken, refreshToken, expiresIn } }` |
 | POST | `/logout` | none | `{ refreshToken }` → revokes token |
-| POST | `/changepassword` | auth | `{ oldPassword, newPassword, confirmNewPassword }` — revokes all refresh tokens |
-| POST | `/reset-password-token` | none | `{ email }` |
-| POST | `/reset-password` | none | `{ token, password }` — revokes all refresh tokens |
+| POST | `/changepassword` | auth | `{ oldPassword, newPassword, confirmPassword }` — revokes all refresh tokens |
+| POST | `/reset-password-token` | resetLimiter | `{ email }` |
+| POST | `/reset-password` | resetLimiter | `{ token, newPassword, confirmPassword }` — revokes all refresh tokens |
 | POST | `/verify-email` | none | `{ email, otp }` — OTP TTL: 5 min |
 
 **Token model:**
 - `accessToken`: short-lived JWT (2h expiry), sent as `Authorization: Bearer` header
 - `refreshToken`: long-lived JWT (7d expiry), stored hashed in MongoDB, used only to get new access tokens
-- Token rotation: each `/refresh` call invalidates the old refresh token and issues a new one
+- Token rotation: each `/refresh` call invalidates the old refresh token and issues a new one. Refresh tokens are **single-use**: the old token is claimed atomically, so of two refreshes sent with the same token only one succeeds; the other gets `401 REFRESH_TOKEN_REVOKED`
 - Max 5 active refresh tokens per user (multi-device support)
 - Password change/reset revokes all refresh tokens, forcing re-login on all devices
 
@@ -97,6 +103,9 @@ All role guards also allow `SuperAdmin`.
 |--------|------|------|-------|
 | GET | `/details` | auth | Current user profile |
 | PUT | `/update` | auth | Update fields |
+| PUT | `/name` | auth | `{ name }` (2–100 chars) → `{ name }`. No verification |
+| POST | `/email/request-change` | auth | `{ email }` → `{ newEmail, expiresInMinutes: 10 }`. Emails a 6-digit code to the NEW address; account unchanged. 400 same email · 409 taken · 429 within 60 s of last code · 502 send failed |
+| POST | `/email/confirm-change` | auth | `{ code }` (6 digits) → `{ email }`. Switches the login email and notifies the old address. 400 wrong (with tries left) / expired · 409 taken meanwhile · 429 after 5 wrong codes |
 | DELETE | `/delete` | auth | Delete account |
 | PUT | `/display-picture` | auth | Multipart upload |
 | DELETE | `/display-picture` | auth | Remove photo |
@@ -123,7 +132,7 @@ All role guards also allow `SuperAdmin`.
 | POST | `/create-with-pdf` | auth, isTeacher | Multipart: pdf + metadata — auto-triggers AI RAG upload |
 | POST | `/check-rag-status` | auth | Body: `{ classId, subjectId, chapterIds }` — checks if AI has RAG data |
 | GET | `/class/:classId/subject/:subjectId` | none | Chapters with topics |
-| DELETE | `/` | auth, isTeacher | Body: `{ classId, subjectId, chapterIds }` — also calls AI delete-document |
+| DELETE | `/` | auth, isTeacher | Body: `{ classId, subjectId, chapterIds }` — also calls AI Service `/v1/delete-document` |
 
 ### 1.6 Content - Topics (`/api/v1/topic`)
 
@@ -137,7 +146,7 @@ All role guards also allow `SuperAdmin`.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| GET | `/configuration` | none | Optional `?classIds=` |
+| GET | `/configuration` | none | Optional `?classIds=`. Each chapter in the returned class→subject→chapter tree carries `isStartable: boolean` (true only once the chapter has topics AND has finished RAG indexing) — clients must not let the user start a chapter where this is `false`. |
 | GET | `/filter` | auth | |
 
 ### 1.8 Questions (`/api/v1/questions`)
@@ -193,12 +202,12 @@ All role guards also allow `SuperAdmin`.
 
 ### 1.11 Topic Progress (`/api/v1/topic-progress`)
 
-| Method | Path | Notes |
-|--------|------|-------|
-| GET | `/progress/chapter/:chapterId` | `auth` | userId from JWT |
-| GET | `/progress/subject/:subjectId` | `auth` | userId from JWT |
-| GET | `/v1/ai-insights/chapter/:chapterId` | `auth` | Proxies to AI Service `/v1/ai-insights/chapter` |
-| GET | `/v1/ai-insights/subject/:subjectId` | `auth` | Proxies to AI Service `/v1/ai-insights/subject` |
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/progress/chapter/:chapterId` | `auth` | userId from JWT. Response includes `isStartable: boolean` (topics exist AND RAG-indexed) for the requested chapter. |
+| GET | `/progress/subject/:subjectId` | `auth` | userId from JWT. Each entry in `data.chapters[]` includes `isStartable: boolean` — the frontend gates the "Start Learning" CTA (`ChapterList.jsx`, `StudyConfig.jsx`) on this flag the same way it already gates chapter selection on `/study/configuration`'s `isStartable`. |
+| GET | `/ai-insights/chapter/:chapterId` | `auth` | Proxies to AI Service `/v1/ai-insights/chapter` |
+| GET | `/ai-insights/subject/:subjectId` | `auth` | Proxies to AI Service `/v1/ai-insights/subject` |
 | GET | `/mastery-summary` | `auth` | userId from JWT |
 | GET | `/teacher/class-insights` | `auth` + `isTeacher` | teacherId from JWT |
 
@@ -255,12 +264,13 @@ All role guards also allow `SuperAdmin`.
 |--------|------|------|-------|
 | POST | `/` | Auth | `{ title, description, category }` |
 | POST | `/:id/upvote` | Auth | Toggle upvote |
-| GET | `/` | Auth | Paginated, filterable by `?status=&category=` |
+| GET | `/` | Auth | Paginated, filterable by `?status=&category=`. `?includeHidden=true` returns moderated (hidden) suggestions too — honoured for SuperAdmin only, silently ignored for everyone else. `isHidden` is stripped from the response unless `includeHidden` applied. |
 | GET | `/mine` | Auth | User's own suggestions |
 | GET | `/recently-shipped` | Auth | Last 30 days — includes `upvotedByMe`, `submittedByMe` flags |
 | GET | `/user-impact` | Auth | Returns `{ suggestionsShipped, upvotesShipped }` |
-| PUT | `/:id/respond` | Teacher/Principal | `{ status, response? }` |
-| PUT | `/:id/hide` | SuperAdmin | |
+| PUT | `/:id/respond` | SuperAdmin | `{ status, response? }` — `status` must be a valid `SuggestionStatus` |
+| PUT | `/:id/hide` | SuperAdmin | Soft delete — sets `isHidden: true`, removing it from the public board |
+| PUT | `/:id/unhide` | SuperAdmin | Restores a hidden suggestion (`isHidden: false`) |
 
 ### 1.19 Badges (`/api/v1/badges`)
 
@@ -269,7 +279,7 @@ All role guards also allow `SuperAdmin`.
 | GET | `/:userId` |
 | POST | `/check` |
 
-### 1.17 Quiz (`/api/v1/quiz`)
+### 1.20 Quiz (`/api/v1/quiz`)
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
@@ -293,7 +303,7 @@ All role guards also allow `SuperAdmin`.
 | DELETE | `/:quizId/questions/:questionId` | auth | |
 | PUT | `/:quizId/questions/reorder` | auth | |
 
-### 1.18 Question Paper (`/api/v1/question-paper`)
+### 1.21 Question Paper (`/api/v1/question-paper`)
 
 | Method | Path | Auth |
 |--------|------|------|
@@ -304,21 +314,21 @@ All role guards also allow `SuperAdmin`.
 | GET | `/:paperId/pdf` | auth |
 | DELETE | `/:paperId` | auth |
 
-### 1.19 Teacher (`/api/v1/teacher`)
+### 1.22 Teacher (`/api/v1/teacher`)
 
 | Method | Path | Auth |
 |--------|------|------|
 | POST | `/` | auth, isPrincipal |
 | GET | `/get-all` | auth, isPrincipal |
 
-### 1.20 Teacher-Students (`/api/v1/teacher-students`)
+### 1.23 Teacher-Students (`/api/v1/teacher-students`)
 
 | Method | Path | Auth |
 |--------|------|------|
 | POST | `/bulk` | auth, isTeacherOrPrincipal |
 | GET | `/` | auth, isTeacherOrPrincipal |
 
-### 1.21 Teacher Dashboard (`/api/v1/teacher-dashboard`)
+### 1.24 Teacher Dashboard (`/api/v1/teacher-dashboard`)
 
 All require `auth, isTeacher` (applied at router level).
 
@@ -332,7 +342,7 @@ All require `auth, isTeacher` (applied at router level).
 | GET | `/:teacherId/subject/:subjectId/weak-topics` |
 | GET | `/:teacherId/subject/:subjectId/activity` |
 
-### 1.22 School (`/api/v1/school`)
+### 1.25 School (`/api/v1/school`)
 
 | Method | Path |
 |--------|------|
@@ -341,7 +351,7 @@ All require `auth, isTeacher` (applied at router level).
 | GET | `/:id` |
 | PUT | `/:id` |
 
-### 1.23 Sections (`/api/v1/sections`)
+### 1.26 Sections (`/api/v1/sections`)
 
 | Method | Path |
 |--------|------|
@@ -353,33 +363,36 @@ All require `auth, isTeacher` (applied at router level).
 | PUT | `/:sectionId` |
 | DELETE | `/:sectionId` |
 
-### 1.24 Student (`/api/v1/student`)
+### 1.27 Student (`/api/v1/student`)
 
 | Method | Path |
 |--------|------|
 | POST | `/create` |
 | GET | `/get-all` |
 
-### 1.25 Other
+### 1.28 Other
 
 | Module | Path | Endpoints |
 |--------|------|-----------|
-| Leaderboard | `/api/v1/leaderboard` | `GET /`, `GET /subject/:subjectId` |
+| Leaderboard | `/api/v1/leaderboard` | `GET /` → top 10 of **this week** (from Monday 00:00 IST) `{ userId, name (first name), totalScore, totalQuestions, accuracy }[]`, `GET /subject/:subjectId` (all-time) |
 | Feedback | `/api/v1/feedback` | `POST /` |
 | API Logs | `/api/v1/logs` | `GET /`, `DELETE /`, `GET /stats` |
 | Stats | `/api/v1/stats` | `GET /public` |
 | Admin Metrics | `/api/v1/admin/metrics` | `GET /overview`, `GET /users`, `GET /content`, `GET /engagement`, `GET /question-jobs`, `GET /new-users`, `GET /feedback-insights` (all SuperAdmin) |
-| AI System (LLM) | `/api/v1/admin/system/llm` | `GET /status` → `LlmStatus`, `GET /models?provider=&freeOnly=` → `LlmModelList`, `POST /test` `LlmTestRequest` → `LlmTestResult`, `POST /active` `{ provider, model }` → `LlmSwitchResult` (switches the live model instantly if the checks pass), `POST /reset` → `LlmSwitchResult` (back to env default) (all SuperAdmin; `/test` 10/min, `/active`+`/reset` 5 per 10 min; proxies the ai-service `/v1/admin/llm/*`) |
-| Referral | `/api/v1/referral` | `GET /my-code` (auth), `POST /redeem/:code` (auth) |
+| AI System (LLM) | `/api/v1/admin/system/llm` | `GET /status` → `LlmStatus`, `GET /models?provider=&freeOnly=` → `LlmModelList`, `POST /test` `LlmTestRequest` → `LlmTestResult`, `POST /active` `{ provider, model }` → `LlmSwitchResult` (switches the live model instantly if the checks pass), `POST /reset` → `LlmSwitchResult` (back to env default), `POST /features/:feature` `{ provider?, model?, temperature? }` → `LlmFeatureSwitchResult` (gives one feature its own model and/or temperature if the checks pass), `POST /features/:feature/reset` → `LlmFeatureSwitchResult` (feature follows the live model again) (all SuperAdmin; `/test` 10/min, `/active`+`/reset` 5 per 10 min, `/features/*` 20 per 10 min; proxies the ai-service `/v1/admin/llm/*`) |
+| Referral | `/api/v1/referral` | `GET /my-code` (auth) → `ReferralSummary`, `POST /redeem/:code` (auth; new accounts only, same rules as signup), `POST /rewards/practice-paper` `{ chapterId }` (auth) → `PracticePaperRedeemResult` (201; spends one credit, `400 NO_CREDITS` when none; credit refunded if the paper can't be made). Rewards are given when the referred friend has answered **10** questions, not at signup: both sides get +1 `paperCredits` and +1 `streakFreezes.bonus`; max 10 rewarded friends per referrer per month. |
+| Teacher class links | `/api/v1/teacher-classes` | `POST /` `{ classId, subjectId, sectionName?, expectedStudents? }` (isTeacher) → `ClassLinkSummary` (201; reuses the active link for the same class/subject/section; a teacher with no school gets a private `kind: 'independent'` School first), `GET /mine` (isTeacher) → `MyClassLinks`, `PATCH /:id` `{ active }` (isTeacher, own links), `GET /:id/report` (isTeacher) → `ClassReport` (`403 REPORT_LOCKED` below 10 practised), `GET /certificate` (isTeacher) → `TeacherCertificate` (`403 CERTIFICATE_LOCKED` below 25 practised), `GET /join/:code` (public, 120/10 min) → `ClassLinkPublic`, `POST /join/:code` (auth, students only else `403 ONLY_STUDENTS`; `410 LINK_INACTIVE`) → `ClassJoinResult`. Joining creates a normal `TeacherStudent` row (`joinedVia` = the link) so the student appears in every `/teacher-dashboard` view; the student's `schoolId` is left unset so their practice stays unrestricted. |
+| Challenges | `/api/v1/challenges` | `POST /` `{ sessionId }` (auth) → `ChallengeSummary` (201; one per session, needs ≥3 MCQ answers else `400 NOT_ENOUGH_QUESTIONS`), `GET /mine` (auth) → `MyChallenge[]`, `GET /:code` (public, optional auth, 120/10 min) → `PublicChallenge` (no answers), `POST /:code/attempts` `{ name?, answers: { questionId, selected }[] }` (public, optional auth, 20/10 min) → `ChallengeAttemptResult` (201; scored server-side; guests get a single-use `claimToken`; owner → `400 OWN_CHALLENGE`), `POST /attempts/:attemptId/claim` `{ claimToken }` (auth) → `ChallengeClaimResult` (links a guest play to the account and credits the owner as referrer if the account is new; the play's answers count towards the referral gift, so `gift` can come back already unlocked), `GET /:code/review` (auth; owner or a player, else `403 PLAY_FIRST`) → `ChallengeReview` |
+| Notifications | `/api/v1/notifications` | All auth, any role. `GET /` `?before=<nextCursor>&limit=` (≤50, default 20) → `NotificationList` (newest first by `lastAt`), `GET /unread-count` → `{ unread }` (the bell polls this every 60 s while the tab is visible), `POST /read` `{ ids }` or `{ all: true }` → `NotificationReadResult`. Rows are written by the backend on challenge plays, referral joins/gifts, badges, class-link joins and a daily 5 pm IST job (gift reminders, teacher milestones); one-time events never repeat; rows expire 60 days after their last event. |
 | Goals | `/api/v1/goals` | `GET /` (auth), `PUT /` (auth) |
 
-### 1.26 Health
+### 1.29 Health
 
 | Method | Path |
 |--------|------|
 | GET | `/ping` |
 
-### 1.27 AI Assistant (`/api/v1/ai-assistant`)
+### 1.30 AI Assistant (`/api/v1/ai-assistant`)
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
@@ -409,8 +422,12 @@ All require `auth, isTeacher` (applied at router level).
 
 ## 2. AI Service Endpoints (FastAPI + Qdrant)
 
-Base: `http://localhost:8000` (dev) / `https://ai-service.askaide.ai` (prod)
+Host: `http://localhost:8000` (dev) / `https://ai-service.askaide.ai` (prod)
 Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/health/live`, `/health/ready`, `/docs`, `/redoc`)
+
+**Versioning:** all business endpoints are served under the `/v1` prefix. There are **no unversioned mirrors** — an unversioned business path returns `404`. Only the health/ops endpoints in the second table below are unversioned. New endpoints go under `/v1`.
+
+### 2.1 Versioned Endpoints (`/v1`)
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
@@ -418,34 +435,45 @@ Auth: All endpoints require `x-api-key` header (except `/ping`, `/health`, `/hea
 | GET | `/v1/upload-status/{task_id}` | Path param | `UploadStatusResponse` | Poll upload task status; `status` is `queued`, `processing`, `completed`, or `failed` |
 | POST | `/v1/delete-document` | `{ class_id, chapter_id, subject_id }` | `DocumentDeleteResponse` | Removes from Qdrant |
 | POST | `/v1/search-document` | `{ class_id, chapter_id, subject_id }` | `DocumentSearchResponse` | Check existence |
-| POST | `/query` | `{ query, class_id, subject_id, chapter_ids, stream? }` | `QueryResponse` | RAG semantic search |
+| POST | `/v1/search-documents/batch` | `[{ class_id, subject_id, chapter_id }]` | `BatchDocumentSearchResponse` — `{ results: [{ found, metadata }] }` | Batch check multiple chapters |
+| POST | `/v1/query` | `{ query, class_id, subject_id, chapter_ids, stream? }` | `QueryResponse` | RAG semantic search |
 | POST | `/v1/generate-questions` | `{ class_id, subject_id, chapter_id, topics, n, type, is_distinct?, difficulty?, max_retries? }` | `GenerateQuestionsResponse` | AI question gen (`max_retries` caps LLM attempts for latency-sensitive first-batch calls) |
+| POST | `/v1/regenerate-topics` | `{ class_id, subject_id, chapter_id }` | `202` + `{ task_id }` | Async topic regeneration from Qdrant chunks |
+| POST | `/v1/sync-chapter-topics` | `{ chapter_id }` | `SyncChapterTopicsResponse` | Sync Qdrant→MongoDB topics |
 | GET | `/v1/ai-insights/chapter` | Query: `chapter_id`, `user_id` | `{ insight: string }` | Student progress analysis |
 | GET | `/v1/ai-insights/subject` | Query: `subject_id`, `user_id` | `{ insight: string }` | Subject-level analysis |
-| POST | `/v1/ai-agent/stream` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | SSE stream | Streaming AI content generation (quiz, paper, notes, etc.) |
+| GET | `/v1/ai-insights/teacher/class` | Query: `class_id`, `teacher_id` | `AITeacherClassInsightResponse` | Teacher class-level analysis |
 | POST | `/v1/ai-agent` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | `AgentResponse` (contains `generation_id`) | AI content generation (quiz, paper, notes, etc.) |
+| POST | `/v1/ai-agent/stream` | `{ teacher_id, prompt, responses?, session_id?, class_id?, subject_id?, chapter_id? }` | SSE stream | Streaming version (SSE, token-by-token) |
 | POST | `/v1/ai-agent/modify` | `{ teacher_id, generation_id, difficulty?, num_questions?, question_type?, sections?, duration_minutes? }` | `AgentResponse` | Modify existing generation — re-executes with merged params |
 | GET | `/v1/ai-agent/chapters` | Query: `teacher_id`, `subject_id?` | `{ chapters: [...] }` | Teacher's chapters with topics, RAG status, class/subject info |
 | GET | `/v1/ai-agent/classes` | Query: `teacher_id` | `{ classes: [] }` | Teacher's accessible classes |
 | GET | `/v1/ai-agent/tasks` | — | `{ tasks: [] }` | Available AI tasks |
 | GET | `/v1/ai-agent/history` | Query: `teacher_id`, `limit?`, `offset?` | `{ generations: [...] }` | Past generations, newest first |
 | GET | `/v1/ai-agent/generation/{generation_id}` | Path param | `{ generation: { ... } }` | Single generation by ID |
-| GET | `/v1/ai-agent/health` | — | `{ status: "healthy" }` | AI Agent health |
-| GET | `/v1/ai-insights/teacher/class` | Query: `class_id`, `teacher_id` | `AITeacherClassInsightResponse` | Teacher class-level analysis |
-| GET | `/v1/upload-status/{task_id}` | — | `AIUploadStatusResponse` | Async upload task status |
-| POST | `/v1/sync-chapter-topics` | `{ chapter_id }` | `{ synced: number }` | Sync Qdrant→MongoDB topics |
-| POST | `/v1/regenerate-topics` | `{ class_id, subject_id, chapter_id }` | Async — returns task_id | Async topic regeneration |
-| POST | `/search-documents/batch` | `[{ class_id, subject_id, chapter_id }]` | `{ results: [{ found, metadata }] }` | Batch check multiple chapters |
-| POST | `/conversations` | `{ user_id }` | `{ conversation_id }` | Create conversation |
-| GET | `/conversations` | Query: `user_id` | `{ conversations: [] }` | List conversations |
-| GET | `/conversations/{id}/messages` | Path param | `{ messages: [] }` | Get conversation messages |
-| POST | `/conversations/{id}/messages` | `{ role, content }` | `{ message: {...} }` | Add message to conversation |
-| DELETE | `/conversations/{id}` | Path param | `{ deleted: true }` | Delete conversation |
+| GET | `/v1/ai-agent/health` | — | `{ status: "healthy" }` | AI Agent health (requires `x-api-key` — it is versioned, not a public probe) |
+| POST | `/v1/conversations` | `{ user_id, title? }` | `{ conversation_id }` | Create conversation |
+| GET | `/v1/conversations` | Query: `user_id`, `limit?` | `{ conversations: [] }` | List conversations |
+| GET | `/v1/conversations/{id}/messages` | Query: `user_id` | `{ messages: [] }` | Get messages |
+| POST | `/v1/conversations/{id}/messages` | Query: `user_id`, `role`, `content` | `{ message: {...} }` | Add message |
+| DELETE | `/v1/conversations/{id}` | Query: `user_id` | `{ deleted: true }` | Delete conversation |
+| POST | `/v1/teacher/create-quiz` | `TeacherQuizRequest` — `{ teacher_id, prompt }` | `TeacherQuizResponse` | Legacy quiz entry point; delegates to the AI Agent internally |
+| GET | `/v1/teacher/classes` | Query: `teacher_id` | `{ success, classes: [] }` | Legacy — prefer `/v1/ai-agent/classes` |
 | GET | `/v1/admin/llm/status` | — | `LlmStatus` | Live provider/model and where it came from (`database` / `env`), env default, recent switches, start time, commit, per-provider key configured flag (never the key) |
-| POST | `/v1/admin/llm/test` | `LlmTestRequest` — `{ provider?, model? }` | `LlmTestResult` | Plain / JSON / question checks; empty body tests the live model. `400` unknown provider or key not configured, `504` past `LLM_TEST_TIMEOUT` (90s). Never changes anything |
+| POST | `/v1/admin/llm/test` | `LlmTestRequest` — `{ provider?, model?, temperature?, feature? }` | `LlmTestResult` | Plain / JSON / question checks; empty body tests the live model (with `feature`: what that feature runs now); `temperature` runs the checks at that temperature. `400` unknown provider or key not configured, `504` past `LLM_TEST_TIMEOUT` (90s). Never changes anything |
 | POST | `/v1/admin/llm/active` | `LlmActivateRequest` — `{ provider, model, requested_by? }` | `LlmSwitchResult` | Re-runs the 3 checks on the candidate; only if all pass: save to MongoDB `llm_settings` (scoped per deployment) → swap the live client in memory. Instant, no restart; in-flight calls finish on the old model. `activated: false` = failed checks, nothing changed. `409` switch already running, `503` can't save |
-| POST | `/v1/admin/llm/reset` | `{ requested_by? }` | `LlmSwitchResult` | Delete the saved choice; go back to `LLM_PROVIDER` + its model env var |
+| POST | `/v1/admin/llm/reset` | `{ requested_by? }` | `LlmSwitchResult` | Delete the saved choice; go back to `LLM_PROVIDER` + its model env var. Features with their own model keep it |
+| POST | `/v1/admin/llm/features/{feature}` | `LlmFeatureRequest` — `{ provider?, model?, temperature?, requested_by? }` | `LlmFeatureSwitchResult` | Give one feature (`LlmFeatureKey`) its own model and/or temperature. provider+model together, or only a temperature to stay on the live model. Runs the 3 checks on exactly that combination; only if all pass: save to `llm_settings` (`_id = feature:<scope>:<feature>`) → swap instantly. `404` unknown feature, `400` bad combination, `409` switch running, `503` can't save |
+| POST | `/v1/admin/llm/features/{feature}/reset` | `{ requested_by? }` | `LlmFeatureSwitchResult` | Delete the feature's saved choice; it follows the live model at the provider's default temperature |
 | GET | `/v1/admin/llm/models` | Query: `provider?`, `free_only?` (default true, OpenRouter only) | `LlmModelList` | Live provider listing cached 10 min; curated fallback when a key is missing or listing fails (`502` only if OpenRouter's public catalogue is down) |
+
+### 2.2 Unversioned Health & Ops Endpoints
+
+These sit on the app root, not the `/v1` router, so probes survive future version bumps.
+
+| Method | Path | Request | Response | Notes |
+|--------|------|---------|----------|-------|
+| GET | `/` | — | service info | Root |
 | GET | `/ping` | — | `{ status: "alive" }` | Health ping |
 | GET | `/health` | — | `{ status: "healthy" }` | Full health check |
 | GET | `/health/live` | — | `{ status: "alive" }` | Liveness probe |

@@ -1,7 +1,7 @@
 # SEO & GEO Checklist - AskAideAI
 
 > Tracking SEO (Search Engine Optimization) and GEO (Generative Engine Optimization) implementation status.
-> Last Updated: April 17, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -16,16 +16,15 @@
 | Static Prerendering | ✅ Active | `src/prerender.jsx` + `vite.config.ts` |
 
 ### Prerendered Pages (build-time HTML)
-`npm run build` now outputs fully prerendered HTML for 6 public routes. Googlebot receives real HTML on first byte — no JS rendering delay.
+`npm run build` outputs fully prerendered HTML for **501 public routes** (`src/prerender_routes.js`). Googlebot receives real HTML on first byte — no JS rendering delay.
 
-| Route | Prerendered | Title in HTML |
-|-------|-------------|--------------|
-| `/` | ✅ | AskAideAI - AI-Powered Learning Platform... |
-| `/for-schools` | ✅ | AskAideAI for Schools — AI Learning Platform... |
-| `/free-paper-generator` | ✅ | Free CBSE Question Paper Generator... |
-| `/try` | ✅ | Try AskAide AI for Free... |
-| `/blog` | ✅ | Blog - AI Learning Tips & Study Guides... |
-| `/signup` | ✅ | Sign Up Free \| AskAideAI... |
+| Group | Routes |
+|-------|--------|
+| Marketing and company pages | `/`, `/try`, `/for-schools`, `/free-paper-generator`, `/signup`, `/blog`, `/feedback`, `/privacy-policy`, `/terms-of-service`, `/about`, `/pricing`, `/how-it-works` |
+| Blog posts | 11 `/blog/<slug>` pages |
+| Curriculum | 478 pages: 7 class hubs, 31 subject pages, 440 chapter pages (from `src/data/curriculum.static.js`) |
+
+Public URLs end in a trailing slash. `public/_redirects` 301s the slash-less form, and an inline script in `index.html` does the same in the browser before the app loads.
 
 ### SEO Components Available
 
@@ -34,7 +33,7 @@
 | `SEOHead` | Page meta tags | Import and add to any page |
 | `OrganizationSchema` | Company JSON-LD | Homepage only |
 | `FAQSchema` | FAQ rich snippets | Pages with FAQ sections |
-| `BreadcrumbSchema` | Breadcrumb rich results | Multi-level pages |
+| `BreadcrumbSchema` | Breadcrumb rich results | Multi-level pages, About, Pricing, How it works |
 | `ContactInfo` | NAP-consistent contact | Footer, contact page |
 
 ---
@@ -48,14 +47,20 @@
 | `/free-paper-generator` | ✅ | ✅ `/free-paper-generator` | — | ✅ | ✅ | Done |
 | `/try` | ✅ | ✅ `/try` | — | ✅ | ✅ | Done |
 | `/blog` | ✅ | ✅ `/blog` | — | — | ✅ | Done |
-| `/blog/:slug` | ✅ | ✅ dynamic | ✅ Article | — | ❌ dynamic | Done |
-| `/class/:id/subject/:id` | ✅ | ✅ dynamic | — | ✅ | ❌ dynamic | Done |
+| `/about` | ✅ | ✅ `/about/` | ✅ Org + Breadcrumb | — | ✅ | Done |
+| `/pricing` | ✅ | ✅ `/pricing/` | ✅ FAQ + Breadcrumb | — | ✅ | Done |
+| `/how-it-works` | ✅ | ✅ `/how-it-works/` | ✅ FAQ + Breadcrumb | — | ✅ | Done |
+| `/blog/:slug` | ✅ | ✅ dynamic | ✅ Article | — | ✅ | Done |
+| `/class/:id` | ✅ | ✅ dynamic | — | ✅ | ✅ | Done |
+| `/class/:id/subject/:id` | ✅ | ✅ dynamic | — | ✅ | ✅ | Done |
+| `/class/:id/subject/:id/chapter/:id` | ✅ (`noindex, follow` until the chapter has snapshot questions) | ✅ dynamic | — | ✅ | ✅ | Done |
 | `/signup` | ✅ | ✅ `/signup` | — | ✅ | ✅ | Done |
 | `/login` | ✅ noindex | — | — | — | — | Done |
-| `/privacy-policy` | ✅ | ✅ `/privacy-policy` | — | — | — | Done |
-| `/terms-of-service` | ✅ | ✅ `/terms-of-service` | — | — | — | Done |
-| `/feedback` | ✅ | ✅ `/feedback` | — | — | — | Done |
-| `/dashboard` | — | — | — | — | N/A | Protected |
+| `/privacy-policy` | ✅ | ✅ `/privacy-policy` | — | — | ✅ | Done |
+| `/terms-of-service` | ✅ | ✅ `/terms-of-service` | — | — | ✅ | Done |
+| `/feedback` | ✅ | ✅ `/feedback` | — | — | ✅ | Done |
+| `/c/:code`, `/join/:code` | ✅ noindex | ✅ dynamic | — | — | — | Shared via WhatsApp, not indexed |
+| Signed-in pages (`/dashboard`, `/study`, …) | ✅ tab title + noindex | — | — | — | N/A | Protected |
 
 > **Canonical URL bug fixed (April 2026):** `TryNow`, `PublicPaperGenerator`, and `SeoSubjectPage` were missing the `path=` prop on `SEOHead`, causing all three to emit `https://askaide.in/` as their canonical. This has been corrected.
 
@@ -65,17 +70,20 @@
 
 | Item | Status | File |
 |------|--------|------|
-| robots.txt | ✅ | `public/robots.txt` |
-| sitemap.xml | ✅ 13 URLs | `public/sitemap.xml` |
+| robots.txt | ✅ Disallows app paths | `public/robots.txt` |
+| sitemap.xml | ✅ 120 URLs (chapters without snapshot questions are left out) | `public/sitemap.xml` |
+| Trailing-slash redirects | ✅ | `public/_redirects` (generated), `index.html` |
+| Legacy chapter URLs | ✅ Redirect to the current chapter slug | `SeoChapterPage.jsx` |
+| Favicon and PWA icons | ✅ Real files (`favicon.ico`, `favicon.svg`, `apple-touch-icon.png`, `icons/`) | `public/`, `scripts/generate-icons.mjs` |
 | index.html SEO | ✅ | `index.html` |
 | Canonical URLs | ✅ All pages | Via `SEOHead path=` prop |
 | Open Graph | ✅ | Via SEOHead |
 | Twitter Cards | ✅ | Via SEOHead |
-| Static Prerendering | ✅ 6 pages | `vite-prerender-plugin` |
-| OG Image | ⚠️ Needed | `public/og-image.jpg` |
+| Static Prerendering | ✅ 501 routes | `vite-prerender-plugin` |
+| OG Image | ✅ | `public/og-image.png` |
 
-### Sitemap URLs (13 total)
-`/`, `/free-paper-generator`, `/try`, `/for-schools`, `/signup`, `/blog`, `/blog/how-ai-transforms-personalized-learning-2026`, `/blog/10-ai-study-techniques-students`, `/blog/chapter-wise-study-more-effective`, `/feedback`, `/privacy-policy`, `/terms-of-service`
+### Sitemap URLs (120 total)
+Static marketing and company pages, the blog posts, the class hubs and subject pages, and every chapter page that has snapshot questions. Regenerated by `npm run sitemap` (run first by `npm run build`). Refresh the chapter snapshot with `npm run content` so newly covered chapters drop `noindex` and join the sitemap.
 
 ---
 
@@ -87,8 +95,7 @@
 | geo.region | IN | ✅ |
 | geo.placename | India | ✅ |
 | addressCountry | IN (in schemas) | ✅ |
-| Keywords | CBSE, State Board, Class 9-12 | ✅ |
-| Testimonials | Delhi, Mumbai, Bangalore | ✅ |
+| Keywords | CBSE, NCERT, Class 6–12 | ✅ |
 
 ---
 

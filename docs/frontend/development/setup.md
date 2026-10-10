@@ -4,7 +4,7 @@
 For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend), follow the canonical [Getting Started](/docs/reference/getting-started) guide. This page covers **frontend-specific** details only.
 :::
 
-A modern, high-performance EdTech platform built with React, TypeScript, and Tailwind CSS. This frontend serves as the primary interface for students, teachers, and administrators to interact with the AskAide AI ecosystem.
+A modern, high-performance EdTech platform built with React, JavaScript, and Tailwind CSS. This frontend serves as the primary interface for students, teachers, and administrators to interact with the AskAide AI ecosystem.
 
 ## 🚀 Features
 
@@ -14,17 +14,22 @@ A modern, high-performance EdTech platform built with React, TypeScript, and Tai
 - **Auto Question Paper Generator**: Professional board-style exam papers generated in seconds.
 - **Lead Magnet**: Public-facing free paper generator with automatic WhatsApp delivery.
 - **Mastery Analytics**: Topic-level progress tracking with AI-generated learning insights.
-- **Multi-Role Support**: Tailored experiences for Students, Teachers, Parents, and Admins.
+- **Multi-Role Support**: Tailored experiences for Students, Teachers, Principals, Parents, and Admins.
+- **Challenges & Refer & Earn**: Challenge a friend on WhatsApp (played without login) and invite friends for a shared gift.
+- **Teacher Class Links**: Teachers sign up on their own and bring students in with a link or QR code.
+- **In-App Notifications**: Bell, panel and toast for signed-in users.
 
 ## 🛠 Tech Stack
 
 - **Framework**: React 18 + Vite
 - **Language**: JavaScript (TypeScript installed but not in active use)
 - **Styling**: Tailwind CSS
-- **State Management**: Redux Toolkit (Auth, Profile, Session)
+- **State Management**: Redux Toolkit (Auth, Profile, Session, AI Agent)
 - **Routing**: React Router DOM (Lazy-loaded routes)
 - **API Client**: Axios (with centralized interceptors)
 - **Analytics**: Microsoft Clarity
+- **Tests**: Vitest + React Testing Library (23 files in `src/__tests__/`)
+- **Fonts**: Fraunces, Inter Tight, JetBrains Mono, self-hosted in `public/fonts/`
 
 ## 📁 Project Structure
 
@@ -56,6 +61,12 @@ src/
    ```bash
    npm run dev
    ```
+4. **Run the tests**:
+   ```bash
+   npm test
+   ```
+
+Google sign-in needs `VITE_GOOGLE_CLIENT_ID`, and the origin you run on (for example `http://localhost:5173`) must be an authorised JavaScript origin for that client, or the button fails.
 
 ## 📖 Related Documentation
 

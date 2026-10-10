@@ -8,42 +8,62 @@ Welcome to the AskAide AI monorepo. This guide covers everything you need to kno
 
 ```
 AskAideAI/
-├── Frontend/              React 18 + Vite SPA
+├── frontend/              React 18 + Vite SPA
 │   └── src/
-│       ├── api/           16 API service modules (one per domain)
-│       ├── components/    14 component directories
+│       ├── api/           axios.js (shared instance + token refresh), endpoints.js,
+│       │                  and 19 *.api.js modules (one per domain, e.g. referral,
+│       │                  challenge, teacherClass, notification)
+│       ├── components/    20 component directories
 │       │   ├── admin/
+│       │   ├── ai-agent/
 │       │   ├── auth/
 │       │   ├── blog/
 │       │   ├── common/
 │       │   ├── dashboard/
+│       │   ├── feedback/
 │       │   ├── layout/
+│       │   ├── notifications/
 │       │   ├── pages/
+│       │   ├── principal/
+│       │   ├── profile/
 │       │   ├── progress/
 │       │   ├── question-paper/
 │       │   ├── seo/
+│       │   ├── student/
 │       │   ├── study/
-│       │   ├── student/quiz/
 │       │   ├── teacher/
+│       │   ├── tour/
 │       │   └── ui/
-│       ├── context/       ThemeContext, SoundContext
-│       ├── hooks/         useTypewriter, useSessionEvents, useQuestionPolling, useIsMobile
-│       ├── redux/         authSlice, profileSlice, sessionSlice
-│       └── utils/
+│       ├── contexts/      ThemeContext, SoundContext
+│       ├── hooks/         useQuestionPolling, useSessionEvents, useTypewriter, useIsMobile,
+│       │                  useNotifications, useReferralCode, useFeedbackGate, ...
+│       ├── store/slices/  authSlice, profileSlice, sessionSlice, aiAgentSlice
+│       └── utils/         incl. acquisition.js (first-touch ?ref= / UTMs),
+│                          pendingChallenge.js (guest challenge claim, pending class join)
 │
 ├── Backend/               Express.js + MongoDB API server
+│   ├── index.js           Entry point (also imports the cron jobs)
+│   ├── routes/v1/index.js Mounts every module router under /api/v1
 │   └── src/
-│       ├── modules/       14 domain modules
+│       ├── modules/       19 domain modules: auth, user, content, questions,
+│       │   │              progress, question-paper, teacher, quiz, school,
+│       │   │              principal, parent, supporting, ai-assistant, feedback,
+│       │   │              goal, referral, challenge, notification, campaign
 │       │   └── <domain>/
 │       │       ├── controllers/
 │       │       ├── routes/
 │       │       ├── services/
 │       │       ├── models/
-│       │       └── validators/
+│       │       ├── validators/
+│       │       ├── jobs/        (supporting, notification: node-cron jobs)
+│       │       ├── tests/
+│       │       └── index.js     barrel that re-exports the routers
 │       └── shared/
 │           ├── middleware/  auth, apiLogger, errorHandler, validate
-│           ├── models/      User, Profile, OTP
-│           └── utils/       cache, responseHandler, mailSender, logger
+│           ├── models/      User, Profile, OTP, UserActivityDay
+│           ├── jobs/        keepAlive
+│           ├── templates/   email templates
+│           └── utils/       cache, responseHandler, mailSender, logger, activityTracker, requestContext
 │
 ├── ai-service/            FastAPI + Python RAG/LLM service
 │   ├── main.py            FastAPI app entry
@@ -56,7 +76,9 @@ AskAideAI/
 ├── shared-contracts/      Shared API definitions & types
 │   ├── api-definitions.md
 │   ├── data-models.ts
-│   └── integration-guide.md
+│   ├── data-models.schema.json
+│   ├── integration-guide.md
+│   └── QUICK_START.md
 │
 └── docs/                  This file and future documentation
 ```
@@ -136,8 +158,8 @@ This is the full workflow when a feature spans multiple services.
 2. Define the Joi validator in `validators/`.
 3. Implement business logic in `services/`.
 4. Write the controller using `asyncHandler`.
-5. Wire routes in `routes/` and register in `src/app.js`.
-6. If the feature needs AI, call the AI Service from the controller or service layer.
+5. Wire routes in `routes/`, re-export the router from the module's `index.js`, and mount it in `routes/v1/index.js`.
+6. If the feature needs AI, call the AI Service from the service layer (`proxyAiService()` in `src/shared/utils/requestContext.js` adds the `x-api-key` and correlation headers).
 
 ### Step 3: AI Service Implementation (if needed)
 
@@ -149,10 +171,10 @@ This is the full workflow when a feature spans multiple services.
 
 ### Step 4: Frontend Implementation
 
-1. Create a new API service module in `src/api/myFeature.js`.
-2. Export typed functions that call the Backend endpoints.
+1. Add the URLs to `src/api/endpoints.js` and create an API module `src/api/myFeature.api.js` (export it from `src/api/index.js`).
+2. Export functions that call the Backend endpoints through the shared axios instance.
 3. Create components under `src/components/<domain>/`.
-4. Add any new Redux slices in `src/redux/` if state management is needed.
+4. Add any new Redux slices in `src/store/slices/` if state management is needed.
 5. Wire routing in `src/App.jsx` or the relevant router config.
 
 ### Step 5: Testing
@@ -173,74 +195,92 @@ This is the full workflow when a feature spans multiple services.
 
 ### Backend
 
+The Backend is ESM (`import`/`export`, `.js` extensions in import paths).
+
 1. **Validator** — `src/modules/<module>/validators/<module>.validator.js`
    ```js
-   const Joi = require('joi');
+   import Joi from 'joi';
 
-   const myEndpointSchema = Joi.object({
-     field: Joi.string().required(),
-     count: Joi.number().integer().min(1).default(10),
-   });
-
-   module.exports = { myEndpointSchema };
+   // validate() checks any of body, query and params.
+   export const myEndpointSchema = {
+     body: Joi.object({
+       field: Joi.string().required(),
+       count: Joi.number().integer().min(1).default(10),
+     }),
+   };
    ```
 
 2. **Service** — `src/modules/<module>/services/<module>.service.js`
    ```js
-   const MyModel = require('../models/<module>.model');
+   import MyModel from '../models/<module>.model.js';
 
-   exports.myEndpointService = async (params) => {
-     const result = await MyModel.find(params);
-     return result;
-   };
+   class MyService {
+     async myEndpoint(userId, params) {
+       return MyModel.find({ userId, ...params }).lean();
+     }
+   }
+
+   export default new MyService();
    ```
 
 3. **Controller** — `src/modules/<module>/controllers/<module>.controller.js`
    ```js
-   const asyncHandler = require('../../../shared/utils/asyncHandler');
-   const { myEndpointService } = require('../services/<module>.service');
+   import myService from '../services/<module>.service.js';
+   import { asyncHandler } from '../../../shared/middleware/index.js';
+   import { sendSuccess } from '../../../shared/utils/index.js';
 
-   exports.myEndpoint = asyncHandler(async (req, res) => {
-     const data = await myEndpointService(req.body);
-     res.json({ success: true, data });
+   export const myEndpoint = asyncHandler(async (req, res) => {
+     const data = await myService.myEndpoint(req.user.id, req.body);
+     return sendSuccess(res, 'Done', data); // → { success, message, data }
    });
    ```
 
 4. **Route** — `src/modules/<module>/routes/<module>.routes.js`
    ```js
-   const express = require('express');
-   const { myEndpoint } = require('../controllers/<module>.controller');
-   const { validate } = require('../../../shared/middleware/validate');
-   const { myEndpointSchema } = require('../validators/<module>.validator');
-   const auth = require('../../../shared/middleware/auth');
+   import express from 'express';
+   import { auth, validate } from '../../../shared/middleware/index.js';
+   import * as myController from '../controllers/<module>.controller.js';
+   import { myEndpointSchema } from '../validators/<module>.validator.js';
 
    const router = express.Router();
-   router.post('/my-endpoint', auth, validate(myEndpointSchema), myEndpoint);
+   router.post('/my-endpoint', auth, validate(myEndpointSchema), myController.myEndpoint);
 
-   module.exports = router;
+   export default router;
    ```
 
-5. **Register** in `src/app.js`:
+5. **Export** the router from `src/modules/<module>/index.js`:
    ```js
-   app.use('/api/v1/<module>', require('./modules/<module>/routes/<module>.routes'));
+   export { default as myRoutes } from './routes/<module>.routes.js';
+   ```
+
+6. **Mount** it in `routes/v1/index.js` (everything there is served under `/api/v1`):
+   ```js
+   import { myRoutes } from '../../src/modules/<module>/index.js';
+   router.use('/<module>', myRoutes);
    ```
 
 ### Frontend
 
-1. **API Module** — `src/api/myFeature.js`
+1. **Endpoint + API module** — add the URL to `src/api/endpoints.js`, then create `src/api/myFeature.api.js`:
    ```js
-   import api from '../utils/api'; // centralized Axios instance
+   import api from './axios'; // shared Axios instance (adds the JWT, refreshes expired tokens)
+   import { ENDPOINTS } from './endpoints';
 
-   export const myEndpoint = (data) =>
-     api.post('/<module>/my-endpoint', data);
+   export const myFeatureApi = {
+     myEndpoint: async (body) => {
+       const response = await api.post(ENDPOINTS.MY_FEATURE.MY_ENDPOINT, body);
+       return response.data.data; // unwrap { success, message, data }
+     },
+   };
    ```
+   Export it from `src/api/index.js`. Raw `fetch` calls (streaming, file downloads) must use `authorizedFetch()` from `axios.js` so expired tokens are refreshed the same way.
 
 2. **Component usage**:
    ```jsx
-   import { myEndpoint } from '../api/myFeature';
+   import { myFeatureApi } from '../../api';
 
    const handleAction = async () => {
-     const { data } = await myEndpoint({ field: 'value' });
+     const data = await myFeatureApi.myEndpoint({ field: 'value' });
      // use data
    };
    ```
@@ -351,7 +391,7 @@ export default MyWidget;
 ### Step 3: Follow conventions
 
 - One component per file.
-- Use the centralized Axios instance from `src/utils/api` for API calls.
+- Use the centralized Axios instance from `src/api/axios.js` (through the `src/api/*.api.js` modules) for API calls.
 - Use Redux (`useSelector`/`useDispatch`) for global state; use local state for UI-only concerns.
 - Access theme via `useContext(ThemeContext)`.
 - Use existing `ui/` primitives before building new UI elements.
@@ -484,7 +524,7 @@ Place test files adjacent to components: `MyWidget.test.jsx`.
    ```
 
 5. **Before requesting review**:
-   - Run linting (`npm run lint` in Frontend/Backend, `ruff check` in AI Service).
+   - Run linting (`npm run lint` in frontend/Backend, `ruff check` in AI Service).
    - Run type checks where applicable.
    - Run the full test suite.
    - Verify the app starts and the changed flows work end-to-end.
@@ -544,7 +584,7 @@ Reviewers should verify:
 | Inline styles for complex components | Use CSS modules or the existing styling approach |
 | Importing from `../../` deep paths | Use path aliases if configured, or reorganize |
 | Missing error boundaries | Wrap async component logic in try/catch or error boundaries |
-| Not using the centralized Axios instance | Always import from `src/utils/api` — it handles interceptors and base URL |
+| Not using the centralized Axios instance | Always go through `src/api/axios.js` — it adds the JWT, refreshes expired tokens and sets the base URL |
 
 ### Backend
 
@@ -585,12 +625,14 @@ Reviewers should verify:
 
 | Purpose | Location |
 |---------|----------|
-| Backend entry point | `Backend/src/app.js` |
-| Frontend entry point | `Frontend/src/App.jsx` |
+| Backend entry point | `Backend/index.js` |
+| Backend route mounts | `Backend/routes/v1/index.js` |
+| Backend cron jobs | `Backend/src/shared/jobs/keepAlive.js`, `Backend/src/modules/supporting/jobs/achievementScheduler.js`, `Backend/src/modules/notification/jobs/notificationScheduler.js` |
+| Frontend entry point | `frontend/src/main.jsx` (routes in `frontend/src/App.jsx`) |
 | AI Service entry point | `ai-service/main.py` |
 | API contract docs | `shared-contracts/api-definitions.md` |
 | Shared TS types | `shared-contracts/data-models.ts` |
-| Frontend API utils | `Frontend/src/utils/api.js` |
+| Frontend API client | `frontend/src/api/axios.js`, `frontend/src/api/endpoints.js` |
 | Backend auth middleware | `Backend/src/shared/middleware/auth.js` |
 | Backend error handler | `Backend/src/shared/middleware/errorHandler.js` |
 | AI config | `ai-service/config.py` |
@@ -598,4 +640,4 @@ Reviewers should verify:
 
 ---
 
-*Last updated: June 2026*
+*Last updated: October 2026*

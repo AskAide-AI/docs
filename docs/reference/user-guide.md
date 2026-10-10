@@ -16,13 +16,18 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
   - [Quizzes](#student-quizzes)
   - [Progress Tracking](#progress-tracking)
   - [Gamification](#gamification)
+  - [Challenge a Friend](#challenge-a-friend)
+  - [Refer & Earn](#refer--earn)
+  - [Notifications](#notifications)
   - [Profile](#student-profile)
   - [Settings](#settings)
   - [Try Now (No Signup)](#try-now-no-signup)
   - [Free Paper Generator](#free-paper-generator-no-signup)
   - [Blog & SEO Pages](#blog--seo-pages)
 - [Teacher Guide](#teacher-guide)
+  - [Teacher Signup](#teacher-signup)
   - [Login & Dashboard](#teacher-login--dashboard)
+  - [Class Join Links](#class-join-links)
   - [Quiz Management](#quiz-management)
   - [Question Paper Generator](#question-paper-generator)
   - [AI Assistant](#ai-assistant)
@@ -50,22 +55,24 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
 
 | Role | Description | Access |
 |------|-------------|--------|
-| **Student** | Classes 6–12 learners | Study, quizzes, progress, gamification |
-| **Teacher** | School teachers | Quiz creation, paper generation, student monitoring |
+| **Student** | Classes 6–12 learners | Study, quizzes, progress, gamification, challenges, Refer & Earn |
+| **Teacher** | School or independent teachers | Class join links, quiz creation, paper generation, student monitoring |
 | **Parent** | Parents/guardians | View linked children's progress |
 | **Admin** | School administrators | Full school, teacher, student, content management |
 
 ### First-Time Setup
 
 1. Visit the AskAide AI platform URL
-2. Click **Sign Up** (or accept an invite link from your school)
-3. Select your role and complete registration
+2. Click **Sign Up** (or open a link someone shared with you: a friend's invite, a friend's challenge, or your teacher's class link)
+3. Sign up with your email or with **Continue with Google**. You are signed in straight away
 4. Verify your email address
 5. Complete your profile (class, subjects, school)
 
-> **Students:** If your teacher shared a class code, enter it during signup to auto-link to your school and teacher.
+> **Students:** If your teacher shared a class link (it looks like `.../join/ABC123`), open it and tap **Join the class**. If you don't have an account yet, sign up first; you are added to the class when you come back to the link page.
 
-> **Teachers/Admins:** You typically receive an invite link from your school admin. Use that link to register with your school pre-linked.
+> **Students invited by a friend:** Sign up from your friend's invite link or challenge, and the invite is remembered even if you sign up later on the same device. See [Refer & Earn](#refer--earn).
+
+> **Teachers:** You can create your own free teacher account (see [Teacher Signup](#teacher-signup)). If your school already set you up, use the login details or invite link from your school admin.
 
 ---
 
@@ -126,6 +133,10 @@ At the end of each session:
 - Time taken
 - Breakdown by topic/difficulty
 - Points earned
+- Any badge you just earned (shown first, then the result card)
+- A **Challenge on WhatsApp** button (**Challenge a friend** on small phones), pinned at the bottom of the result card so you can tap it without scrolling. See [Challenge a Friend](#challenge-a-friend).
+
+Every answer is saved the moment you give it, so closing the tab mid-session doesn't lose your progress.
 
 > **PLACEHOLDER: `[Screenshot of session summary screen]`**
 
@@ -248,28 +259,34 @@ AskAide AI keeps you motivated through gamification features.
 
 #### Streak Freezes
 
-- Earned through milestones and achievements
-- Protects your streak for one missed day
+- You get a free streak freeze every week (it resets on Monday)
+- Extra freezes, called **streak shields**, come with the [Refer & Earn](#refer--earn) gift. They never expire and are used only after your weekly freeze
+- Each freeze protects your streak for one missed day
 - View your available freezes in the dashboard
 
 #### Badges
 
 | Badge | How to Earn |
 |-------|-------------|
-| 🏅 **First Step** | Complete your first study session |
-| 🔥 **7-Day Warrior** | Maintain a 7-day streak |
-| 💯 **Perfect Score** | Get 100% accuracy in a session |
-| 📚 **Bookworm** | Complete 50 sessions |
-| 🏆 **Subject Master** | Master all topics in a subject |
-| 🎯 **Sharpshooter** | Attempt 500+ questions |
-| ⭐ **Challenge Champion** | Complete 30 daily challenges |
-| 🤝 **Team Player** | Refer 3 friends |
+| 🎯 **First Steps** | Complete your first practice session |
+| 📚 **Quick Learner** | Complete 10 sessions in a week |
+| ⏱️ **Warm Up** / 📖 **Getting Serious** / 🐛 **Bookworm** / 🎓 **Dedicated Student** | Study for 1 / 10 / 20 / 40 hours in total |
+| ⭐ **Perfect Score** | Score 100% in a practice session |
+| 🧮 **Math Master** | Score 90%+ in 5 Math sessions in a row |
+| 🦉 **Night Owl** / 🌅 **Early Bird** | Study between midnight and 5 AM / between 5 AM and 7 AM (India time) |
+| 🔥 **Streak Starter** / ⚡ **Week Warrior** / 🏆 **Streak Master** | Reach a 7 / 14 / 30-day practice streak |
+| 🎮 **Weekend Warrior** | Complete 5 weekend study sessions |
+| 👑 **Comeback King** | Come back after 7+ days away |
+| 🌍 **Subject Explorer** | Master 5 chapters in one subject with 70%+ accuracy |
+| ⚔️ **Challenger** | A friend played your challenge |
+| 🥇 **Challenge Champion** | Beat a friend's challenge score |
+| 🤝 **Squad Starter** / 🫂 **Squad Leader** / 🎖️ **Class Captain** | 1 / 3 / 5 friends you invited are practising |
 
 #### Leaderboards
 
-- **Weekly leaderboard** — Ranked by points earned in the current week
-- **All-time leaderboard** — Ranked by total points
-- Filter by class, school, or subject
+- The dashboard's **Leaderboard** card ("Top learners this week") shows the top 10 students of the current week
+- The week starts on Monday (India time), so everyone starts fresh each week and new students can catch up
+- Students are ranked by correct answers this week and shown by first name only
 
 #### Daily Goals
 
@@ -277,11 +294,66 @@ AskAide AI keeps you motivated through gamification features.
 - Track progress toward your goal on the dashboard
 - Earn bonus points for meeting your goal consistently
 
-#### Referrals
+---
 
-1. Go to **Profile → Referrals**
-2. Share your referral code/link with friends
-3. When a friend signs up and completes their first session, you both earn bonus points
+### Challenge a Friend
+
+Turn any practice session into a quiz your friends can play, then see who scored more.
+
+1. Finish a practice session. On the result card, tap **Challenge on WhatsApp** (on small phones the button says **Challenge a friend**). The button is pinned at the bottom of the card, so you don't need to scroll
+2. WhatsApp opens with a ready message and your challenge link (it looks like `.../c/ABC123`). Send it to a friend or a class group. You need at least 3 multiple-choice answers in the session to make a challenge
+3. Your friend opens the link and plays the same questions. **They don't need an account to play**
+4. Your friend sees right away whether they won, lost or tied, and where they rank among everyone who played
+5. To see the correct answers and explanations, your friend signs in (or signs up). Their score is saved to the new account automatically
+6. You get a notification each time someone plays your challenge. Open it to see the results page with every player's score
+
+**Good to know:**
+- Each friend's first score is the one that counts; playing again shows the same result
+- You can't play your own challenge
+- A friend who signs up after playing your challenge counts as a friend you invited, and their challenge answers count towards your [Refer & Earn](#refer--earn) gift
+- Badges: **Challenger** when a friend plays your challenge, **Challenge Champion** when you beat a friend's score
+
+> **PLACEHOLDER: `[Screenshot of the session result card with the Challenge on WhatsApp button]`**
+
+---
+
+### Refer & Earn
+
+Invite friends to AskAide. When a friend you invited answers **10 questions**, you **both** get a gift:
+
+- 🎁 **A free practice paper**: a 20-question practice paper with answer key for any chapter you pick, downloadable as a PDF
+- 🛡️ **A streak shield**: an extra streak freeze that saves your streak if you miss a day
+
+**How to invite:**
+1. Open **Refer & Earn** (from the invite card on your dashboard or profile, tap **Details →**), or tap **Invite on WhatsApp** on the card
+2. Share your invite link. A friend can also join through a challenge you sent (see [Challenge a Friend](#challenge-a-friend))
+3. Your friend signs up from your link (email or Google)
+4. When your friend has answered 10 questions, you both get the gift. Answers in challenges they played count too
+
+**On the Refer & Earn page you can:**
+- Share your invite on WhatsApp or copy the invite message
+- See each friend you invited and whether they have unlocked the gift yet
+- Under **Your gifts**, get your practice paper: pick a chapter and tap **Get my practice paper (PDF)** (if the paper can't be made for that chapter, you keep your credit)
+- See progress towards the **Squad Starter**, **Squad Leader** and **Class Captain** badges
+- See the challenges you've sent and who played them
+- If a friend invited you, see how many of your 10 questions you've done
+
+> **Note:** Invites work for new accounts only. If you signed up with a friend's invite, your friend is credited automatically.
+
+> **PLACEHOLDER: `[Screenshot of the Refer & Earn page]`**
+
+---
+
+### Notifications
+
+The **bell** shows what's new: a friend played your challenge, a friend joined with your invite, your gift unlocked, you're a few questions away from your gift, or you earned a badge. Teachers also see students joining their class links and their class report or certificate becoming ready.
+
+- **Where the bell is:** in the sidebar on desktop, in the top bar on public pages, and next to the greeting on the student dashboard on phones. On phones, the **Menu** tab in the bottom bar also shows the number of unread notifications, and the menu has a **Notifications** row
+- A red number on the bell shows how many are unread. It updates about every minute while AskAide is open
+- Tap the bell to open the list (a sheet from the top on phones, a panel next to the bell on desktop). Opening it marks everything as read. Tap a notification to go to the related page
+- Similar notifications from the same day are grouped, for example "Kabir and 2 others played your challenge"
+- When something new arrives while you're using the app, a short pop-up appears. Pop-ups stay quiet while you're in a practice session or a quiz
+- Notifications are kept for 60 days
 
 ---
 
@@ -293,9 +365,27 @@ AskAide AI keeps you motivated through gamification features.
    - Total points, badges, streak
    - Subjects and mastery overview
 3. Click **Edit Profile** to update:
-   - Display name
    - Profile picture
    - Class/subject changes
+
+#### Changing Your Name
+
+1. On your **Profile**, tap **Edit** next to your name
+2. Type the new name (2–100 characters) and save
+
+Your name is what friends and teachers see (for example on the leaderboard and in challenges). It isn't used to sign in, so no confirmation is needed.
+
+#### Changing Your Email
+
+Your email is used to sign in, so changing it takes a confirmation code:
+
+1. On your **Profile**, tap **Change** next to your email
+2. Enter the new email address. AskAide sends a 6-digit code **to the new address**
+3. Enter the code within 10 minutes. Your sign-in email switches to the new address, and your old address gets a message saying the email was changed
+
+Until you enter the code, nothing changes on your account. If the code expired or you entered it wrong too many times, ask for a new one (you can request a new code after a minute). An email address that another account already uses can't be chosen.
+
+> These name and email options are on the Profile page for every account type, not just students.
 
 #### Public Profile
 
@@ -365,10 +455,22 @@ Generate practice papers instantly — no account required.
 
 ## Teacher Guide
 
+### Teacher Signup
+
+Teachers can create their own free account; you don't need your school to set you up first.
+
+1. On the login page, tap **Teacher? Create a free teacher account** (the **For Schools** page has the same option), or go to the signup page and switch to the teacher sign-up
+2. Sign up with your email, or with **Continue with Google**
+3. You land on the **Teacher Dashboard**. Its first step is to create a class link so your students can join (see [Class Join Links](#class-join-links))
+
+> If your school has already created your account, log in with the details from your school admin instead of signing up again.
+
+---
+
 ### Teacher Login & Dashboard
 
 **Logging In:**
-1. Use the invite link from your school admin (or login with your credentials)
+1. Log in with your email/username and password, or with Google
 2. You'll land on the **Teacher Dashboard**
 
 #### Dashboard Overview
@@ -383,6 +485,32 @@ Generate practice papers instantly — no account required.
 | **Quick Actions** | Create quiz, generate paper, view progress |
 
 > **PLACEHOLDER: `[Screenshot of teacher dashboard]`**
+
+---
+
+### Class Join Links
+
+A class link brings a whole class into AskAide with one message. Students who join appear in your Teacher Dashboard, just like students your school links to you.
+
+**Creating a link:**
+1. On the Teacher Dashboard, tap **Create your class link** (new teachers) or **Invite students**. This opens the **Class links** page
+2. Pick the **class** and **subject**. Optionally add a **section** (for example "B") and how many students you expect
+3. Share the link: send it on **WhatsApp** (a ready message in English and Hindi for the class or parents' group), **copy** it, or show the **QR code** on the projector
+
+Making a link again for the same class, subject and section gives you the same link.
+
+**How students join:**
+1. A student opens the link (it looks like `.../join/ABC123`) and sees your name, the class and the subject
+2. A signed-in student taps **Join the class**. A student without an account signs up (email or Google) and is added to your class automatically when they come back to the link
+3. You get a notification when students join
+
+Only student accounts can join a class link.
+
+**Tracking your class:** the Class links page shows, for each link, how many students joined, how many have practised since joining, and how many were active this week. A printable **class progress report** and an **AskAide Champion Teacher certificate** unlock as more of your students practise; the page shows your progress towards each, and you get a notification when one is ready.
+
+**Closing a link:** turn a link off on the Class links page when you no longer want new students to join. Students who already joined stay in your class. You can turn it back on later.
+
+> **PLACEHOLDER: `[Screenshot of the Class links page with a link and QR code]`**
 
 ---
 
@@ -844,6 +972,10 @@ This is useful for:
 | **AI generates wrong content** | Edit the generated content before publishing; provide more specific prompts |
 | **Quiz results not showing** | Ensure quiz is submitted (not just saved); check analytics tab |
 | **Streak not updating** | Streak requires completing at least one question; login alone doesn't count |
+| **Can't make a challenge** | Answer at least 3 multiple-choice questions in the session first |
+| **Refer & Earn gift not unlocked yet** | The gift unlocks for both of you once your friend has answered 10 questions (practice and challenge answers both count). Open **Refer & Earn** to see the latest progress |
+| **Can't join a class link** | Only student accounts can join. If the page says the link is turned off, ask your teacher for a new one |
+| **Email change code not arriving** | Check the spam folder of the **new** address; you can ask for a new code after a minute. Codes expire after 10 minutes |
 
 ### Getting Help
 
@@ -853,5 +985,5 @@ This is useful for:
 
 ---
 
-*Last updated: June 2026*
+*Last updated: October 2026*
 *Platform version: AskAide AI v1.0*

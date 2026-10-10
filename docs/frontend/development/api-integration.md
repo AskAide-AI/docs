@@ -1,7 +1,7 @@
 # API Integration
 
 > How the frontend connects to backend APIs.
-> Last Updated: January 19, 2026
+> Last Updated: October 10, 2026
 
 ---
 
@@ -9,7 +9,7 @@
 
 **Library:** Axios
 **Version:** 1.6.x
-**Base URL:** `import.meta.env.VITE_API_URL` or `https://askaideaibackend.onrender.com/api/v1`
+**Base URL:** `import.meta.env.VITE_API_URL` (no fallback in the client; set it in `.env`)
 **Location:** `/src/api/`
 
 ---
@@ -18,29 +18,32 @@
 
 **File:** `/src/api/axios.js`
 
-> Note: The older `src/services/` layer is legacy. All new API code should use `src/api/`.
+> There is no `src/services/` layer. All API code lives in `src/api/`: one axios instance, endpoint constants, and one operation module per domain, barrel-exported from `src/api/index.js`.
 
-**Available API modules:**
+**Available API modules (19):**
+- `src/api/auth.api.js` — Login, signup (email and Google), logout, password reset, profile picture (Redux thunks)
+- `src/api/study.api.js` — Study config, questions, sessions, answers, progress, streaks, badges
+- `src/api/quiz.api.js` — Quizzes (teacher and student)
+- `src/api/questionPaper.api.js` — Question paper generator
 - `src/api/ai-assistant.api.js` — AI Assistant
-- `src/api/admin.api.js` — Admin CRUD
+- `src/api/admin.api.js` — Admin CRUD, metrics, AI System
 - `src/api/teacher-dashboard.api.js` — Teacher Dashboard
+- `src/api/teacherClass.api.js` — Teacher class links and join page
+- `src/api/principal.api.js` — Principal Dashboard
 - `src/api/parent.api.js` — Parent Dashboard
 - `src/api/goal.api.js` — Daily Goals
-- `src/api/referral.api.js` — Referral System
+- `src/api/referral.api.js` — Refer & Earn (invite link, redeem, practice-paper reward)
+- `src/api/challenge.api.js` — Challenge a friend
+- `src/api/notification.api.js` — Notification bell
 - `src/api/stats.api.js` — Public Stats
-- `src/api/profile.api.js` — Profile Management
+- `src/api/profile.api.js` — Public profile, name edit, email change
+- `src/api/feedback.api.js`, `src/api/suggestion.api.js`, `src/api/behavioral.api.js` — Feedback
 
 ```javascript
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  'https://askaideaibackend.onrender.com/api/v1';
-
+// src/api/axios.js (trimmed)
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: { 'Content-Type': 'application/json' },
   timeout: 30000, // 30 second timeout
 });
 
@@ -49,8 +52,7 @@ api.interceptors.request.use((config) => {
   const tokenString = localStorage.getItem('token');
   if (tokenString) {
     try {
-      const token = JSON.parse(tokenString);
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${JSON.parse(tokenString)}`;
     } catch {
       config.headers.Authorization = `Bearer ${tokenString}`;
     }
@@ -58,22 +60,41 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor - handle errors
+// Refresh tokens are single-use, so only one refresh may run at a time:
+// one shared promise per tab, and a Web Lock across tabs.
+export function refreshAccessToken() {
+  if (!refreshPromise) {
+    const refreshTokenAtStart = readStored('refreshToken');
+    const run = () => runRefresh(refreshTokenAtStart); // reuses tokens another tab just saved
+    refreshPromise = Promise.resolve(
+      navigator.locks?.request ? navigator.locks.request('askaide-token-refresh', run) : run()
+    ).finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
+// Response interceptor - refresh on an expired token, then retry once
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response) {
-      console.error('API Error:', error.response.status, error.response.data);
-      if (error.response.status === 401) {
-        // Handle unauthorized (optional redirect)
-      }
+  async (error) => {
+    const original = error.config;
+    if (error.response?.status === 401 && isTokenExpiredBody(error.response.data) && !original._retry) {
+      original._retry = true;
+      // Sent with a token another tab already replaced? Just retry with the stored one.
+      // Otherwise: const token = await refreshAccessToken(); retry with it.
+      // A failed refresh runs clearAuthAndRedirect().
     }
+    if (error.response?.status === 401) clearAuthAndRedirect(); // other 401s
     return Promise.reject(error);
   }
 );
-
-export default api;
 ```
+
+`clearAuthAndRedirect()` removes the tokens and `user`, stores `auth:sessionExpired` and `auth:returnTo` in sessionStorage, and sends the user to `/login`, which explains why and returns them afterwards.
+
+### Raw `fetch` calls: `authorizedFetch()`
+
+Calls axios can't make (the teacher AI stream, PDF downloads) use `authorizedFetch(url, init)` from `src/api/axios.js`. It attaches the access token and, on a `tokenExpired` 401, refreshes once through `refreshAccessToken()` and retries. Don't attach the bearer token to a bare `fetch` by hand: it fails with a 401 once the 2-hour access token expires. The one exception is ending a session from a closing tab (`studyApi.endSessionOnPageExit`), a `keepalive` fetch that can't wait for a refresh.
 
 ---
 
@@ -87,11 +108,17 @@ export default api;
 | Auth | `/authenticate/signup` | User registration |
 | Auth | `/authenticate/sendotp` | Send OTP for login |
 | Auth | `/authenticate/verify-email` | Verify OTP and login |
-| Auth | `/auth/changepassword` | Change password |
-| Profile | `/profile/getUserDetails` | Get user profile |
-| Profile | `/profile/updateProfile` | Update profile |
-| Profile | `/profile/updateDisplayPicture` | Upload profile photo |
-| Profile | `/profile/deleteProfilePhoto` | Remove profile photo |
+| Auth | `/authenticate/google` | Google sign-in / sign-up (`accountType: 'Teacher'` on the teacher sign-up) |
+| Auth | `/authenticate/refresh` | Refresh the access token |
+| Auth | `/authenticate/logout` | Log out (revokes the refresh token) |
+| Auth | `/authenticate/changepassword` | Change password |
+| Profile | `/profile/details` | Get user profile |
+| Profile | `/profile/update` | Update profile |
+| Profile | `/profile/name` | Change display name (PUT) |
+| Profile | `/profile/email/request-change` | Send a 6-digit code to the new email |
+| Profile | `/profile/email/confirm-change` | Confirm the code and switch the email |
+| Profile | `/profile/display-picture` | Upload (PUT) or remove (DELETE) profile photo |
+| Profile | `/profile/public/:userId` | Public student profile |
 | Content | `/study/configuration` | Get classes with subjects |
 | Content | `/topics/class/:classId/subject/:subjectId` | Get topics for class/subject |
 | Content | `/chapters/class/:classId/subject/:subjectId` | Get chapters for class/subject |
@@ -101,7 +128,7 @@ export default api;
 | Sessions | `/sessions` | Create session |
 | Sessions | `/sessions/:sessionId/end` | End session (PATCH) |
 | Sessions | `/sessions/last-incomplete/:userId` | Get last incomplete session |
-| Answers | `/user-answers/batch` | Submit answers batch |
+| Answers | `/user-answers/batch` | Submit answers. The study screen sends one answer per call, as soon as it is given. |
 | Progress | `/topic-progress/progress/:userId/subject/:subjectId` | Subject progress |
 | Progress | `/topic-progress/progress/:userId/chapter/:chapterId` | Chapter progress |
 | Progress | `/topic-progress/ai-insights/userid/:userId/chapter/:chapterId` | AI chapter insights |
@@ -155,8 +182,24 @@ export default api;
 | Session Feedback | `/session-feedback/nps` | Submit NPS score |
 | Session Feedback | `/session-feedback/nps/check/:userId` | Check NPS due |
 | Goals | `/goals` | Get/update daily goals |
-| Referral | `/referral/my-code` | Get referral code |
+| Referral | `/referral/my-code` | Get invite code, gift progress and friends |
 | Referral | `/referral/redeem/:code` | Redeem referral code |
+| Referral | `/referral/rewards/practice-paper` | Spend a gift on a practice paper (60 s timeout) |
+| Challenges | `/challenges` | Create a challenge from a finished session (POST) |
+| Challenges | `/challenges/mine` | Challenges the student sent |
+| Challenges | `/challenges/:code` | Public challenge (no login) |
+| Challenges | `/challenges/:code/attempts` | Submit a play (guest or signed in) |
+| Challenges | `/challenges/attempts/:attemptId/claim` | Claim a guest's play after sign-in |
+| Challenges | `/challenges/:code/review` | Answers and full scoreboard |
+| Teacher Classes | `/teacher-classes` | Create a class link (POST) |
+| Teacher Classes | `/teacher-classes/mine` | Teacher's links, totals and milestones |
+| Teacher Classes | `/teacher-classes/:id` | Turn a link on or off (PATCH) |
+| Teacher Classes | `/teacher-classes/:id/report` | Class progress report |
+| Teacher Classes | `/teacher-classes/certificate` | Champion Teacher certificate |
+| Teacher Classes | `/teacher-classes/join/:code` | Class info (GET, public) or join (POST, student) |
+| Notifications | `/notifications` | List (`?before=&limit=`) → `{ items, hasMore, nextCursor, unread }` |
+| Notifications | `/notifications/unread-count` | Unread count (polled every 60 s while the tab is visible) |
+| Notifications | `/notifications/read` | Mark read: `{ ids }` or `{ all: true }` |
 | Stats | `/stats/public` | Public platform stats |
 | Leaderboard | `/leaderboard` | Global leaderboard |
 | Leaderboard | `/leaderboard/class/:classId` | Class leaderboard |
@@ -223,46 +266,36 @@ export function login(userName, password, navigate, setLoginError) {
 ---
 
 ### Study Service
-**File:** `/src/api/study.api.js`
+**File:** `/src/api/study.api.js` (abridged)
 
 ```javascript
 import api from './axios';
 
-export const studyService = {
-  getClasses: async () => {
-    const response = await api.get('/study/configuration/classes');
-    return response.data;
-  },
-  
-  getSubjects: async (classId) => {
-    const response = await api.get(`/study/configuration/subjects?classId=${classId}`);
-    return response.data;
-  },
-  
-  getChapters: async (subjectId) => {
-    const response = await api.get(`/study/configuration/chapters/${subjectId}`);
-    return response.data;
-  },
-  
+export const studyApi = {
+  getConfiguration: async (classIds = null) => { /* GET /study/configuration?classIds= */ },
+
   getQuestions: async (chapterId, questionType, difficulty, sessionId) => {
     const response = await api.get(`/questions/batch/chapter/${chapterId}/type/${questionType}/difficulty/${difficulty}/session/${sessionId}`);
     return response.data;
   },
-  
-  startSession: async (sessionData) => {
-    const response = await api.post('/sessions', sessionData);
+
+  startSession: async (config) => { /* POST /sessions */ },
+
+  endSession: async (sessionId, score, totalquestions) => {
+    const response = await api.patch(`/sessions/${sessionId}/end`, { score, totalquestions });
     return response.data;
   },
-  
-  endSession: async (sessionId, results) => {
-    const response = await api.put(`/sessions/${sessionId}`, results);
-    return response.data;
+
+  // From a closing tab: a keepalive fetch can finish after the page is gone.
+  endSessionOnPageExit: (sessionId, score, totalquestions) => { /* fetch(..., { method: 'PATCH', keepalive: true }) */ },
+
+  // The study screen calls this with one answer, right after it is given.
+  submitUserAnswers: async (userAnswers) => {
+    return api.post('/user-answers/batch', { answers: userAnswers });
   },
-  
-  submitAnswers: async (answers) => {
-    const response = await api.post('/answers/batch', { answers });
-    return response.data;
-  },
+
+  // The backend sends { badgeId, title } objects; this returns the badge IDs.
+  checkNewBadges: async (userId, sessionData) => { /* POST /badges/check */ },
 };
 ```
 
@@ -505,7 +538,7 @@ try {
 
 ```env
 # .env or .env.local
-VITE_API_URL=https://askaideaibackend.onrender.com/api/v1
+VITE_API_URL=http://localhost:4000/api/v1
 ```
 
 > **Note:** In Vite, environment variables must be prefixed with `VITE_` to be exposed to the client.

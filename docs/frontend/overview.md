@@ -16,24 +16,26 @@
 
 ## Architecture
 
-- **Public routes**: `/`, `/login`, `/signup`, `/try`, `/blog`, `/for-schools`
-- **Protected routes** (JWT required): `/study`, `/dashboard`, `/profile`, `/progress`, `/quizzes`
-- **Role-protected routes**: `/admin` (SuperAdmin), `/teacher/*`, `/parent/*`
+- **Public routes**: `/`, `/login`, `/signup`, `/try`, `/about`, `/pricing`, `/how-it-works`, `/blog`, `/for-schools`, `/class/...` (SEO pages), `/c/:code` (challenge a friend), `/join/:code` (join a teacher's class)
+- **Protected routes** (JWT required): `/study`, `/dashboard`, `/profile`, `/progress`, `/referral`, `/quizzes`, `/c/:code/results`
+- **Role-protected routes**: `/admin` (SuperAdmin), `/teacher/*`, `/principal/*`, `/parent/*`, `/question-paper/*`
 
 ### State Management
 
-- `authSlice` — token, signup data, loading
+- `authSlice` — token, refresh token, signup data, loading
 - `profileSlice` — user object (name, role, image)
 - `sessionSlice` — study sessions, answers
 - `aiAgentSlice` — AI assistant conversations
 - `ThemeContext` / `SoundContext` — persisted to localStorage
+- `useNotifications` — small shared store (outside Redux) for the notification bell's unread count and panel
 
 ### API Layer
 
 Unified Axios instance at `src/api/axios.js`:
 - Base URL from `VITE_API_URL` env var
 - Request interceptor auto-injects JWT
-- Response interceptor handles global errors
+- Response interceptor refreshes an expired access token, once at a time across all tabs, and retries
+- Raw `fetch` calls (AI streaming, PDF download) go through `authorizedFetch()`, which refreshes the same way
 - Endpoints centralized in `src/api/endpoints.js`
 
 ## Key Feature Areas
@@ -45,7 +47,10 @@ Unified Axios instance at `src/api/axios.js`:
 5. **AI Assistant** — Teacher AI content generation (quizzes, papers, notes)
 6. **Progress Analytics** — Subject/chapter/topic tracking with AI insights
 7. **Question Paper Generator** — Board-style exam generation with PDF preview
-8. **Gamification** — Badges, streaks, daily challenges, NPS surveys
+8. **Gamification** — Badges, streaks, daily challenges, weekly leaderboard, NPS surveys
+9. **Challenges & Referral** — Challenge a friend on WhatsApp, Refer & Earn gifts, invite attribution
+10. **Class Links** — Teachers self-sign-up and bring students in with a link or QR code
+11. **Notifications** — In-app bell, panel and toast
 
 ## AI Integration
 
@@ -64,4 +69,4 @@ VITE_CLARITY_PROJECT_ID=<project_id>
 VITE_CONTACT_EMAIL=hello@askaide.in
 ```
 
-Production API defaults to `https://askaideaibackend.onrender.com/api/v1`.
+If `VITE_API_URL` is unset, `vite.config.ts` (PWA API cache rule) and the chapter-content snapshot script fall back to the production backend URL. The axios client has no fallback, so requests then go to the frontend's own origin and fail.

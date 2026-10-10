@@ -1,6 +1,6 @@
 # Frontend — Low-Level Design
 
-> **Verified against:** `frontend` @ `75ce259` (main), 2026-09-26. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md).
+> **Verified against:** `frontend` @ `75ce259` (main), 2026-09-26; routing, shell, API layer, token refresh, study session, SEO, hooks, storage and testing re-checked at `c2aa6a2`, 2026-10-10. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md).
 
 All paths below are relative to the Frontend repo root. Claims that could not be confirmed from code are marked "(not verified)".
 
@@ -15,8 +15,9 @@ The Frontend is a single-page React application that serves every AskAide AI use
 | Access control | UI-only | Route guards hide screens. The Backend enforces authorisation. |
 | Data access | Via Backend REST only | Base URL `VITE_API_URL`. The browser never calls the AI Service directly. |
 | AI features (question generation, insights, teacher content generation, chapter ingestion) | Trigger and display only | Proxied by Backend endpoints such as `/questions/batch/...`, `/topic-progress/ai-insights/...`, `/ai-assistant/*`, `/chapters/create-with-pdf` |
-| SEO | Yes | Build-time prerendering of about 500 public routes, per-page meta, JSON-LD, sitemap |
+| SEO | Yes | Build-time prerendering of 501 public routes, per-page meta, JSON-LD, sitemap |
 | Offline and PWA | Partial | Workbox service worker, offline banner, local retry queues for answers |
+| In-app notifications | Yes | Bell, panel and toast over `/notifications`, polled every 60 s |
 | Analytics | Yes | Microsoft Clarity (`src/utils/clarity.js`) plus a second script injected by `index.html` |
 
 Out of scope: business rules, grading, question generation, persistence (all Backend or AI Service).
@@ -31,16 +32,17 @@ Out of scope: business rules, grading, question generation, persistence (all Bac
 | Routing | `react-router-dom` | ^7.5.2 | `BrowserRouter`, nested `Routes`, `StaticRouter` in prerender |
 | State | `@reduxjs/toolkit`, `react-redux` | ^2.7.0, ^9.2.0 | 4 slices (section 6) |
 | HTTP | `axios` | ^1.6.7 | Shared instance `src/api/axios.js` |
-| Forms | `react-hook-form` | ^7.56.3 | 8 files (auth and admin CRUD forms) |
+| Forms | `react-hook-form` | ^7.56.3 | 10 files (auth, profile and admin CRUD forms) |
 | Validation | `zod` | ^3.22.4 | Declared, **0 imports** in `src/` |
 | Head / SEO | `react-helmet-async` | ^2.0.5 | `SEOHead` and JSON-LD components |
-| Toasts | `react-hot-toast` | ^2.5.2 | 35 files import it |
+| Toasts | `react-hot-toast` | ^2.5.2 | 47 files import it |
 | UI primitives | `@headlessui/react` | ^1.7.18 | `src/components/ui/Dropdown.jsx` (Listbox) |
-| Icons | `lucide-react` | ^0.344.0 | About 118 files |
+| Icons | `lucide-react` | ^0.344.0 | About 137 files |
 | Charts | `recharts` | ^3.8.1 | Admin overview metrics only |
 | Markdown | `react-markdown`, `remark-gfm` | ^10.1.0, ^4.0.1 | AI chat bubbles, AI insights, blog posts |
 | Tours | `react-joyride` | ^3.1.0 | `src/components/tour/AppTour.jsx` |
-| Google sign-in | `@react-oauth/google` | ^0.13.5 | Only mounted when `VITE_GOOGLE_CLIENT_ID` is set |
+| Google sign-in | `@react-oauth/google` | ^0.13.5 | Only mounted when `VITE_GOOGLE_CLIENT_ID` is set. Buttons go through `auth/FitGoogleLogin.jsx`. |
+| QR codes | `qrcode.react` | ^4.2.0 | Class-link QR in `teacher/TeacherClassLinks.jsx` |
 | Analytics | `@microsoft/clarity` | ^1.0.2 | `src/utils/clarity.js` |
 | PDF | `jspdf` | ^4.2.1 | Dynamic `import('jspdf')` in `PublicPaperGenerator.jsx` only |
 | Build | `vite`, `@vitejs/plugin-react` | ^5.4.18, ^4.4.0 | Bundler and dev server (port 5173) |
@@ -72,7 +74,7 @@ Out of scope: business rules, grading, question generation, persistence (all Bac
 | `vitePrerenderPlugin` | `renderTarget: '#root'`, `additionalPrerenderRoutes` = `PUBLIC_ROUTES` minus `/` | Entry is the `<script prerender>` tag in `index.html` pointing at `src/prerender.jsx` |
 | `cleanup-jsdom` | `closeBundle` (order `pre`) deletes `global.document/window/navigator` | Removes the Node polyfills set by `src/prerender.jsx` |
 | `remove-prerender-script` | `transformIndexHtml` regex | Strips the prerender script tag from the shipped HTML |
-| `VitePWA` | `registerType: 'autoUpdate'`, `manifest: false` (uses `public/manifest.json`) | Precache `**/*.{js,css,ico,png,svg,woff2}` plus 4 runtime caches (section 9.6) |
+| `VitePWA` | `registerType: 'autoUpdate'`, `manifest: false` (uses `public/manifest.json`) | Precache `**/*.{js,css,ico,png,svg,woff2}` (includes the self-hosted fonts) plus 2 runtime caches (section 9.6) |
 | `define` | `process.env` = only `VITE_*` keys of the build environment | No `process.env` reads exist in `src/` |
 | `resolve.alias` | `decode-named-character-reference` pinned to its `index.js` | Build workaround for a markdown dependency (reason not verified) |
 | `esbuild` | `loader: 'jsx'` for `src/**/*.js(x)` | Allows JSX in `.js` files |
@@ -88,11 +90,11 @@ There are no path aliases for app code (imports are relative, e.g. `'../../api'`
 
 | Item | Fact |
 |---|---|
-| Source files | 172 `.jsx`, 61 `.js` (includes tests and data), 1 `.ts` (`src/vite-env.d.ts`), 0 `.tsx` |
+| Source files | 206 `.jsx`, 74 `.js` (includes tests and data), 1 `.ts` (`src/vite-env.d.ts`), 0 `.tsx` |
 | TypeScript | `tsconfig.app.json` is strict with `noEmit`. No type-check script. Only `vite.config.ts` is TS. |
 | Tailwind | `tailwind.config.js`: `darkMode: 'class'`, content `./index.html` + `./src/**/*.{js,ts,jsx,tsx}`, custom font families, no plugins |
 | Theme tokens | 77 CSS custom properties in `src/index.css`, defined under `:root` / `:root.light` and `:root.dark` |
-| Fonts | Fraunces, Inter Tight, JetBrains Mono from Google Fonts (`index.html`), constants in `src/constants/fonts.js` |
+| Fonts | Fraunces, Inter Tight, JetBrains Mono, self-hosted as variable woff2 files in `public/fonts/` (Fontsource builds, OFL). `index.html` preloads the four latin files and declares `@font-face`; latin-ext files load only when a page uses those glyphs. Constants in `src/constants/fonts.js`. |
 | SSR | None at runtime. Build-time prerender only (section 9.5). |
 
 ## 3. Code structure
@@ -106,8 +108,8 @@ src/
 ├── seo.config.js          site-wide SEO defaults, generatePageSEO()
 ├── index.css              Tailwind layers + theme CSS variables
 ├── setupTests.js          jest-dom for Vitest
-├── __tests__/             10 Vitest files (flat)
-├── api/                   axios instance, endpoints, 16 *.api.js modules, barrel
+├── __tests__/             23 Vitest files (flat)
+├── api/                   axios instance, endpoints, 19 *.api.js modules, barrel
 ├── components/
 │   ├── admin/             SuperAdmin tabs (CRUD, upload, feedback, campaigns, system/ AI System)
 │   │   └── overview/      metrics panels, NewUsersPanel, UserDetailDrawer, DatePicker
@@ -118,24 +120,27 @@ src/
 │   ├── dashboard/         role dashboards, onboarding (FirstRunGate, OnboardingOverlay)
 │   ├── feedback/          InlineFeedback, QuickPulse, MicroReaction, FeedbackPrompt, WhatsNew
 │   ├── layout/            Navbar, AppSidebar, BottomNav, MobileMenu, GuestMobileCTA
-│   ├── pages/             route pages (landing, SEO pages, profile, settings, progress, ...)
+│   ├── notifications/     NotificationBell, NotificationCenter, NotificationToaster
+│   ├── pages/             route pages (landing, SEO, challenge, join, referral, profile, ...)
+│   │   └── info/          About, Pricing, How it works + InfoLayout
+│   ├── profile/           NameEditor, EmailChanger
 │   ├── principal/         Principal analytics screens + shared tabs
 │   ├── progress/          SubjectSummary, ChapterList, ChapterDetailView (AI insights)
 │   ├── question-paper/    generator, preview, history
 │   ├── seo/               SEOHead + JSON-LD schema components
 │   ├── student/quiz/      quiz list, attempt, result, history
 │   ├── study/             /study practice flow
-│   ├── teacher/           teacher analytics, AI generator, quiz authoring, shared/
+│   ├── teacher/           teacher analytics, class links, report, certificate, AI generator, quiz authoring, shared/
 │   ├── tour/              AppTour (react-joyride)
 │   └── ui/                Dropdown, RangeSlider
 ├── config/                navItems.js (role nav model), tourSteps.js
 ├── constants/             badges.js, fonts.js
 ├── contexts/              ThemeContext, SoundContext
 ├── data/                  curriculum.static.js, chapter-topics.js, chapter-content.generated.js
-├── hooks/                 9 custom hooks + index.js barrel
+├── hooks/                 10 custom hooks + index.js barrel
 ├── mocks/                 teacherData.js (used), studyData.js (unused)
 ├── store/                 index.js + slices/ (auth, profile, session, aiAgent)
-└── utils/                 clarity.js, displayName.js, jsonld.js, text.js
+└── utils/                 clarity, displayName, jsonld, text, timeAgo, acquisition, pendingChallenge, tryChoice
 ```
 
 | Folder | Responsibility |
@@ -148,8 +153,8 @@ src/
 | `src/data/` | Static curriculum used by SEO pages, prerender route list and sitemap |
 | `src/components/<area>/` | Feature areas. Route containers plus their presentational children. |
 | `src/components/common`, `ui`, `teacher/shared`, `seo` | Shared presentational components |
-| `scripts/` | Build and dev tooling: sitemap/redirects, content snapshot, Playwright auth state |
-| `public/` | Static assets, `manifest.json`, `robots.txt`, generated `sitemap.xml` and `_redirects` |
+| `scripts/` | Build and dev tooling: sitemap/redirects, content snapshot, icon generation, Playwright auth state |
+| `public/` | Static assets, fonts, favicon and PWA icons, `manifest.json`, `robots.txt`, generated `sitemap.xml` and `_redirects` |
 
 ## 4. Application shell and routing
 
@@ -171,6 +176,7 @@ flowchart TD
   SH --> MOB["BottomNav, GuestMobileCTA, MobileMenu"]
   SH --> W["AIAssistantWidget (lazy)"]
   SH --> FR["FirstRunGate (lazy)"]
+  SH --> NT["NotificationToaster + NotificationCenter (signed in)"]
 ```
 
 **Hydrate or render.** `main.jsx` reads the path of the `link[rel=canonical]` baked into the HTML. If `#root` has children and that path equals the current path (trailing slash ignored), it calls `hydrateRoot`. Otherwise it empties `#root` and calls `createRoot().render()`. This handles the host's SPA fallback, which serves the prerendered home page for every non-prerendered path.
@@ -181,11 +187,13 @@ flowchart TD
 |---|---|
 | `Navbar` | Not on `/login` or `/signup`, and the sidebar is not shown |
 | `AppSidebar` (desktop) | A user is loaded and the path is in `AUTH_PATHS` (`/study`, `/dashboard`, `/profile`, `/settings`, `/progress`, `/quizzes`, `/quiz`, `/parent`, `/teacher`, `/principal`, `/admin`, `/question-paper`, `/referral`). Content is offset by the CSS variable `--app-sidebar-width`, which `AppSidebar` sets in a layout effect. |
-| `BottomNav` (mobile) | Path is not public (see `PUBLIC_ROUTES` plus the prefixes `/update-password/`, `/student/`, `/class/`, `/blog/`) |
-| `GuestMobileCTA` | Public path and no user |
+| `BottomNav` (mobile) | Path is not public (see `PUBLIC_ROUTES` plus the prefixes `/update-password/`, `/student/`, `/class/`, `/blog/`, `/join/`, and `/c/` except `/c/:code/results`) |
+| `GuestMobileCTA` | Public path, no user, and not a challenge or join page |
 | `MobileMenu` | Everywhere except `/login` and `/signup` |
-| `AIAssistantWidget` | Non-public paths. The widget itself renders nothing unless `accountType` is `Teacher` or `SuperAdmin`. |
-| `FirstRunGate` | Non-public paths with a user. Shows onboarding to first-time students only. |
+| `AIAssistantWidget` | Non-public paths, except challenge (`/c/...`) and join (`/join/...`) pages. The widget itself renders nothing unless `accountType` is `Teacher` or `SuperAdmin`. |
+| `FirstRunGate` | Non-public paths with a user, except challenge and join pages. Shows onboarding to first-time students only. |
+| `NotificationToaster`, `NotificationCenter` | A user is loaded (any path). One panel for every bell (section 5.8). |
+| Tab title (`SEOHead`, `noindex`) | Paths in `AUTH_PATHS`: `<Page> \| AskAide` from the first matching prefix in `APP_TITLES` |
 | Offline banner | `navigator.onLine` is false (window `online`/`offline` listeners) |
 
 Public-route matching strips one trailing slash first, because prerendered URLs end in `/`. The Toaster moves to bottom-center when the viewport is narrower than 768 px.
@@ -223,21 +231,22 @@ flowchart TD
 
 ### 4.4 Lazy loading
 
-Every route-level component in `App.jsx` is `React.lazy()` behind one `Suspense` with a `PageLoader` fallback (37 lazy route components plus `AIAssistantWidget` and `FirstRunGate`). The guards, layout components, `ErrorBoundary` and `SEOHead` are imported eagerly. Second-level splitting exists only in `PrincipalDashboard.jsx`, which lazy-loads its 6 screens. `TeacherDashboard` and `AdminDashboard` import their children eagerly, so each dashboard is one chunk.
+Every route-level component in `App.jsx` is `React.lazy()` behind one `Suspense` with a `PageLoader` fallback (43 lazy route components plus `AIAssistantWidget` and `FirstRunGate`). The guards, layout components, `ErrorBoundary` and `SEOHead` are imported eagerly. Second-level splitting exists only in `PrincipalDashboard.jsx`, which lazy-loads its 6 screens. `TeacherDashboard` and `AdminDashboard` import their children eagerly, so each dashboard is one chunk.
 
 ### 4.5 Route groups
 
-Full per-route detail: [Pages and Routes](./development/pages-and-routes.md). Parts of that page are stale (see section 12).
+Full per-route detail: [Pages and Routes](./development/pages-and-routes.md).
 
 | Group | Paths | Guard | Layout |
 |---|---|---|---|
-| Marketing | `/`, `/try`, `/for-schools`, `/free-paper-generator`, `/blog`, `/blog/:slug`, `/feedback`, `/privacy-policy`, `/terms-of-service` | none | Navbar, prerendered |
+| Marketing | `/`, `/try`, `/for-schools`, `/free-paper-generator`, `/about`, `/pricing`, `/how-it-works`, `/blog`, `/blog/:slug`, `/feedback`, `/privacy-policy`, `/terms-of-service` | none | Navbar, prerendered |
+| Challenges and class links | `/c/:code`, `/join/:code` (public); `/c/:code/results` (`ProtectedRoute`) | as listed | Navbar; no onboarding, assistant or guest CTA bar |
 | SEO curriculum | `/class/:classId`, `/class/:classId/subject/:subjectId`, `/class/:classId/subject/:subjectId/chapter/:chapterId` | none | Navbar, prerendered |
 | Auth | `/login`, `/signup`, `/forgot-password`, `/update-password/:id` | none | No Navbar on login/signup. `/signup` is prerendered with noindex. `/login` is not prerendered. |
 | Public profile | `/student/:userId` | none | noindex |
 | Student app | `/study`, `/dashboard`, `/progress`, `/profile`, `/settings`, `/referral`, `/suggestions`, `/whats-new` | `ProtectedRoute` | Sidebar, except `/suggestions` and `/whats-new`, which are not in `AUTH_PATHS` and keep the Navbar |
 | Quizzes | `/quizzes`, `/quiz/:quizId/attempt/:attemptId`, `/quiz/result/:attemptId`, `/quiz/history` | `ProtectedRoute` | Sidebar |
-| Teacher | `/teacher/*` (nested routes in `TeacherDashboard.jsx`) | Role | Sidebar |
+| Teacher | `/teacher/*` (nested routes in `TeacherDashboard.jsx`, incl. `classes`, `classes/:id/report`, `certificate`) | Role | Sidebar |
 | Question papers | `/question-paper`, `/question-paper/preview/:paperId`, `/question-paper/history` | Role | Sidebar |
 | Principal | `/principal/*` (nested, `index`, `classes`, `subjects`, `teachers`, `students`, `student/:studentId`) | Role | Sidebar |
 | Parent | `/parent/*` (single screen, no nested routes) | Role | Sidebar |
@@ -279,6 +288,7 @@ flowchart TD
   QP --> CD["ConfirmDialog (end session)"]
   QP --> SRM["SessionResultModal"]
   SRM --> SFW["SessionFeedbackWidget, ShareButton, BadgeUnlockToast"]
+  SRM --> CSC["ChallengeShareCard (pinned footer)"]
   QP --> NPS["NpsSurvey"]
 ```
 
@@ -305,6 +315,9 @@ flowchart TD
   TD --> CA["subject/:subjectId/chapter/:chapterId: TeacherChapterAnalytics"]
   TD --> WT["subject/:subjectId/weak-topics: TeacherWeakTopicsReport"]
   TD --> AF["subject/:subjectId/activity: TeacherActivityFeed"]
+  TD --> CL["classes: TeacherClassLinks"]
+  TD --> CR["classes/:id/report: TeacherClassReport"]
+  TD --> CE["certificate: TeacherCertificate"]
   TD --> AIG["ai-generator: TeacherAIGenerator"]
   TD --> QZ["quizzes, quiz/new, quiz/:quizId, quiz/:quizId/edit, quiz/:quizId/questions, quiz/:quizId/analytics"]
 ```
@@ -341,7 +354,8 @@ flowchart TD
 
 | Surface | Structure |
 |---|---|
-| `dashboard/Dashboard.jsx` (student) | `ContinueSessionBanner`, `DailyChallenge`, `DailyGoalCard`, `StreakDisplay`/`StreakCalendar`, `MasteryOverview`, `BadgeGrid`, `WeeklyActivityChart`, `ClassLeaderboard`, `ReferralCard`, `FeedbackPrompt`, dashboard tour |
+| `dashboard/Dashboard.jsx` (student) | `NotificationBell` (phones only, beside the greeting), `ContinueSessionBanner` (whole banner resumes), `DailyChallenge`, `DailyGoalCard`, `StreakDisplay`/`StreakCalendar`, `MasteryOverview`, `BadgeGrid`, `WeeklyActivityChart`, `ClassLeaderboard` (weekly), `ReferralCard`, `FeedbackPrompt`, dashboard tour |
+| `teacher/TeacherSubjectSelector.jsx` (teacher home) | "Invite students" button; with no students, a "Create your class link" welcome card instead of the old "contact your administrator" empty state |
 | `dashboard/PrincipalDashboard.jsx` | `PrincipalTabs` + lazy nested routes (`src/components/principal/`) |
 | `dashboard/ParentDashboard.jsx` | Child selector, then child overview (`parentDashboardApi`) |
 
@@ -349,13 +363,27 @@ flowchart TD
 
 | Component | Notes |
 |---|---|
-| `auth/Login.jsx` | `useForm` (no schema resolver). Single "email or username" identifier field. Optional `GoogleLogin`. Inline error only, with the server message shown verbatim on 429. Shows a toast if `auth:sessionExpired` is set. Post-login redirect resolver (section 8.1). |
-| `auth/Signup.jsx` | `useForm`. Reads `?ref=` into `referralCode`. Auto-login on success, then `/study`. |
+| `auth/Login.jsx` | `useForm` (no schema resolver). Single "email or username" identifier field. Optional Google button (`FitGoogleLogin`). Inline error only, with the server message shown verbatim on 429. Shows a toast if `auth:sessionExpired` is set. Post-login redirect resolver (section 8.1). Link to `/signup?role=teacher`. |
+| `auth/Signup.jsx` | `useForm`. `?role=teacher` sets `accountType: 'Teacher'` (also for Google) and hides the referral code field. Reads `?ref=` into `referralCode`; the thunks also send `getAcquisition()` (first-touch code and UTMs). Password: 8+ characters with a letter and a number. Auto-login on success, then the role's home (`/teacher`) or `/study`, unless `postAuthPath()` has a pending class join or challenge. |
+| `auth/FitGoogleLogin.jsx` | Measures its container with a `ResizeObserver` and passes that width (200–400) to `GoogleLogin`, which only takes a fixed pixel width |
 | `auth/ForgotPassword.jsx`, `auth/UpdatePassword.jsx` | Wrapped with `SEOHead noindex` in `App.jsx`. Reset errors keep the user on the page. |
+
+### 5.8 Challenges, class links and notifications
+
+| Component | Notes |
+|---|---|
+| `pages/ChallengePlay.jsx` (`/c/:code`) | Steps: loading, intro (guest name), playing (no right/wrong reveal), submitting, result. `markChallengeSource()` records the arrival. A guest's attempt returns a `claimToken`, saved by `savePendingChallenge()`; sign-up then lands on `/c/:code/results` through `postAuthPath()`. |
+| `pages/ChallengeResults.jsx` | Claims a pending guest attempt, then loads `/challenges/:code/review`. "Practise this chapter" saves a try choice and opens `/study` with `preselectConfig`. |
+| `common/ChallengeShareCard.jsx` | Hidden below 3 answers (`canChallenge`). Opens a blank window first, creates the challenge, then points it at `wa.me`. `variant="footer"` is pinned in `SessionResultModal`. |
+| `pages/JoinClass.jsx` (`/join/:code`) | Public class info; a signed-in student joins with `POST`. A guest's code is stored by `savePendingJoin()` and joined automatically on return (it wins over a pending challenge in `postAuthPath()`). |
+| `pages/ReferralPage.jsx` | Loads `/referral/my-code` and `/challenges/mine` in parallel. Practice-paper redeem uses a 60 s timeout. |
+| `notifications/NotificationCenter.jsx` | Portal, mounted once in `App.jsx`. Top sheet on phones (body scroll locked), popover next to the anchor bell on desktop. Opening loads `/notifications` and, if anything is unread, posts `{ all: true }` to `/notifications/read`. Cursor paging with "Show older". |
+| `notifications/NotificationToaster.jsx` | When the unread count rises, fetches the latest 5 and toasts the newest unread one newer than `askaide:notifToastAt`. Skipped on `/study` and `/quiz/`. Tapping marks that item read and follows its link. |
+| `notifications/NotificationBell.jsx` | Bell button plus `UnreadBadge` and `bellLabel()`, reused by `AppSidebar`, `BottomNav` (Menu tab) and `MobileMenu` (Notifications row). |
 
 ## 6. State management
 
-Overview and usage guidelines: [State Management](./development/state-management.md). That page is partly stale (see section 12).
+Overview and usage guidelines: [State Management](./development/state-management.md).
 
 ### 6.1 Redux store (`src/store/index.js`)
 
@@ -384,13 +412,15 @@ Both hooks (`useTheme`, `useSound`) are re-exported from `src/hooks/index.js`.
 | Hook | Exported from barrel | Purpose |
 |---|---|---|
 | `useQuestionPolling` | yes | Question batch loading, polling (5 s, max 60 polls), bounded retry on `failed` (2 retries, 3 s delay), `mastered` terminal state, full-screen vs inline errors. Pauses while the tab is hidden. Detail: [Study Session Flow](./features/study-session-flow.md). |
-| `useSessionEvents` | yes | During an active session: `visibilitychange` opens the leave dialog, `beforeunload` stashes buffered answers to `unsyncedAnswers`, online/offline handling, and intercepts clicks on nav buttons found by CSS selector |
+| `useSessionEvents` | yes | During an active session: online/offline handling (pauses and resumes the timer) and intercepts clicks on nav buttons found by CSS selector to open the leave dialog. No `visibilitychange` or `beforeunload` handling: answers are saved as they are given. |
 | `useLeaveSessionGuard` | no (direct import) | `guardedNavigate` + `ConfirmDialog` props shared by all nav surfaces. Leaving dispatches `resetSessionStarted`. |
 | `useFeedbackGate` | yes | Central throttle for all feedback UI: 72 h global cooldown, 24 h per key, 30-day silence after 3 dismissals, never during an active session. Stored in localStorage `askaide_feedback_gate`. |
 | `usePublicStats` | yes | `GET /stats/public` for landing and `/try` social-proof counters. Returns `null` until real data arrives, so no placeholder numbers get baked into prerendered HTML. |
 | `useAppTour` | no (direct import) | react-joyride tour state per key. Completion stored as `tour_completed_` + key. Steps in `src/config/tourSteps.js` (`tour_dashboard`, `tour_study_config`, `tour_study_practice`). |
 | `useTypewriter`, `useOptionsTypewriter` | yes | Typewriter animation for AI text |
 | `useIsMobile` | yes | `innerWidth` below the breakpoint (default 768), debounced |
+| `useNotifications` | no (direct import) | Module-level store read with `useSyncExternalStore`: `useUnreadNotifications()` (unread count; the first user starts polling every 60 s while visible plus on `visibilitychange`/`focus`, the last stops it) and `useNotificationPanel()` (`open`, `anchor`). Both pass a server snapshot so prerendering doesn't fail with React #407. |
+| `useReferralCode` | no (direct import) | The signed-in student's invite code, cached in `askaide:myRefCode`; `withRef(url, code)` adds `?ref=` to links to our own site (used by `ShareButton`) |
 
 ### 6.4 Local and router state
 
@@ -398,8 +428,8 @@ Both hooks (`useTheme`, `useSound`) are re-exported from `src/hooks/index.js`.
 |---|---|
 | Component state | All server data in containers, tab selection (`AdminDashboard`, `FeedbackCenter`), dialogs, form UI, the study session object and question list (`Home`, `QuestionPractice`), quiz answers, flags and timer (`QuizAttempt`) |
 | Refs | Poll timers and mount flags (`useQuestionPolling`), buffered answers for unmount flush (`QuestionPractice`), `AbortController` for SSE (`ChatWindow`) |
-| Router `location.state` | `from` (guard to login), `session` (dashboard "continue" to `/study`), `preselectConfig` (Progress page or onboarding to `/study`), `initialData` (optional quiz bootstrap read by `QuizAttempt`) |
-| URL | Route params for all entity IDs. `?ref=` on signup. |
+| Router `location.state` | `from` (guard to login), `session` (dashboard "continue" to `/study`), `preselectConfig` (Progress page, onboarding, joined class or challenge results to `/study`), `initialData` (optional quiz bootstrap read by `QuizAttempt`) |
+| URL | Route params for all entity IDs. `?ref=` and UTM tags on any first visit (captured by `captureAcquisition()` in `App.jsx`). `?role=teacher` on signup. |
 
 ### 6.5 Browser storage keys (names only)
 
@@ -415,13 +445,18 @@ Both hooks (`useTheme`, `useSound`) are re-exported from `src/hooks/index.js`.
 | localStorage | `tour_completed_<tourKey>` | `useAppTour.js` |
 | localStorage | `askaide-sidebar-collapsed` | `AppSidebar.jsx` |
 | localStorage | `askaide_feedback_gate` | `useFeedbackGate.js` |
+| localStorage | `askaide:tryChoice` | `utils/tryChoice.js` (24 h, read once) |
+| localStorage | `askaide:acquisition` | `utils/acquisition.js` (30 days, cleared after sign-in) |
+| localStorage | `askaide:pendingChallenge`, `askaide:pendingJoin` | `utils/pendingChallenge.js` |
+| localStorage | `askaide:myRefCode` | `hooks/useReferralCode.js` |
+| localStorage | `askaide:notifToastAt` | `NotificationToaster.jsx` |
 | sessionStorage | `auth:sessionExpired`, `auth:returnTo` | Set by `clearAuthAndRedirect()` in `src/api/axios.js`, consumed by `Login.jsx` |
 
 Slice initialisers use a `readStored()` helper that guards `typeof window`, removes the literal strings `"undefined"`/`"null"`, and drops malformed JSON so a corrupt key cannot crash store creation.
 
 ## 7. API layer
 
-Endpoint catalogue and examples: [API Integration](./development/api-integration.md). Treat its code snippets as stale (see section 12).
+Endpoint catalogue and examples: [API Integration](./development/api-integration.md).
 
 ### 7.1 Axios instance (`src/api/axios.js`)
 
@@ -431,8 +466,10 @@ Endpoint catalogue and examples: [API Integration](./development/api-integration
 | Defaults | `Content-Type: application/json`, `timeout: 30000` ms. Per-call overrides: `aiAssistantApi.processRequest` and `continueSession` use 600000 ms. PDFs use `responseType: 'blob'`. |
 | Request interceptor | Reads localStorage `token`, JSON-parses it (falls back to the raw string), sets `Authorization: Bearer ...` |
 | Refresh trigger | Response `401` whose `data.error` or `data.message` equals `tokenExpired` (case-insensitive), the request is not already `_retry`, and the URL is not `/authenticate/refresh` |
-| Single-flight refresh | Module-level `isRefreshing` flag plus `failedRequestsQueue`. The first request calls `POST /authenticate/refresh` with the stored refresh token. Concurrent 401s park in the queue and replay with the new token. |
-| On refresh success | Writes both tokens to localStorage, dispatches `setToken`/`setRefreshToken`, resolves the queue, replays the original request |
+| Stale-token shortcut | If the request was sent with an access token older than the one now in localStorage (another tab already refreshed), it is retried with the stored token and no refresh |
+| Single-flight refresh | `refreshAccessToken()`: one shared promise per tab, run under the Web Lock `askaide-token-refresh` (`navigator.locks`) across tabs. After taking the lock it compares the stored refresh token with the one it started with: if another tab has replaced it, it reuses that tab's tokens instead of refreshing again. Otherwise it calls `POST /authenticate/refresh`. Refresh tokens are single-use, so this stops two tabs from logging each other out. |
+| On refresh success | Writes both tokens to localStorage, dispatches `setToken`/`setRefreshToken`, replays the original request with the new token |
+| `authorizedFetch(url, init)` | `fetch` with the stored token and the same refresh-and-retry on a `tokenExpired` 401. Used by `aiAssistantApi.streamRequest` (SSE) and the PDF `DownloadButton` in `MessageBubble.jsx`. |
 | On refresh failure or any other 401 | `clearAuthAndRedirect()`: removes `token`, `refreshToken`, `user`, sets `auth:sessionExpired` and `auth:returnTo` (path + query) in sessionStorage, then does a hard `window.location.href = '/login'`. It is a no-op redirect if already on `/login`, so failed login attempts do not loop. |
 | Network errors | Rejected unchanged (empty `else if (error.request)` branch) |
 | Error normalisation | None centrally. Callers use `err.response?.data?.message` with a fallback string. Some module functions swallow errors and return `null` (e.g. `adminApi.listFeedback`, `feedbackApi.submitInlineReaction`). |
@@ -441,19 +478,19 @@ The Backend response envelope is `success`, `message`, `data`. Most module funct
 
 ### 7.2 Endpoint constants (`src/api/endpoints.js`)
 
-`ENDPOINTS` groups: `AUTH`, `PROFILE`, `STUDY`, `PROGRESS`, `CHAPTERS`, `ADMIN` (incl. `METRICS`), `TEACHER_DASHBOARD`, `PARENT`, `PARENT_STUDENTS`, `QUIZ`, `QUESTION_PAPER`, `BADGES`, `FEEDBACK`, `CAMPAIGN`. Only `auth.api.js`, `feedback.api.js` and `admin.api.js` (feedback paths) read these constants. The other modules inline their path strings or use a module-level `BASE_PATH`, so `endpoints.js` is not a complete inventory.
+`ENDPOINTS` groups: `AUTH`, `PROFILE`, `STUDY`, `PROGRESS`, `CHAPTERS`, `ADMIN` (incl. `METRICS`, `SYSTEM_LLM`), `TEACHER_DASHBOARD`, `PARENT`, `PARENT_STUDENTS`, `QUIZ`, `QUESTION_PAPER`, `REFERRAL`, `NOTIFICATIONS`, `CHALLENGES`, `TEACHER_CLASSES`, `BADGES`, `FEEDBACK`, `CAMPAIGN`. These modules read them: `auth`, `profile`, `referral`, `challenge`, `notification`, `teacherClass`, `feedback`, `quiz` and `admin`. The others (notably `study.api.js`) inline their path strings or use a module-level `BASE_PATH`, so `endpoints.js` is not a complete inventory.
 
 ### 7.3 Operation modules
 
-`src/api/index.js` barrel-exports `studyApi`, `adminApi`, the auth thunks, `principalApi`, `profileApi`, `referralApi`, `goalApi`, `statsApi`, `ENDPOINTS`, `API_BASE_URL` and `api`. The other modules are imported by file path.
+`src/api/index.js` barrel-exports `studyApi`, `adminApi`, the auth thunks, `principalApi`, `profileApi`, `referralApi`, `challengeApi`, `notificationApi`, `teacherClassApi`, `goalApi`, `statsApi`, `ENDPOINTS`, `API_BASE_URL` and `api`. The other modules are imported by file path.
 
 | Module | Export(s) | Backend base paths | Notes |
 |---|---|---|---|
-| `auth.api.js` | `signUp`, `login`, `loginWithGoogle`, `logout`, `getPasswordResetToken`, `resetPassword`, `fetchUserDetails`, `updateDisplayPicture`, `removeDisplayPicture`, `updateProfile` | `/authenticate/*`, `/profile/*` | **Only** module that returns Redux thunks, writes localStorage, shows toasts and fires Clarity events |
-| `study.api.js` | `studyApi` | `/study/configuration`, `/questions/*`, `/sessions/*`, `/user-answers/*`, `/progress/user/*`, `/topic-progress/*`, `/chapters/*`, `/leaderboard`, `/streaks/*`, `/daily-challenge/*`, `/session-feedback/*`, `/badges/*` | Plain promise functions. Includes admin chapter operations (`createChapter`, `deleteChapters`, `checkRagStatus`, `generateChapterQuestions`, `getChapterQuestionCounts`). |
+| `auth.api.js` | `signUp`, `login`, `loginWithGoogle`, `logout`, `getPasswordResetToken`, `resetPassword`, `fetchUserDetails`, `updateDisplayPicture`, `removeDisplayPicture`, `updateProfile` | `/authenticate/*`, `/profile/*` | **Only** module that returns Redux thunks, writes localStorage, shows toasts and fires Clarity events. Signup and Google send `acquisition`; every thunk navigates through `postAuthPath()`. `loginWithGoogle` takes `{ accountType }` for teacher sign-up. |
+| `study.api.js` | `studyApi` | `/study/configuration`, `/questions/*`, `/sessions/*`, `/user-answers/*`, `/progress/user/*`, `/topic-progress/*`, `/chapters/*`, `/leaderboard`, `/streaks/*`, `/daily-challenge/*`, `/session-feedback/*`, `/badges/*` | Plain promise functions. Includes admin chapter operations (`createChapter`, `deleteChapters`, `checkRagStatus`, `generateChapterQuestions`, `getChapterQuestionCounts`). `endSessionOnPageExit` is a `keepalive` fetch. `checkNewBadges` maps the Backend's `{ badgeId, title }` objects to IDs. |
 | `quiz.api.js` | `quizApi` | `/quiz/*` | Teacher CRUD, publish, close, clone, analytics, question-bank search. Student `start`, `answer`, `submit`, `result`, `history`. |
 | `questionPaper.api.js` | `questionPaperApi` | `/question-paper/*` | `generatePublicPaper` targets `/question-paper/public/generate` (lead magnet). PDF via blob. |
-| `ai-assistant.api.js` | `aiAssistantApi` | `/ai-assistant/*` | Generate, continue, tasks, health, export PDF, conversations CRUD. `streamRequest` uses `fetch` to `/ai-assistant/stream` (SSE, bypasses axios). |
+| `ai-assistant.api.js` | `aiAssistantApi` | `/ai-assistant/*` | Generate, continue, tasks, health, export PDF, conversations CRUD. `streamRequest` uses `authorizedFetch` to `/ai-assistant/stream` (SSE, bypasses axios). |
 | `admin.api.js` | `adminApi` | `/school`, `/teacher`, `/principals`, `/student`, `/teacher-students`, `/classes`, `/subjects/class/*`, `/sections/*`, `/admin/metrics/*`, `/admin/system/llm/*`, `/feedback/admin`, `/campaign/*` | `normalizeListResponse`, `cleanParams`; `getLlmStatus`, `getLlmModels`, `testLlmModel`, `activateLlmModel`, `resetLlmModel` (AI System tab) |
 | `teacher-dashboard.api.js` | `teacherDashboardApi` (re-exports `mockTeacherData`) | `/teacher-dashboard/:teacherId/*` | |
 | `principal.api.js` | `principalApi` | `/principal/*` | School-scoped analytics |
@@ -462,11 +499,14 @@ The Backend response envelope is `success`, `message`, `data`. Most module funct
 | `suggestion.api.js` | `suggestionApi` | `/suggestions/*` | SuperAdmin moderation: `respond`, `hide`, `unhide` |
 | `behavioral.api.js` | `behavioralApi` | `/behavioral-prompt/*` | Behaviour-triggered feedback prompt |
 | `goal.api.js` | `goalApi` | `/goals` | |
-| `referral.api.js` | `referralApi` | `/referral/*` | |
+| `referral.api.js` | `referralApi` | `/referral/*` | `getMyReferral`, `redeemReferral`, `redeemPracticePaper` (60 s timeout) |
+| `challenge.api.js` | `challengeApi` | `/challenges/*` | `create`, `get` and `submitAttempt` (public; a signed-in player's token is still sent), `claim`, `review`, `mine` |
+| `teacherClass.api.js` | `teacherClassApi` | `/teacher-classes/*` | `create`, `mine`, `setActive`, `report`, `certificate`; `getJoinInfo` (public) and `join` (student) |
+| `notification.api.js` | `notificationApi` | `/notifications/*` | `list`, `unreadCount`, `markRead`. No toasts: the bell polls quietly. |
 | `stats.api.js` | `statsApi` | `/stats/public` | Unauthenticated |
-| `profile.api.js` | `profileApi` | `/profile/public/:userId` | Unauthenticated public profile |
+| `profile.api.js` | `profileApi` | `/profile/public/:userId`, `/profile/name`, `/profile/email/*` | Public profile, `updateName`, `requestEmailChange`, `confirmEmailChange`. Errors are rethrown as `Error` with the Backend message. |
 
-Two components also call the Backend with raw `fetch` and a manually attached bearer token: `aiAssistantApi.streamRequest` and the PDF `DownloadButton` in `src/components/ai-agent/MessageBubble.jsx`.
+Raw `fetch` calls: `aiAssistantApi.streamRequest` and the PDF `DownloadButton` in `src/components/ai-agent/MessageBubble.jsx` go through `authorizedFetch`. `studyApi.endSessionOnPageExit` attaches the stored token by hand, because a `keepalive` request on `pagehide` can't wait for a refresh.
 
 ## 8. Key flows
 
@@ -491,7 +531,7 @@ sequenceDiagram
   T->>T: localStorage user, token, refreshToken
   T->>T: Clarity identify, user_role tag, login_success
   T->>L: navigate to resolver(user)
-  Note over L: order - stashed returnTo, then PRIMARY_BY_ROLE path, then /study
+  Note over L: order - stashed returnTo, then PRIMARY_BY_ROLE path, then /study. postAuthPath() overrides with a pending /join/:code, then a pending /c/:code/results
   alt 4xx or 429
     BE-->>AX: error
     AX-->>T: reject
@@ -508,28 +548,39 @@ sequenceDiagram
 sequenceDiagram
   participant C as Component
   participant AX as axios interceptor
-  participant Q as failedRequestsQueue
+  participant RT as refreshAccessToken
+  participant WL as Web Lock (all tabs)
+  participant LS as localStorage
   participant BE as Backend
   C->>AX: any request
   AX->>BE: Authorization Bearer access token
   BE-->>AX: 401 tokenExpired
-  alt refresh already in flight
-    AX->>Q: park request
-    Q-->>AX: new token when refresh completes
-    AX->>BE: replay with new token
-  else first expired request
-    AX->>BE: POST /authenticate/refresh with refreshToken
-    BE-->>AX: success, accessToken, refreshToken
-    AX->>AX: persist tokens, dispatch setToken and setRefreshToken
-    AX->>Q: resolve parked requests
+  alt stored token is newer than the one sent
+    AX->>BE: retry with the stored token, no refresh
+  else
+    AX->>RT: refreshAccessToken()
+    Note over RT: one shared promise per tab
+    RT->>WL: request askaide-token-refresh
+    WL-->>RT: lock granted
+    RT->>LS: read refreshToken
+    alt another tab already replaced it
+      RT->>RT: reuse that tab's tokens
+    else
+      RT->>BE: POST /authenticate/refresh with refreshToken
+      BE-->>RT: success, accessToken, refreshToken
+      RT->>LS: save both tokens, dispatch setToken and setRefreshToken
+    end
+    RT-->>AX: new access token
     AX->>BE: replay original request
   end
   BE-->>C: response
-  opt refresh throws, no refresh token, or non-expiry 401
+  opt refresh fails, success false, no refresh token, or non-expiry 401
     AX->>AX: clearAuthAndRedirect
     Note over AX: clear token keys and user, set auth:sessionExpired and auth:returnTo, hard redirect /login
   end
 ```
+
+`authorizedFetch()` follows the same path for raw `fetch` calls: on a `tokenExpired` 401 it awaits `refreshAccessToken()` and retries once.
 
 ### 8.3 App boot and session restore
 
@@ -590,20 +641,24 @@ sequenceDiagram
   PH-->>QP: first batch
   U->>QP: select option
   QP->>QP: grade locally, advance after 1.5 s
-  opt 10 buffered answers or last question of batch
-    QP->>BE: POST /user-answers/batch
-    Note over QP: on failure append to localStorage unsyncedAnswers
-  end
+  QP->>BE: POST /user-answers/batch with this one answer
+  Note over QP: on failure append to localStorage unsyncedAnswers
   QP->>PH: loadQuestions(true) when batch exhausted
-  U->>QP: End session and confirm
-  QP->>BE: POST /user-answers/batch with remaining buffer, then PATCH /sessions/:id/end
-  QP->>BE: GET /session-feedback/nps/check/:userId
-  QP->>U: SessionResultModal (POST /badges/check, share card)
-  U->>QP: close modal
-  QP->>HM: resetSessionStarted, navigate /dashboard
+  alt End session and confirm
+    U->>QP: End session
+    QP->>BE: PATCH /sessions/:id/end (if any answers)
+    QP->>BE: GET /session-feedback/nps/check/:userId
+    QP->>U: badge popups (POST /badges/check), then SessionResultModal with ChallengeShareCard
+    U->>QP: close modal
+    QP->>HM: resetSessionStarted, navigate /dashboard
+  else in-app navigation away
+    QP->>BE: PATCH /sessions/:id/end on unmount (if any answers)
+  else tab closed
+    QP->>BE: keepalive fetch PATCH /sessions/:id/end on pagehide (if any answers)
+  end
 ```
 
-The UI compares `selectedOption` with `currentQuestion.correctAnswer` (trimmed) for immediate feedback, and answers are sent to the Backend in `/user-answers/batch`. The Backend triggers AI generation when the bank is thin (Backend concern, see [Study Session Flow](./features/study-session-flow.md)).
+The UI compares `selectedOption` with `currentQuestion.correctAnswer` (trimmed) for immediate feedback, and each answer is sent to the Backend on its own through `/user-answers/batch` as soon as it is given (holding them for a batch of 10 lost them whenever a student left mid-batch). The practice tour starts about 1.8 s after the first answer. If `/try` saved a chapter (`askaide:tryChoice`), `Home` opens the config on it once, unless onboarding is pending, in which case the wizard uses it. The Backend triggers AI generation when the bank is thin (Backend concern, see [Study Session Flow](./features/study-session-flow.md)).
 
 ### 8.5 Quiz attempt
 
@@ -760,7 +815,7 @@ Only `VITE_*` variables reach client code. Template: `.env.example`.
 | Mechanism | Detail |
 |---|---|
 | `ErrorBoundary` (`src/components/common/ErrorBoundary.jsx`) | Wraps the whole app, key routes, the AI widget and `FirstRunGate`. "Try again" remounts the subtree through a keyed Fragment (`retryKey`). If the retry crashes again immediately, it does `window.location.reload()`. The secondary button hard-navigates to `/dashboard`. Errors are only logged to the console (no remote error reporting). |
-| Toasts | One `Toaster` in `App.jsx`. Auth thunks own their toasts. Components use `toast.error(err.response?.data?.message ...)`. `Login` uses inline errors instead of toasts. |
+| Toasts | One `Toaster` in `App.jsx`. Auth thunks own their toasts. Components use `toast.error(err.response?.data?.message ...)`. `Login` uses inline errors instead of toasts. `NotificationToaster` uses `toast.custom` with the fixed id `notification-news`. |
 | Session expiry UX | The axios interceptor stashes the reason and return path, and `Login.jsx` shows a lock toast |
 | Question loading | `useQuestionPolling` separates `error` (nothing ever loaded, full screen) from `inlineError` (mid-session) |
 | Offline | Global banner in `App.jsx`. Answer retry queues in `unsyncedAnswers` and `pendingQuizAnswers:<attemptId>`. |
@@ -776,23 +831,26 @@ Only `VITE_*` variables reach client code. Template: `.env.example`.
 | Microsoft Clarity | `@microsoft/clarity` via `src/utils/clarity.js`: `initClarity`, `identifyUser`, `setTag`, `trackEvent`, `upgradeSession`, constants `ClarityEvents` and `ClarityTags` | Disabled when `import.meta.env.DEV` is true or the project id is missing |
 | Rybbit analytics | Inline script in `index.html` injects the vendor script | Skipped on `localhost` and `127.0.0.1` |
 | Google Identity | `@react-oauth/google` | Only when `VITE_GOOGLE_CLIENT_ID` is set |
-| Google Fonts | `index.html` preconnect + stylesheet | Always. Cached CacheFirst by the service worker. |
+| Fonts | Self-hosted in `public/fonts/`, preloaded from `index.html` | Same origin; no third-party font request. In the service worker precache. |
 | DiceBear | Avatar URL fallback when the user has no image (`auth.api.js`, `StudentPublicProfile.jsx`) | Always |
 | Share / contact links | WhatsApp deep link (`FloatingWhatsAppButton.jsx`), X and Facebook share intents | User-initiated |
 
-Clarity events are fired from `auth.api.js` and 6 component files: `Home.jsx` (study start), `Dashboard.jsx`, `Progress.jsx`, `QuizAttempt.jsx` (quiz start and complete), `PublicPaperGenerator.jsx` and `TryNow.jsx`.
+Clarity events are fired from `auth.api.js` and 13 component files: `Home.jsx` (study start), `Dashboard.jsx`, `Progress.jsx`, `QuizAttempt.jsx` (quiz start and complete), `PublicPaperGenerator.jsx`, `TryNow.jsx`, `ChallengePlay.jsx`, `ChallengeResults.jsx`, `ChallengeShareCard.jsx`, `ReferralPage.jsx`, `ReferralCard.jsx`, `NotificationCenter.jsx` and `NotificationToaster.jsx`.
 
 ### 9.5 SEO and meta
 
 | Mechanism | Detail |
 |---|---|
-| Prerender | `vite-prerender-plugin` renders `PUBLIC_ROUTES` (`src/prerender_routes.js`): 20 static and blog routes plus 478 curriculum routes (7 class hubs, 31 subjects, 440 chapters, from `getAllCurriculumRoutes()` in `src/data/curriculum.static.js`). `src/prerender.jsx` maps a URL to a page with `getPageComponent()`, renders the same shell as `App.jsx` with `StaticRouter`, and returns Helmet `title`, `meta`, `link` and `script` tags as head elements with `lang: 'en-IN'`. |
+| Prerender | `vite-prerender-plugin` renders `PUBLIC_ROUTES` (`src/prerender_routes.js`): 23 static and blog routes (incl. `/about`, `/pricing`, `/how-it-works`) plus 478 curriculum routes (7 class hubs, 31 subjects, 440 chapters, from `getAllCurriculumRoutes()` in `src/data/curriculum.static.js`), 501 in all. `src/prerender.jsx` maps a URL to a page loader with `getPageLoader()`, which uses dynamic `import()` so Rollup doesn't fold every page and the question snapshot into one chunk preloaded on every page. It renders the same shell as `App.jsx` with `StaticRouter`, decodes Helmet's HTML entities, and returns `title`, `meta`, `link` and `script` tags as head elements with `lang: 'en-IN'`. |
 | Hydration parity | `prerender.jsx` mirrors the public shell exactly (Navbar, GuestMobileCTA, closed MobileMenu, no BottomNav) to avoid hydration mismatches (comment in `prerender.jsx`). The theme class is applied before paint for the same reason. |
 | Build-time content | `src/data/chapter-content.generated.js` embeds real preview questions so they appear in prerendered HTML. It is refreshed manually with `npm run content`. |
 | Per-page head | `src/components/seo/SEOHead.jsx`: title, description, canonical (always with a trailing slash), robots, OG, Twitter. `index.html` deliberately has no static description, OG or canonical tags. |
-| Robots | `noindex` on login, signup, forgot and update password, `NotFound`, `StudentPublicProfile`. `SeoChapterPage` emits `noindex, follow` when its chapter has no snapshot questions. `public/robots.txt` disallows app paths. |
+| Robots | `noindex` on login, signup, forgot and update password, `NotFound`, `StudentPublicProfile`, and every signed-in app page (the per-route tab title `SEOHead`). `SeoChapterPage` emits `noindex, follow` when its chapter has no snapshot questions. `public/robots.txt` disallows app paths, incl. `/referral`, `/suggestions` and `/whats-new`. |
+| Legacy chapter URLs | `SeoChapterPage` redirects old slugs built from raw DB names to the current chapter slug, and is keyed on the class/subject/chapter params so the redirected page remounts with fresh state |
+| Trailing slash | An inline script at the top of `index.html` replaces slash-less public URLs with their trailing-slash form before the app loads |
+| Icons | Real `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` and PWA icons (48–512 px plus maskable) in `public/`, generated by `scripts/generate-icons.mjs` |
 | JSON-LD | `Organization`, `WebSite`, `FAQ`, `Course`, `Breadcrumb`, `Article`, `Quiz`, `SoftwareApplication` schema components (`ReviewSchema` is unused), serialised with `safeJsonLd()` (`src/utils/jsonld.js`) |
-| Sitemap and redirects | `scripts/generate-sitemap.mjs` writes `public/sitemap.xml` (content-less chapters are left out) and `public/_redirects`: a 301 from each slashless prerendered path to its slash form, then the catch-all SPA rewrite `/* /index.html 200`. The script comments name Cloudflare Pages as the host. |
+| Sitemap and redirects | `scripts/generate-sitemap.mjs` writes `public/sitemap.xml` (120 URLs; content-less chapters are left out) and `public/_redirects`: a 301 from each slashless prerendered path to its slash form, then the catch-all SPA rewrite `/* /index.html 200`. The script comments name Cloudflare Pages as the host. |
 
 ### 9.6 Performance techniques
 
@@ -801,10 +859,13 @@ Clarity events are fired from `auth.api.js` and 6 component files: `Home.jsx` (s
 | Route-level code splitting | `React.lazy` for every route in `App.jsx`, nested lazy routes in `PrincipalDashboard.jsx`, lazy AI widget and onboarding gate |
 | Vendor chunking | `manualChunks` in `vite.config.ts` |
 | Dynamic import of heavy libs | `jspdf` loaded on demand in `PublicPaperGenerator.jsx` |
-| Memoisation | `React.memo` on `QuestionHistoryItem` only. `useMemo`/`useCallback` in 27 files. |
+| Memoisation | `React.memo` on `QuestionHistoryItem` only. `useMemo`/`useCallback` in 33 files. |
 | Polling hygiene | One timer in flight, paused on hidden tabs, bounded counts, no retry storms on timeouts (`useQuestionPolling.js`) |
-| Answer batching | Study answers sent in batches of 10 (`BATCH_SIZE` in `QuestionPractice.jsx`) |
-| Service worker caches | `google-fonts-cache` and `gstatic-fonts-cache` (CacheFirst, 10 entries, 1 year), `api-cache` (NetworkFirst for URLs under `VITE_API_URL`, 10 s network timeout, 100 entries, 24 h), `images-cache` (CacheFirst, 50 entries, 30 days) |
+| Answer saving | One small request per answer, sent as it is given (`BATCH_SIZE` in `QuestionPractice.jsx` now only numbers the answers) |
+| Fonts | Self-hosted and preloaded, so first visits paint in the final font (no swap shift) |
+| Layout stability | Landing counters render from first paint in a fixed-width slot of tabular digits; `DailyGoalCard` has a fixed minimum height |
+| Notification polling | One poller for the whole app, every 60 s and only while the tab is visible |
+| Service worker caches | `api-cache` (NetworkFirst for URLs under `VITE_API_URL`, 10 s network timeout, 100 entries, 24 h), `images-cache` (CacheFirst, 50 entries, 30 days). Fonts are precached. |
 | Debounced resize | `useIsMobile` (150 ms) |
 | Infinite scroll | Study history sidebar pages of 20 via `IntersectionObserver` |
 
@@ -824,9 +885,9 @@ Clarity events are fired from `auth.api.js` and 6 component files: `Home.jsx` (s
 |---|---|
 | Framework | Vitest 4 (`test` block in `vite.config.ts`), `jsdom` environment, globals enabled |
 | Libraries | `@testing-library/react`, `@testing-library/user-event`, `@testing-library/jest-dom` (loaded by `src/setupTests.js`) |
-| Layout | Flat `src/__tests__/`, 10 files, no co-located tests |
-| Coverage areas | Login identifier field and role-based redirect (`auth-login-field.test.jsx`), nav role model (`navigation-role-model.test.jsx`), onboarding gate and preselect handoff (`onboarding-first-session.test.jsx`), prerender route matcher, curriculum data integrity (route count 478), SEO page rendering (3 files), `stripInlineMarkdown`, plus a `1 + 1` placeholder |
-| Mocking | `vi.mock('../api', ...)`, `vi.mock('react-router-dom', ...)`, `vi.mock('@react-oauth/google', ...)` |
+| Layout | Flat `src/__tests__/`, 23 files, no co-located tests |
+| Coverage areas | Login identifier field and role-based redirect, nav role model, onboarding gate and preselect handoff, `/try` chapter handoff (`try-choice`), answer saving and session end on leave (`question-practice-answer-saving`), token refresh across tabs and `authorizedFetch` (`token-refresh`), badge unlock flow, challenge share card and gift note, referral attribution and pending claims, notification bell and panel, profile name and email change, teacher AI clarification, AI System tab and model-per-feature card, prerender route matcher, curriculum data integrity (route count 478), SEO page rendering (4 files), `stripInlineMarkdown`, plus a `1 + 1` placeholder. Full list: [Testing](./development/testing.md). |
+| Mocking | `vi.mock('../api', ...)` or a single module (e.g. `../api/notification.api`) with `vi.hoisted`, `vi.mock('react-router-dom', ...)`, `vi.mock('@react-oauth/google', ...)` |
 | Coverage tooling | Not configured |
 | E2E | No Playwright test suite or config. `playwright` 1.63 is used only for manual CLI-driven checks: `node scripts/pw-auth.mjs <role> --target=local` logs in through the Backend API and writes a storage-state file with the `token`, `refreshToken` and `user` localStorage keys. Local credentials live in the gitignored `.playwright/` folder. |
 | CI | No CI workflow in the repo (no `.github/`) |
@@ -840,7 +901,7 @@ npx vitest run -t "should pass a smoke test"
 
 ## 11. Design constraints and known limitations
 
-Technical facts from the code at `75ce259`. There are no `TODO`/`FIXME` markers in `src/`.
+Technical facts first listed from the code at `75ce259`. Rows 6, 8, 10, 16, 19 and 22 and rows 27–29 were updated at `c2aa6a2`. There are no `TODO`/`FIXME` markers in `src/`.
 
 | # | Constraint or limitation | Evidence |
 |---|---|---|
@@ -849,37 +910,40 @@ Technical facts from the code at `75ce259`. There are no `TODO`/`FIXME` markers 
 | 3 | `RoleProtectedRoute` calls `toast.error` during render. | `RoleProtectedRoute.jsx` |
 | 4 | Reducers perform side effects: `setToken`, `setRefreshToken`, `setSessionHistory` and `clearSessionHistory` write localStorage. | `authSlice.js`, `sessionSlice.js` |
 | 5 | Circular import: store, then `aiAgentSlice`, then `ai-assistant.api`, then `axios`, then store. It works only because `store` is read lazily inside interceptors. | `store/index.js`, `api/axios.js` |
-| 6 | SSE streaming and the chat PDF download use raw `fetch` with the stored token, so they get no automatic refresh on `tokenExpired`. | `ai-assistant.api.js`, `MessageBubble.jsx` |
+| 6 | Resolved: SSE streaming and the chat PDF download now use `authorizedFetch`, which refreshes on `tokenExpired`. The page-exit session end (`endSessionOnPageExit`) still sends the stored token by hand with no refresh, so a session left after the access token expired is not ended by that request. | `axios.js`, `ai-assistant.api.js`, `MessageBubble.jsx`, `study.api.js` |
 | 7 | `streamRequest` calls `onDone` for a `done` event and again when the reader finishes. `ChatWindow`'s `onDone` appends and saves the assistant message each time it runs. Whether the Backend emits a `done` event is not verified. | `ai-assistant.api.js`, `ChatWindow.jsx` |
-| 8 | If `/authenticate/refresh` resolves with `success: false` (no throw), queued requests are never settled. | `axios.js` |
+| 8 | Resolved: a refresh that resolves with `success: false` now throws, so the waiting requests reject and `clearAuthAndRedirect()` runs. In browsers without `navigator.locks`, the cross-tab guard falls back to per-tab only. | `axios.js` |
 | 9 | If `VITE_API_URL` is unset, the axios `baseURL` is undefined and requests go to the frontend origin. The production fallback exists only in `vite.config.ts` (PWA pattern) and the scripts. | `axios.js`, `vite.config.ts` |
-| 10 | `PATCH /sessions/:id/end` is sent only when unsent answers remain in the buffer at end time. | `QuestionPractice.jsx` `handleSessionEndButton` |
+| 10 | `PATCH /sessions/:id/end` is sent once per session with at least one answer: on End Session, on unmount (in-app navigation), or as a `keepalive` fetch on `pagehide`. A session with no answers is never ended. | `QuestionPractice.jsx` |
 | 11 | `unsyncedAnswers` is drained only when `Home` mounts or a new session starts. | `Home.jsx` |
 | 12 | `QuizResult` retry button navigates to `/quiz/:quizId/start`, which has no route and renders `NotFound`. | `QuizResult.jsx`, `App.jsx` |
 | 13 | `POST /quiz/:quizId/start` runs twice on the normal path (list, then attempt page). The Backend is relied on to resume the in-progress attempt. | `StudentQuizList.jsx`, `QuizAttempt.jsx` |
 | 14 | Teacher analytics screens show mock data to SuperAdmins. | `src/mocks/teacherData.js`, `TeacherSubjectSelector.jsx` and siblings |
 | 15 | `App.jsx` allows `Parent` on `/teacher/*`, while `navItems.js` hides the Teacher link from Parents. | `App.jsx`, `navItems.js` |
-| 16 | `useSessionEvents` binds click interceptors by CSS selector (`.navbar button`, `.bottom-navbar button`, `.mobile-nav-drawer button`), which couples it to layout markup. | `useSessionEvents.js` |
+| 16 | `useSessionEvents` binds click interceptors by CSS selector (`.navbar button`, `.bottom-navbar button`, `.mobile-nav-drawer button`, `button[aria-label="Open menu"]`), which couples it to layout markup. | `useSessionEvents.js` |
 | 17 | The ESLint flat config applies rules only to `**/*.{ts,tsx}`, so the `.jsx`/`.js` sources are effectively unlinted. `tsconfig.app.json` includes a non-existent `../trash/Home.tsx`. | `eslint.config.js`, `tsconfig.app.json` |
 | 18 | `zod` is a dependency with no imports. Forms use `react-hook-form` without schema resolvers. `dotenv` is a runtime dependency used only by `vite.config.ts`. | `package.json`, grep of `src/` |
-| 19 | The PWA manifest references PNG icons and screenshots that are not in `public/` (only `icons/icon.svg` exists). `includeAssets` lists a missing `favicon.ico`. | `public/manifest.json`, `vite.config.ts` |
+| 19 | Resolved: the manifest icons, `favicon.ico`, `favicon.svg` and `apple-touch-icon.png` now exist in `public/`, and the screenshot entries were dropped. | `public/manifest.json`, `vite.config.ts` |
 | 20 | `api-cache` (NetworkFirst, 24 h) can store authenticated GET responses. Logout clears localStorage but not Cache Storage. | `vite.config.ts`, `auth.api.js` `logout` |
 | 21 | `generate-sitemap.mjs` keeps its own inline copy of the curriculum ("mirrors `src/data/curriculum.static.js`"), so the two can drift. The chapter-content snapshot is refreshed manually, not by `build`. | `scripts/generate-sitemap.mjs`, `package.json` |
-| 22 | On non-prerendered routes the host serves the prerendered home HTML, which `main.jsx` discards before rendering. | `main.jsx` comment |
+| 22 | On non-prerendered routes the host serves the prerendered home HTML, which `main.jsx` discards before rendering. Slash-less public URLs are sent to their slash form by the inline script in `index.html` before this happens. | `main.jsx` comment, `index.html` |
 | 23 | No request cancellation except the SSE `AbortController`. Polling and fetch effects use mounted or cancelled flags instead. | `useQuestionPolling.js`, `usePublicStats.js` |
 | 24 | Dead code: `study/QuestionArea.jsx`, `common/LockIndicator.jsx`, `mocks/studyData.js`, and `sessionSlice.sessionHistory` (never written by the UI). | import scan |
 | 25 | Convention drift: `style` props are used extensively (about 3,250 occurrences), `window.confirm` appears in `SuggestionBoard.jsx`, and `alert` in `MessageBubble.jsx`. | grep of `src/` |
 | 26 | Errors reach only the console. There is no remote error or performance monitoring beyond Clarity sessions. | `ErrorBoundary.jsx` |
+| 27 | Notifications arrive by polling (60 s while visible), so news can take up to a minute to show. The toaster remembers its last toast per browser in localStorage, so a second device may toast the same item again. | `useNotifications.js`, `NotificationToaster.jsx` |
+| 28 | `useNotifications.js` must keep the third (server snapshot) argument to `useSyncExternalStore`; without it prerendering fails with React #407. | `useNotifications.js` |
+| 29 | Attribution, pending challenge and pending class join live only in localStorage. A visitor who switches device or browser before signing up loses them. | `utils/acquisition.js`, `utils/pendingChallenge.js` |
 
 ## 12. Related docs
 
 | Doc | Use for |
 |---|---|
 | [System HLD](../reference/hld.md) | Cross-service architecture |
-| [Frontend Architecture](./architecture.md) | Short overview. Route roles and the interceptor description there are outdated. |
-| [Pages and Routes](./development/pages-and-routes.md) | Per-route list. Check guard redirects and API calls against section 4 of this page. |
-| [State Management](./development/state-management.md) | Slice usage guidance. `authSlice` there omits `refreshToken`. |
-| [API Integration](./development/api-integration.md) | Endpoint table. Code snippets and several paths are outdated, so prefer section 7 here. |
+| [Frontend Architecture](./architecture.md) | Short overview |
+| [Pages and Routes](./development/pages-and-routes.md) | Per-route list and features |
+| [State Management](./development/state-management.md) | Slice usage guidance, the notification store, feature storage keys |
+| [API Integration](./development/api-integration.md) | Endpoint table. Some older snippets (admin, question paper) are abridged, so prefer section 7 here. |
 | [Study Session Flow](./features/study-session-flow.md) | Polling contract and mastered state in depth |
 | [Quiz Module API](./development/quiz-module-api.md) | Quiz endpoints |
 | [Teacher Dashboard API](./development/teacher-dashboard-api.md) | Teacher analytics endpoints |
