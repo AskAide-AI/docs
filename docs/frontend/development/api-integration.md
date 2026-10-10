@@ -118,7 +118,7 @@ Calls axios can't make (the teacher AI stream, PDF downloads) use `authorizedFet
 | Profile | `/profile/email/request-change` | Send a 6-digit code to the new email |
 | Profile | `/profile/email/confirm-change` | Confirm the code and switch the email |
 | Profile | `/profile/display-picture` | Upload (PUT) or remove (DELETE) profile photo |
-| Profile | `/profile/public/:userId` | Public student profile |
+| Profile | `/profile/public/:userId` | Public student profile, no login needed; includes a student's streak and stats |
 | Content | `/study/configuration` | Get classes with subjects |
 | Content | `/topics/class/:classId/subject/:subjectId` | Get topics for class/subject |
 | Content | `/chapters/class/:classId/subject/:subjectId` | Get chapters for class/subject |
@@ -134,13 +134,13 @@ Calls axios can't make (the teacher AI stream, PDF downloads) use `authorizedFet
 | Progress | `/topic-progress/ai-insights/subject/:subjectId` | AI subject insights |
 | Progress | `/topic-progress/mastery-summary` | Mastery overview |
 | Quiz | `/quiz` | Create quiz |
-| Quiz | `/quiz/:quizId` | Get/update/delete quiz |
+| Quiz | `/quiz/:quizId` | Get/update/delete quiz (the quiz's teacher only) |
 | Quiz | `/quiz/teacher/:teacherId` | List teacher's quizzes |
 | Quiz | `/quiz/:quizId/publish` | Publish quiz |
 | Quiz | `/quiz/:quizId/close` | Close quiz |
 | Quiz | `/quiz/:quizId/analytics` | Quiz analytics |
 | Quiz | `/quiz/student/available` | Available quizzes (student) |
-| Quiz | `/quiz/:quizId/start` | Start quiz attempt |
+| Quiz | `/quiz/:quizId/start` | Start or resume a quiz attempt (also used by Try Again) |
 | Quiz | `/quiz/attempt/:attemptId/answer` | Submit answer |
 | Quiz | `/quiz/attempt/:attemptId/submit` | Submit quiz |
 | Quiz | `/quiz/attempt/:attemptId/result` | Get attempt result |
@@ -152,7 +152,7 @@ Calls axios can't make (the teacher AI stream, PDF downloads) use `authorizedFet
 | Admin | `/sections` | Section management |
 | Admin | `/chapters/create-with-pdf` | Chapter PDF upload |
 | Admin | `/chapters` | Chapter management |
-| Teacher Dashboard | `/teacher-dashboard/:teacherId/my-assignments` | Get teacher assignments |
+| Teacher Dashboard | `/teacher-dashboard/:teacherId/my-assignments` | Get teacher assignments. Every teacher-dashboard call sends the signed-in teacher's own id |
 | Teacher Dashboard | `/teacher-dashboard/:teacherId/subject/:subjectId/dashboard` | Subject overview |
 | Teacher Dashboard | `/teacher-dashboard/:teacherId/subject/:subjectId/students` | Students with progress |
 | Teacher Dashboard | `/teacher-dashboard/:teacherId/subject/:subjectId/chapter/:chapterId/analytics` | Chapter analytics |
@@ -172,7 +172,7 @@ Calls axios can't make (the teacher AI stream, PDF downloads) use `authorizedFet
 | Parent Dashboard | `/parent-dashboard/children` | Get linked children |
 | Parent Dashboard | `/parent-dashboard/child/:studentId/overview` | Child overview |
 | Parent Dashboard | `/parent-students/links` | Parent-student links |
-| Streaks | `/streaks/:userId` | Get streak info |
+| Streaks | `/streaks/:userId` | Get streak info. Like every route keyed by `:userId`, it serves only the signed-in user (`403 NOT_YOUR_DATA` otherwise) |
 | Streaks | `/streaks/:userId/use-freeze` | Use streak freeze |
 | Daily Challenge | `/daily-challenge/:userId` | Get today's challenge |
 | Daily Challenge | `/daily-challenge/:userId/complete` | Complete challenge |

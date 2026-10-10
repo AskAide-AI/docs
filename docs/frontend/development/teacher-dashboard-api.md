@@ -1,7 +1,7 @@
 # Teacher Dashboard - Frontend API Documentation
 
 > **Base URL:** `http://localhost:4000/api/v1/teacher-dashboard`
-> **Authentication:** Bearer Token required in header
+> **Authentication:** Bearer Token required in header. Teacher role required, and `:teacherId` must be the signed-in teacher's own user ID (a SuperAdmin may use any). Any other ID returns `403` with `code: "NOT_YOUR_DATA"`.
 
 ---
 
@@ -429,7 +429,7 @@ All endpoints return errors in this format:
 | Status Code | Meaning |
 |-------------|---------|
 | 400 | Bad Request |
-| 403 | Not authorized (not assigned to this student/subject) |
+| 403 | Not authorized: `:teacherId` is not the signed-in teacher (`NOT_YOUR_DATA`), or not assigned to this student/subject |
 | 404 | Resource not found |
 | 500 | Server error |
 

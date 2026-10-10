@@ -179,6 +179,20 @@ On success, `auth` also records the user as active today: one `useractivitydays`
 | `isTeacherOrPrincipal` | `Teacher` or `Principal` |
 | `isNormalUser` | `NormalUser` |
 
+`isSuperAdmin` admits only `SuperAdmin`.
+
+### Ownership Guards and Helpers
+
+A role alone doesn't give access to another user's records. These checks tie a request to the caller:
+
+| Guard / helper | Behaviour | Used on |
+|----------------|-----------|---------|
+| `isSelfOrSuperAdmin(param)` | Continues only when `req.params[param]` is the caller's own id, or the caller is a `SuperAdmin`. Otherwise `403` with `code: "NOT_YOUR_DATA"` | `/teacher-dashboard/:teacherId/...`; `/streaks/:userId` and `use-freeze`; `/daily-challenge/:userId`, `complete` and `history`; `/progress/user/:userId`; `/user-answers/user/:userId`; `/badges/:userId`; `/session-feedback/nps/check/:userId` |
+| `principalSchoolScope` | Runs after `isPrincipal`. Sets `req.schoolScope` to the principal's school; a `SuperAdmin` gets no limit. A principal with no school linked gets `403` with `code: "NO_SCHOOL"` | Principal routes for teachers (`/teacher`), school update (`PUT /school/:id`) and section writes (`/sections`) |
+| `canAccessUser(reqUser, ownerId)` (`src/shared/utils/access.js`) | `true` for the owner or a `SuperAdmin` | Sessions (`/sessions/user/:userId`, `/sessions/last-incomplete/:userId`, a single session, ending one, share cards) |
+
+Teachers, principals and parents see students only through their own dashboards (`/teacher-dashboard`, `/principal`, `/parent-dashboard`), which check the teacher–student, school or parent–child link.
+
 ---
 
 ## Role-Based Access Control (RBAC)
@@ -187,8 +201,8 @@ On success, `auth` also records the user as active today: one `useractivitydays`
 | Role | Description | Access Level |
 |------|-------------|--------------|
 | `SuperAdmin` | System administrator | Full access |
-| `Principal` | School principal | School-level access |
-| `Teacher` | Teacher | Class/section access |
+| `Principal` | School principal | Their own school only |
+| `Teacher` | Teacher | Their own dashboard and assigned students |
 | `Student` | Student | Personal data only |
 | `Parent` | Parent/guardian | Child's data only |
 
@@ -223,7 +237,7 @@ All under `/api/v1/authenticate/`:
 | `/logout` | POST | None | `{ refreshToken }` → revoke token |
 | `/changepassword` | POST | auth | Password change (revokes all refresh tokens) |
 | `/reset-password-token` | POST | None | Send reset email |
-| `/reset-password` | POST | None | `{ token, password }` — revokes all refresh tokens |
+| `/reset-password` | POST | None | `{ token, password, confirmPassword }` — revokes all refresh tokens |
 | `/verify-email` | POST | None | `{ email, otp }` — OTP TTL: 5 min |
 
 ---

@@ -6,7 +6,7 @@
 
 ## Current Status
 
-> ✅ **Tests are implemented.** 20 test files exist across 14 of the 19 modules, covering auth, user, content, questions, progress, quiz, teacher, school, principal, question-paper, supporting, referral, challenge and notification.
+> ✅ **Tests are implemented.** 25 test files exist across 15 of the 19 modules, covering auth, user, content, questions, progress, quiz, teacher, school, principal, parent, question-paper, supporting, referral, challenge and notification. Most test a service with mocked models; a few test a controller or mount a real router (see [Route Tests](#route-tests)).
 
 ---
 
@@ -35,19 +35,24 @@ Backend/
         ├── challenge/tests/challenge.service.test.js
         ├── content/tests/content.service.test.js
         ├── notification/tests/notification.service.test.js
+        ├── parent/tests/parentDashboard.routes.test.js
         ├── principal/tests/principalAccount.service.test.js
         ├── principal/tests/principalDashboard.service.test.js
         ├── progress/tests/progress.service.test.js
+        ├── progress/tests/userDataRoutes.test.js
         ├── question-paper/tests/questionPaper.service.test.js
         ├── questions/tests/questions.service.test.js
+        ├── quiz/tests/quiz.controller.test.js
         ├── quiz/tests/quiz.service.test.js
         ├── referral/tests/referral.service.test.js
         ├── school/tests/school.service.test.js
         ├── supporting/tests/llmSystem.service.test.js
         ├── supporting/tests/llmSystem.validator.test.js
         ├── supporting/tests/supporting.service.test.js
+        ├── teacher/tests/principalScope.routes.test.js
         ├── teacher/tests/teacher.service.test.js
         ├── teacher/tests/teacherClass.service.test.js
+        ├── teacher/tests/teacherDashboard.routes.test.js
         └── user/tests/user.service.test.js
 ```
 
@@ -84,29 +89,33 @@ All tests use `jest.unstable_mockModule` for ESM-compatible mocking:
 ```javascript
 import { jest } from '@jest/globals';
 
-// Mock Mongoose model BEFORE dynamic import
-jest.unstable_mockModule('../../models/quizAttempt.model.js', () => ({
-  default: {
-    find: jest.fn(),
-    findOne: jest.fn(),
-    create: jest.fn(),
-    // ... other methods
-  }
+// Mock the Mongoose models BEFORE the dynamic import
+const mockQuiz = { findById: jest.fn() };
+const mockTeacherStudent = { findOne: jest.fn() };
+jest.unstable_mockModule('../models/index.js', () => ({
+  Quiz: mockQuiz,
+  QuizQuestion: {},
+  QuizAttempt: {},
+  QuizAnswer: {},
+  // ... other methods and models
+}));
+jest.unstable_mockModule('../../teacher/models/index.js', () => ({
+  TeacherStudent: mockTeacherStudent,
 }));
 
 // Dynamic import after mocking
-const { default: QuizAttempt } = await import('../../models/quizAttempt.model.js');
-const { quizService } = await import('../services/quiz.service.js');
+const { default: quizService } = await import('../services/quiz.service.js');
 
 describe('Quiz Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should create a quiz attempt', async () => {
-    QuizAttempt.create.mockResolvedValue({ _id: '123', status: 'in_progress' });
-    const result = await quizService.startQuiz('student1', 'quiz1');
-    expect(result.status).toBe('in_progress');
+  it('refuses a student who is not assigned to the quiz', async () => {
+    mockQuiz.findById.mockResolvedValue({ _id: 'quiz1', createdBy: 'teacher1', status: 'published', settings: {} });
+    mockTeacherStudent.findOne.mockResolvedValue(null);
+    await expect(quizService.startQuizAttempt('student1', 'quiz1'))
+      .rejects.toMatchObject({ statusCode: 403, code: 'ACCESS_DENIED' });
   });
 });
 ```
@@ -123,10 +132,15 @@ describe('Quiz Service', () => {
 | User | `user.service.test.js` | User CRUD, profile management, name change, email change codes |
 | Content | `content.service.test.js` | Chapters CRUD, PDF upload |
 | Questions | `questions.service.test.js` | Question retrieval, AI generation, option shuffling, public preview matching |
-| Progress | `progress.service.test.js` | Mastery scoring, topic progress |
-| Quiz | `quiz.service.test.js` | Quiz CRUD, attempts, grading |
+| Progress | `progress.service.test.js` | Mastery scoring, topic progress, mastery summary topic names |
+| Progress | `userDataRoutes.test.js` | Routes keyed by `/:userId` serve only that user or a SuperAdmin (`NOT_YOUR_DATA`); `use-freeze` and daily-challenge `complete` failures return `success: false`; `canAccessUser` |
+| Quiz | `quiz.service.test.js` | Quiz CRUD, starting and resuming attempts, stable shuffle, grading, `canRetry`, student quiz list, history, per-question analysis |
+| Quiz | `quiz.controller.test.js` | Only the quiz's teacher or a SuperAdmin reads the full quiz; teacher quiz list access |
 | Teacher | `teacher.service.test.js` | Teacher-student relationships |
 | Teacher | `teacherClass.service.test.js` | Class join links, independent schools, report and certificate unlocks |
+| Teacher | `teacherDashboard.routes.test.js` | A teacher opens only their own dashboard; SuperAdmin opens any |
+| Teacher | `principalScope.routes.test.js` | Principal teacher, school and section routes stay inside the principal's school; `NO_SCHOOL`; SuperAdmin unlimited |
+| Parent | `parentDashboard.routes.test.js` | Child routes validate only the ids in the path; the parent comes from the token |
 | School | `school.service.test.js` | School/section management |
 | Principal | `principalAccount.service.test.js`, `principalDashboard.service.test.js` | Principal accounts, school-scoped dashboards |
 | Supporting | `supporting.service.test.js` | Achievements, API logs |
@@ -138,13 +152,19 @@ describe('Quiz Service', () => {
 
 ---
 
+## Route Tests
+
+`parentDashboard.routes.test.js`, `userDataRoutes.test.js`, `teacherDashboard.routes.test.js` and `principalScope.routes.test.js` check the role and ownership guards end to end through the real router. Each mounts the router on a bare Express app listening on a random port, signs test JWTs with a test `JWT_SECRET`, and calls it with `fetch`; the controllers or services behind it are mocked. There is no supertest dependency.
+
+---
+
 ## Known Gaps
 
-- No integration tests (API endpoint level with supertest)
+- No integration tests across modules or against a real database
 - No coverage thresholds configured
 - Tests use mocked DB — no `mongodb-memory-server` in-memory integration tests
 
-**Modules without tests:** `ai-assistant`, `campaign`, `feedback`, `goal`, `parent` (14/19 modules = 74% have tests).
+**Modules without tests:** `ai-assistant`, `campaign`, `feedback`, `goal` (15/19 modules = 79% have tests).
 
 ---
 
@@ -155,7 +175,7 @@ describe('Quiz Service', () => {
 2. **goal** — CRUD operations and daily reset logic
 
 ### Phase 2
-1. **parent** — dashboard data aggregation
+1. **parent** — dashboard data aggregation (the routes are covered; the service is not)
 2. **campaign** and **feedback** — campaign sends, unsubscribe tokens, suggestion moderation
 
 ### Phase 3
@@ -166,9 +186,9 @@ describe('Quiz Service', () => {
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Modules with tests | 14/19 (74%) | 19/19 (100%) |
+| Modules with tests | 15/19 (79%) | 19/19 (100%) |
 | Service method coverage | ~40% | 70%+ |
-| Controller coverage | 0% | 50%+ |
+| Controller coverage | 1 controller, 4 route files | 50%+ |
 | Integration tests | 0 | 3 critical flows |
 
 ### What to Test

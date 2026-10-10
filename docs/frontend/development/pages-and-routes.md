@@ -409,14 +409,15 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 
 ### /quizzes
 **Component:** `src/components/student/quiz/StudentQuizList.jsx`
-**Description:** Student's available and past quizzes
+**Description:** Student's available quizzes
 **Authentication:** Protected (ProtectedRoute)
 **API Calls:**
 - `GET /quiz/student/available` - Available quizzes
-- `GET /quiz/student/history` - Quiz history
+- `POST /quiz/:quizId/start` - Start an attempt
 **Features:**
-- Available quizzes list
-- Past quiz history
+- Available quizzes list (published quizzes from the student's teachers)
+- **Start Quiz**, **Resume Quiz**, **Results** and **Retry**, or **View Results** per quiz, from `attemptInfo`
+- **History** button in the header, linking to `/quiz/history`
 - Quiz status indicators
 
 ---
@@ -426,7 +427,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Description:** Take a quiz (in-progress attempt)
 **Authentication:** Protected (ProtectedRoute)
 **API Calls:**
-- `POST /quiz/:quizId/start` - Start attempt
+- `POST /quiz/:quizId/start` - Load the attempt (resumes the one in progress, with saved answers and the same question order)
 - `POST /quiz/attempt/:attemptId/answer` - Submit answer
 - `POST /quiz/attempt/:attemptId/submit` - Submit quiz
 **Features:**
@@ -441,12 +442,16 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Component:** `src/components/student/quiz/QuizResult.jsx`
 **Description:** Quiz attempt result with detailed breakdown
 **Authentication:** Protected (ProtectedRoute)
-**API Calls:** `GET /quiz/attempt/:attemptId/result`
+**API Calls:**
+- `GET /quiz/attempt/:attemptId/result` - Result
+- `POST /quiz/:quizId/start` - Try Again
 **Features:**
 - Score and percentage
 - Correct/incorrect breakdown
 - Question-level review
 - Pass/fail status
+- **Try Again** when `attempt.canRetry` is `true`: starts a new attempt and opens it
+- **More Quizzes** and **Quiz History** buttons
 
 ---
 
@@ -581,10 +586,10 @@ Every share button adds the signed-in student's `?ref=` code to links to our own
 **Component:** `src/components/pages/StudentPublicProfile.jsx`
 **Description:** Shareable student achievement profile
 **Authentication:** Public
-**API Calls:** `GET /profile/public/:userId`
+**API Calls:** `GET /profile/public/:userId` (the only call; it returns the streak and stats too, so signed-out visitors see real numbers)
 **Features:**
-- Student stats (streak, badges, progress)
-- Share card generation
+- Current and best streak, questions practised, accuracy and subjects
+- Share button
 
 ---
 

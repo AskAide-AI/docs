@@ -18,6 +18,10 @@ All notable changes to this project are documented in this file.
 - **`correctAnswer` in `getPublicQuestionsBatch`** (2026-07-10) — the public questions batch response now includes `correctAnswer` (tests updated accordingly).
 
 ### Fixed
+- **Quiz attempts** (2026-10-10) — `POST /quiz/:quizId/start` starts an attempt or returns the one in progress as `{ attempt, questions, quiz }`, with the saved answers in `attempt.answers` and no answers in the questions; shuffled questions keep one order per attempt. The student quiz list shows published quizzes with a working `canAttempt`, `GET /quiz/student/history` pages correctly, teacher analytics include the per-question analysis, and the result carries `attempt.canRetry`.
+- **Parent dashboard child routes** (2026-10-10) — the validators check only the ids in the path (`childId`, `subjectId`); the parent comes from the token.
+- **Topic names** (2026-10-10) — the mastery summary and the daily challenge show the topic's title.
+- **Failure bodies** (2026-10-10) — `use-freeze` and daily-challenge `complete` failures return `success: false`.
 - **Leaderboard ranks this week** (2026-10-10) — `GET /leaderboard` now ranks answers from Monday 00:00 IST and returns each student's first name.
 - **Public question preview matches more chapters** (2026-10-05) — the slug match ignores a Social Studies strand prefix ("Geography: ") and pools questions from duplicate chapters with the same name.
 - **Night Owl / Early Bird badges use IST** (2026-10-05) — the session hour is now read in `Asia/Kolkata`, not UTC.
@@ -26,6 +30,10 @@ All notable changes to this project are documented in this file.
 - **Study configuration ignores bad class IDs** (2026-10-04) — blank or invalid `classIds` no longer cause a 500.
 
 ### Changed
+- **Own-data routes** (2026-10-10) — new `isSelfOrSuperAdmin(param)` guard: `/teacher-dashboard/:teacherId/...` and the progress routes keyed by `/:userId` (streaks and `use-freeze`, daily challenge, `/progress/user`, `/user-answers/user`, badges, NPS check) serve only that user or a SuperAdmin (`403 NOT_YOUR_DATA`). `canAccessUser` (sessions, share cards) means own records or SuperAdmin; teachers, parents and principals see students through their dashboards.
+- **Principal school scope** (2026-10-10) — new `principalSchoolScope` middleware keeps a principal's `/teacher`, `PUT /school/:id` and section writes inside their own school (`403 NO_SCHOOL` without one; `403 NOT_YOUR_SCHOOL` for another school; 404 for another school's teacher or section). SuperAdmin has no limit.
+- **Quiz access** (2026-10-10) — `GET /quiz/:quizId` needs the quiz's teacher or a SuperAdmin; `GET /quiz/teacher/:teacherId` also admits SuperAdmin.
+- **Public profile stats** (2026-10-10) — `GET /profile/public/:userId` includes a student's `streak` and `stats` (`questionsAnswered`, `accuracy`, `subjectsCount`).
 - **Password rule relaxed** (2026-10-04) — 8 to 128 characters with at least one letter and one number. Applies to signup, reset and change.
 - **Answer options shuffled** (2026-10-04) — the practice and free-trial batches shuffle each question's options as well as the question order.
 - **Registration rate limit raised 3 → 10 req/hour** (2026-07-14) — `registerLimiter` in `src/modules/auth/routes/auth.routes.js`. The old 3/hour was too tight for classroom onboarding and shared-IP schools; the message copy is unchanged.

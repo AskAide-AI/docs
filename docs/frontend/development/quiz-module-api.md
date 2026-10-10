@@ -270,7 +270,7 @@ POST /api/v1/quiz
 
 #### 3. Get Quiz by ID
 
-Retrieve quiz details with all questions.
+Retrieve quiz details with all questions, including custom questions' answers. Only the teacher who created the quiz, or a SuperAdmin, may call it; anyone else gets `403` (`ACCESS_DENIED`). Students load a quiz through [Start Quiz Attempt](#2-start-quiz-attempt), which never sends answers.
 
 ```http
 GET /api/v1/quiz/:quizId
@@ -297,7 +297,8 @@ GET /api/v1/quiz/:quizId
           "_id": "...",
           "questionText": "What is 2+2?",
           "options": [...],
-          "correctAnswer": "4"
+          "questionType": "mcq",
+          "difficulty": "Easy"
         },
         "order": 1,
         "marks": 1,
@@ -365,7 +366,7 @@ DELETE /api/v1/quiz/:quizId
 
 #### 6. Get Teacher's Quizzes
 
-List all quizzes created by a teacher with filtering and pagination.
+List all quizzes created by a teacher with filtering and pagination. `:teacherId` must be the signed-in teacher, unless the caller is a SuperAdmin (otherwise `403`).
 
 ```http
 GET /api/v1/quiz/teacher/:teacherId
@@ -691,7 +692,10 @@ POST /api/v1/quiz/:quizId/start
       "attemptNumber": 1,
       "startedAt": "2026-01-16T10:30:00Z",
       "status": "in_progress",
-      "totalQuestions": 10
+      "totalQuestions": 10,
+      "answers": [
+        { "questionId": "quizQuestionId1", "answer": "4" }
+      ]
     },
     "questions": [
       {
@@ -715,14 +719,16 @@ POST /api/v1/quiz/:quizId/start
 
 > [!IMPORTANT]
 > - **Correct answers are NOT included** in the questions response
-> - If an in-progress attempt exists, it returns that attempt instead of creating a new one
+> - If an in-progress attempt exists, it returns that attempt instead of creating a new one, with the answers saved so far in `attempt.answers` (`questionId` is the quiz-question `_id`). A new attempt has an empty list
+> - With `shuffleQuestions` on, the order is shuffled once per attempt and is the same on every load of that attempt
 > - Store the `attempt._id` - you'll need it for submitting answers
 
 **Errors:**
 - `400` - Quiz not available (`QUIZ_NOT_AVAILABLE`) - not published
 - `400` - Deadline passed (`DEADLINE_PASSED`)
 - `400` - Max attempts reached (`MAX_ATTEMPTS_REACHED`)
-- `403` - Student not assigned to this class/subject
+- `403` - Student not assigned to the quiz's teacher for its class and subject (`ACCESS_DENIED`)
+- `404` - Quiz not found or deleted (`NOT_FOUND`)
 
 ---
 
@@ -830,7 +836,8 @@ GET /api/v1/quiz/attempt/:attemptId/result
       "correctAnswers": 8,
       "score": 16,
       "percentage": 80,
-      "passed": true
+      "passed": true,
+      "canRetry": true
     },
     "quiz": {
       "_id": "...",
@@ -861,12 +868,14 @@ GET /api/v1/quiz/attempt/:attemptId/result
 > - `immediately` / `submission`: Always shown
 > - `deadline`: Shown only after deadline passes
 > - `never`: Never shown
+>
+> `attempt.canRetry` is `true` when the student may start another attempt (the quiz is still published, the deadline hasn't passed and attempts are left). `QuizResult` shows **Try Again** only then; it calls [Start Quiz Attempt](#2-start-quiz-attempt) and opens the new attempt.
 
 ---
 
 #### 6. Get Quiz History
 
-View student's past quiz attempts.
+View the signed-in student's completed quiz attempts, newest first. `QuizHistory` (`/quiz/history`) calls it; the quiz list and the result page link there.
 
 ```http
 GET /api/v1/quiz/student/history
@@ -875,9 +884,9 @@ GET /api/v1/quiz/student/history
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `subjectId` | String | Filter by subject |
+| `subjectId` | String | Filter by subject (an invalid ID returns an empty list) |
 | `page` | Number | Page number (default: 1) |
-| `limit` | Number | Results per page (default: 10) |
+| `limit` | Number | Results per page (default: 10, max 50) |
 
 **Response (200):**
 ```json
@@ -1036,12 +1045,13 @@ stateDiagram-v2
 3. **Resume Capability**
    - Check `attemptInfo.inProgressAttempt` on quiz list
    - Show "Resume" button instead of "Start" for in-progress
-   - Restore answers when resuming
+   - Restore answers when resuming (`attempt.answers` from Start Quiz Attempt; `QuizAttempt` does this on load)
 
 4. **Results Display**
    - Show immediate results after submission
    - Respect `showAnswers` flag for correct answers
    - Display pass/fail status prominently
+   - Offer **Try Again** only when `attempt.canRetry` is `true`
 
 ### Error Handling
 

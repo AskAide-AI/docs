@@ -39,7 +39,7 @@ There are 19 modules. All follow `src/modules/<name>/` with `controllers`, `serv
 | `/profile/email/confirm-change` | POST | auth, 10 per 15 min per IP | `{ code }` → switches the login email and tells the old address |
 | `/profile/display-picture` | PUT/DELETE | auth | Set or remove the picture |
 | `/profile/delete` | DELETE | auth | Delete own account |
-| `/profile/public/:userId` | GET | none | Public profile |
+| `/profile/public/:userId` | GET | none | Public profile: `_id`, `name`, `image`, `accountType`, `createdAt`; for a Student also `streak` (`currentStreak`, `longestStreak`) and `stats` (`questionsAnswered`, `accuracy`, `subjectsCount`) |
 | `/student/create`, `/student/get-all`, `/student/:id` | POST/GET/PUT/DELETE | teacher or principal | School-managed student accounts |
 
 **Email change rules:** one pending request per user (`EmailChangeRequest`, expires after 10 minutes). The code is stored only as a SHA-256 hash, allows 5 wrong tries, and can be re-sent once a minute. The new address is compared case-insensitively and re-checked for uniqueness when the code is confirmed. Google sign-in matches by Google ID, so it keeps working after an email change.
@@ -92,21 +92,22 @@ The practice and free-trial batches shuffle both the question order and each que
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/quiz` | POST | auth | Create quiz |
-| `/quiz/:quizId` | GET/PUT/DELETE | auth | CRUD |
+| `/quiz/:quizId` | GET/PUT/DELETE | auth | CRUD. `GET` (full quiz, custom answers included) needs the quiz's teacher or a SuperAdmin |
 | `/quiz/:quizId/publish` | POST | auth | Publish |
 | `/quiz/:quizId/close` | POST | auth | Close |
 | `/quiz/:quizId/clone` | POST | auth | Clone |
-| `/quiz/:quizId/analytics` | GET | auth | Analytics |
+| `/quiz/:quizId/analytics` | GET | auth | Analytics, with per-question analysis |
+| `/quiz/teacher/:teacherId` | GET | auth | The teacher's own quizzes (or any, for a SuperAdmin) |
 | `/quiz/:quizId/questions` | POST | auth | Add question |
 | `/quiz/:quizId/questions/:questionId` | DELETE | auth | Remove question |
 | `/quiz/:quizId/questions/reorder` | PUT | auth | Reorder |
 | `/quiz/questions/search` | GET | auth | Question bank search |
 | `/quiz/student/available` | GET | auth | Available quizzes |
-| `/quiz/student/history` | GET | auth | Quiz history |
-| `/quiz/:quizId/start` | POST | auth | Start attempt |
+| `/quiz/student/history` | GET | auth | Completed attempts, newest first (`page`, `limit` up to 50) |
+| `/quiz/:quizId/start` | POST | auth | Start an attempt or resume the one in progress → `{ attempt, questions, quiz }`. Needs a teacher–student link for the quiz's teacher, class and subject |
 | `/quiz/attempt/:attemptId/answer` | POST | auth | Submit answer |
 | `/quiz/attempt/:attemptId/submit` | POST | auth | Submit attempt |
-| `/quiz/attempt/:attemptId/result` | GET | auth | Attempt result |
+| `/quiz/attempt/:attemptId/result` | GET | auth | Attempt result, with `attempt.canRetry` |
 
 ## Progress Module
 
@@ -123,11 +124,15 @@ The practice and free-trial batches shuffle both the question order and each que
 | `/progress/user/:userId` | GET | Progress dashboard |
 | `/streaks/:userId` | GET | Streak data |
 | `/streaks/:userId/use-freeze` | POST | Use streak freeze |
-| `/daily-challenge/:userId` | GET/POST | Daily challenges |
+| `/daily-challenge/:userId` | GET | Today's daily challenge |
+| `/daily-challenge/:userId/complete`, `/daily-challenge/:userId/history` | POST, GET | Complete today's challenge; recent challenges |
 | `/badges/:userId` | GET | User badges |
 | `/badges/check` | POST | Trigger badge check |
 | `/session-feedback/reaction` | POST | Session reaction |
 | `/session-feedback/nps` | POST | NPS score |
+| `/session-feedback/nps/check/:userId` | GET | Whether to show the NPS survey |
+
+**Own data only:** every route above with `:userId` in the path, plus `/user-answers/user/:userId`, serves only the signed-in user or a SuperAdmin (`isSelfOrSuperAdmin`); anyone else gets `403` with `code: "NOT_YOUR_DATA"`. `/sessions/user/:userId` and `/sessions/last-incomplete/:userId` apply the same rule through `canAccessUser` (`403`). Teachers, parents and principals see a student's progress through their own dashboards.
 
 **After each saved answer batch** (`POST /user-answers/batch`), the service updates the session totals, applies the new answers to topic progress, records today's practice for the streak, and checks whether a referred friend has now reached 10 answers (see Referral).
 
@@ -192,13 +197,13 @@ The practice and free-trial batches shuffle both the question order and each que
 ## Other Modules
 
 ### School (`src/modules/school/`)
-`POST/GET /`, `GET/PUT /:id` — School CRUD
+`POST/GET /`, `GET/PUT /:id` — School CRUD. A principal may `PUT` only their own school (`403 NOT_YOUR_SCHOOL` otherwise)
 
 ### Sections (`src/modules/school/`, mounted at `/sections`)
-`POST /`, `POST /bulk`, `GET /school/:schoolId`, `GET /:sectionId`, `PUT/DELETE /:sectionId`
+`POST /`, `POST /bulk`, `GET /school/:schoolId`, `GET /:sectionId`, `PUT/DELETE /:sectionId`. For a principal, new sections always go into their own school, and another school's section is a 404 on `PUT`/`DELETE`
 
 ### Teacher (`src/modules/teacher/`)
-`POST /`, `GET /get-all` — Teacher CRUD (Principal only)
+`POST /` (one or an array), `GET /get-all`, `PUT/DELETE /:id` — Teacher CRUD (Principal only). A principal works only within their own school: new teachers always get that school, the list shows only its teachers, and another school's teacher is a 404. A principal with no school linked gets `403 NO_SCHOOL`. SuperAdmin has no limit
 
 ### Teacher Class Links (`src/modules/teacher/`, mounted at `/teacher-classes`)
 A teacher makes a `/join/:code` link per class + subject (+ optional section) and shares it with the class. A student who joins gets an ordinary `TeacherStudent` row (`joinedVia` = the link), so every teacher dashboard view shows them with no extra setup.
@@ -216,7 +221,7 @@ A teacher makes a `/join/:code` link per class + subject (+ optional section) an
 **Rules:** a teacher who signed up alone has no school, so the first link creates a private school (`kind: 'independent'`) and sets the teacher's `schoolId`. The student's `schoolId` is left unset, so their practice is not limited to one school's classes. Rewards count students who practised **after** joining: the class report unlocks at 10, the certificate at 25 (across all the teacher's links). Each join goes to the teacher's notification bell.
 
 ### Teacher Dashboard (`src/modules/teacher/`, mounted at `/teacher-dashboard`)
-All require `auth, isTeacher`:
+All require `auth, isTeacher`, and `:teacherId` must be the caller's own id (`isSelfOrSuperAdmin('teacherId')`; a SuperAdmin may use any). Otherwise `403` with `code: "NOT_YOUR_DATA"`:
 - `/:teacherId/my-assignments`
 - `/:teacherId/subject/:subjectId/dashboard`
 - `/:teacherId/subject/:subjectId/students`

@@ -34,6 +34,13 @@ All protected endpoints require JWT token in **one** of:
 
 All role guards also allow `SuperAdmin`.
 
+Ownership guards:
+
+| Guard | Behaviour |
+|-------|-----------|
+| `isSelfOrSuperAdmin(param)` | `req.params[param]` must be the caller's own id, or the caller a `SuperAdmin`; otherwise `403 { code: "NOT_YOUR_DATA" }`. Used on `/teacher-dashboard/:teacherId` and the progress routes keyed by `/:userId` |
+| `principalSchoolScope` | After `isPrincipal`: limits a principal to their own school (`req.schoolScope`); `SuperAdmin` has no limit; a principal with no school gets `403 { code: "NO_SCHOOL" }` |
+
 ## Common Response Format
 
 ### Success
@@ -87,7 +94,7 @@ All role guards also allow `SuperAdmin`.
 | POST | `/logout` | none | `{ refreshToken }` → revokes token |
 | POST | `/changepassword` | auth | `{ oldPassword, newPassword, confirmPassword }` — revokes all refresh tokens |
 | POST | `/reset-password-token` | resetLimiter | `{ email }` |
-| POST | `/reset-password` | resetLimiter | `{ token, newPassword, confirmPassword }` — revokes all refresh tokens |
+| POST | `/reset-password` | resetLimiter | `{ token, password, confirmPassword }` — revokes all refresh tokens |
 | POST | `/verify-email` | none | `{ email, otp }` — OTP TTL: 5 min |
 
 **Token model:**
@@ -109,7 +116,7 @@ All role guards also allow `SuperAdmin`.
 | DELETE | `/delete` | auth | Delete account |
 | PUT | `/display-picture` | auth | Multipart upload |
 | DELETE | `/display-picture` | auth | Remove photo |
-| GET | `/public/:userId` | none | Public profile view |
+| GET | `/public/:userId` | none | Public profile view → `{ _id, name, image, accountType, createdAt }`; for a Student also `streak: { currentStreak, longestStreak }` and `stats: { questionsAnswered, accuracy, subjectsCount }` (`accuracy` is a whole percentage) |
 
 ### 1.3 Content - Classes (`/api/v1/classes`)
 
@@ -187,10 +194,12 @@ All role guards also allow `SuperAdmin`.
 |--------|------|-------|
 | POST | `/` | Create session |
 | DELETE | `/` | Admin |
-| GET | `/user/:userId` | All sessions |
-| PATCH | `/:id/end` | End with score |
-| GET | `/:id` | Get session |
-| GET | `/last-incomplete/:userId` | Resume |
+| GET | `/user/:userId` | All sessions (own, or SuperAdmin) |
+| PATCH | `/:id/end` | End with score (session owner, or SuperAdmin) |
+| GET | `/:id` | Get session (session owner, or SuperAdmin) |
+| GET | `/last-incomplete/:userId` | Resume (own, or SuperAdmin) |
+
+Other callers get `403` (`canAccessUser`: own records, or SuperAdmin).
 
 ### 1.10 User Answers (`/api/v1/user-answers`)
 
@@ -198,7 +207,7 @@ All role guards also allow `SuperAdmin`.
 |--------|------|-------|
 | POST | `/batch` | Submit all answers |
 | GET | `/session/:sessionId` | Get answers |
-| GET | `/user/:userId` | User's answers |
+| GET | `/user/:userId` | User's answers (own, or SuperAdmin; `403 NOT_YOUR_DATA` otherwise) |
 
 ### 1.11 Topic Progress (`/api/v1/topic-progress`)
 
@@ -217,12 +226,16 @@ All role guards also allow `SuperAdmin`.
 |--------|------|
 | GET | `/user/:userId` |
 
+`:userId` must be the signed-in user, or the caller a SuperAdmin; otherwise `403` `{ code: "NOT_YOUR_DATA" }`.
+
 ### 1.13 Streaks (`/api/v1/streaks`)
 
 | Method | Path |
 |--------|------|
 | GET | `/:userId` |
 | POST | `/:userId/use-freeze` |
+
+`:userId` must be the signed-in user, or the caller a SuperAdmin; otherwise `403` `{ code: "NOT_YOUR_DATA" }`. A failed `use-freeze` (no freeze left, no streak) is `400 { success: false, message, data: <streak> }`.
 
 ### 1.14 Daily Challenge (`/api/v1/daily-challenge`)
 
@@ -232,13 +245,15 @@ All role guards also allow `SuperAdmin`.
 | POST | `/:userId/complete` |
 | GET | `/:userId/history` |
 
+`:userId` must be the signed-in user, or the caller a SuperAdmin; otherwise `403` `{ code: "NOT_YOUR_DATA" }`. `complete` without an `answers` array is `400 { success: false }`. `topicName` is the weak topic's title (`"Mixed Topics"` when there is none).
+
 ### 1.15 Session Feedback (`/api/v1/session-feedback`)
 
 | Method | Path | Notes |
 |--------|------|-------|
 | POST | `/reaction` | `{ userId, sessionId, reaction, comment? }` |
 | POST | `/nps` | NPS score (0-10) |
-| GET | `/nps/check/:userId` | Check eligibility |
+| GET | `/nps/check/:userId` | Check eligibility (own, or SuperAdmin; `403 NOT_YOUR_DATA` otherwise) |
 | GET | `/stats` | |
 | GET | `/nps/stats` | |
 
@@ -279,26 +294,28 @@ All role guards also allow `SuperAdmin`.
 | GET | `/:userId` |
 | POST | `/check` |
 
+`GET /:userId`: `:userId` must be the signed-in user, or the caller a SuperAdmin; otherwise `403` `{ code: "NOT_YOUR_DATA" }`.
+
 ### 1.20 Quiz (`/api/v1/quiz`)
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
 | GET | `/questions/search` | auth | Question bank search |
 | GET | `/student/available` | auth | |
-| GET | `/student/history` | auth | |
-| POST | `/:quizId/start` | auth | |
+| GET | `/student/history` | auth | Signed-in student's completed attempts, newest first. `?subjectId=&page=&limit=` (limit default 10, max 50) → `{ attempts, pagination }` |
+| POST | `/:quizId/start` | auth | Start, or resume the attempt in progress → `{ attempt, questions, quiz }`. `attempt.answers` is `[{ questionId, answer }]` (saved answers; `questionId` is the quiz-question id). Questions never include answers; with `shuffleQuestions` the order is fixed per attempt. Needs a `TeacherStudent` link to the quiz's teacher for its class and subject. Errors: 400 `QUIZ_NOT_AVAILABLE` / `DEADLINE_PASSED` / `MAX_ATTEMPTS_REACHED`, 403 `ACCESS_DENIED`, 404 |
 | POST | `/attempt/:attemptId/answer` | auth | |
 | POST | `/attempt/:attemptId/submit` | auth | |
-| GET | `/attempt/:attemptId/result` | auth | |
-| GET | `/teacher/:teacherId` | auth | |
+| GET | `/attempt/:attemptId/result` | auth | Includes `attempt.canRetry` |
+| GET | `/teacher/:teacherId` | auth | Own quizzes; SuperAdmin may list any teacher's |
 | POST | `/` | auth | Create |
-| GET | `/:quizId` | auth | |
+| GET | `/:quizId` | auth | Full quiz (custom answers included): the quiz's teacher or a SuperAdmin; anyone else 403 `ACCESS_DENIED` |
 | PUT | `/:quizId` | auth | |
 | DELETE | `/:quizId` | auth | |
 | POST | `/:quizId/publish` | auth | |
 | POST | `/:quizId/close` | auth | |
 | POST | `/:quizId/clone` | auth | |
-| GET | `/:quizId/analytics` | auth | |
+| GET | `/:quizId/analytics` | auth | Includes `questionAnalysis` (per question) |
 | POST | `/:quizId/questions` | auth | Add question |
 | DELETE | `/:quizId/questions/:questionId` | auth | |
 | PUT | `/:quizId/questions/reorder` | auth | |
@@ -318,8 +335,12 @@ All role guards also allow `SuperAdmin`.
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/` | auth, isPrincipal |
-| GET | `/get-all` | auth, isPrincipal |
+| POST | `/` | auth, isPrincipal, principalSchoolScope |
+| GET | `/get-all` | auth, isPrincipal, principalSchoolScope |
+| PUT | `/:id` | auth, isPrincipal, principalSchoolScope |
+| DELETE | `/:id` | auth, isPrincipal, principalSchoolScope |
+
+A principal works inside their own school: `POST /` (one teacher or an array) always uses it, `GET /get-all` lists only its teachers, and `PUT`/`DELETE /:id` return 404 for another school's teacher. A principal with no school gets `403 NO_SCHOOL`. SuperAdmin has no limit.
 
 ### 1.23 Teacher-Students (`/api/v1/teacher-students`)
 
@@ -330,7 +351,7 @@ All role guards also allow `SuperAdmin`.
 
 ### 1.24 Teacher Dashboard (`/api/v1/teacher-dashboard`)
 
-All require `auth, isTeacher` (applied at router level).
+All require `auth, isTeacher` (applied at router level), and `:teacherId` must be the caller's own id (`isSelfOrSuperAdmin('teacherId')`; a SuperAdmin may use any). Otherwise `403 { code: "NOT_YOUR_DATA" }`.
 
 | Method | Path |
 |--------|------|
@@ -351,6 +372,8 @@ All require `auth, isTeacher` (applied at router level).
 | GET | `/:id` |
 | PUT | `/:id` |
 
+Writes need `isPrincipal`. A principal may `PUT` only their own school (`403 NOT_YOUR_SCHOOL`; no school linked: `403 NO_SCHOOL`).
+
 ### 1.26 Sections (`/api/v1/sections`)
 
 | Method | Path |
@@ -362,6 +385,8 @@ All require `auth, isTeacher` (applied at router level).
 | GET | `/:sectionId` |
 | PUT | `/:sectionId` |
 | DELETE | `/:sectionId` |
+
+Writes need `isPrincipal` + `principalSchoolScope`: a principal's `POST /` and `POST /bulk` always use their own school, and `PUT`/`DELETE` return 404 for another school's section. No school linked: `403 NO_SCHOOL`.
 
 ### 1.27 Student (`/api/v1/student`)
 

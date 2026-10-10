@@ -195,6 +195,8 @@ Quizzes assigned by your teachers appear here.
 2. Answer questions — navigate freely between questions
 3. Click **Submit** when done (or it auto-submits when the timer runs out)
 
+Your answers are saved as you go. If you reload the page or come back later, the quiz picks up where you left off, with your answers and the questions in the same order.
+
 If the teacher allows more than one attempt, a completed quiz shows **Results** and **Retry**. When no attempts are left, it shows **View Results**, or says the deadline has passed.
 
 #### Viewing Quiz Results
@@ -203,10 +205,12 @@ After submission:
 - Score and percentage, and whether you passed (the teacher sets the pass mark, 50% by default)
 - Number of correct answers and the time you spent
 - Question-by-question review with the correct answers and explanations. Your teacher decides when answers are shown: right after you submit, after the deadline, or never
+- **Try Again** (when you have attempts left and the deadline hasn't passed) starts a new attempt straight away
+- **More Quizzes** goes back to the quiz list, and **Quiz History** opens your past attempts
 
 #### Quiz History
 
-- The **Quiz History** page (`/quiz/history`) lists your submitted attempts, newest first
+- The **Quiz History** page (`/quiz/history`) lists your submitted attempts, newest first. Open it with the **History** button at the top of the quiz list, or **Quiz History** on a result page
 - Search by quiz title
 - Open any attempt to see its result again
 
@@ -388,7 +392,7 @@ Until you enter the code, nothing changes on your account. If the code expired o
 
 #### Public Profile
 
-- Anyone with the link to your public profile can open it
+- Anyone with the link to your public profile can open it, without signing in
 - Shows your name, picture, current and best streak, questions practised, accuracy and number of subjects (no email or other private details)
 - There is no setting to hide it
 

@@ -42,6 +42,9 @@
 - **Result card** — "Challenge on WhatsApp" is pinned in the footer, visible without scrolling on every phone (shorter label below 360px).
 
 #### Fixed
+- **Quiz Try Again and history** — **Try Again** on the result page (shown when `attempt.canRetry` is `true`) starts a new attempt and opens it. The quiz list header and the result page link to `/quiz/history`.
+- **Quiz page load** — `QuizAttempt` declares `flushPending` before the effect that depends on it, so the page renders instead of the error screen.
+- **Public student page stats** — `StudentPublicProfile` reads the streak and stats from `GET /profile/public/:userId` alone, so signed-out visitors see the real numbers.
 - **Result card after a new badge** — the badge check returned `{ badgeId, title }` objects but the result modal expected IDs, so any session that earned a badge (including First Steps on a first session) ended with no result card. The API layer now maps to IDs and the popup skips unknown badges.
 - **Two tabs logging each other out** — two tabs refreshing with the same single-use refresh token no longer log the slower tab out.
 - **AI stream and PDF export after token expiry** — they now refresh instead of failing with a bare 401.

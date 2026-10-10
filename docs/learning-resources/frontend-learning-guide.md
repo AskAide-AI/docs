@@ -27,7 +27,7 @@ A comprehensive guide to understanding the **AskAide AI Frontend** -- its tech s
 | **State Mgmt** | Redux Toolkit | Global state management (auth, profile, session) |
 | **Routing** | React Router DOM v7 | Client-side navigation |
 | **HTTP Client** | Axios | API requests with interceptors |
-| **Forms** | React Hook Form + Zod | Form handling and schema validation |
+| **Forms** | React Hook Form | Form handling and validation with `register` rules |
 | **Icons** | Lucide React | Modern icon library |
 | **Charts** | Recharts | Data visualization |
 | **Analytics** | Microsoft Clarity | Heatmaps and session recording |
@@ -137,13 +137,15 @@ Manages global state that many components need to access (e.g., logged-in user i
 - Using `useSelector` to read state and `useDispatch` to dispatch actions
 - Handling asynchronous logic via thunks or in the API layer
 
-### React Hook Form + Zod
+### React Hook Form
 Makes form handling efficient and robust.
 
 **What to learn:**
 - Registering form inputs with `useForm`
-- Form validation with Zod schemas (e.g., defining min/max length, email format, required fields)
-- Error display
+- Validation rules passed to `register` (`required`, `minLength`, `pattern`, `validate`), e.g. the signup password rule
+- Error display from `formState.errors`
+
+(`zod` is in `package.json` but no form uses it.)
 
 ---
 
@@ -206,6 +208,6 @@ Implemented by toggling a `dark` class on a parent element. Tailwind then applie
 3. **Learn React Router** (navigation in SPAs)
 4. **Learn Axios basics** (GET/POST requests)
 5. **Learn Redux Toolkit** (slices, store, dispatch/select)
-6. **Learn React Hook Form + Zod** (forms and validation)
+6. **Learn React Hook Form** (forms and validation rules)
 7. **Study the project structure** (`src/`, `api/`, `store/`)
 8. **Explore an existing feature** (e.g., login, study session) to see how pieces fit together

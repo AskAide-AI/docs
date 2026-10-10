@@ -504,7 +504,7 @@ The Backend response envelope is `success`, `message`, `data`. Most module funct
 | `teacherClass.api.js` | `teacherClassApi` | `/teacher-classes/*` | `create`, `mine`, `setActive`, `report`, `certificate`; `getJoinInfo` (public) and `join` (student) |
 | `notification.api.js` | `notificationApi` | `/notifications/*` | `list`, `unreadCount`, `markRead`. No toasts: the bell polls quietly. |
 | `stats.api.js` | `statsApi` | `/stats/public` | Unauthenticated |
-| `profile.api.js` | `profileApi` | `/profile/public/:userId`, `/profile/name`, `/profile/email/*` | Public profile, `updateName`, `requestEmailChange`, `confirmEmailChange`. Errors are rethrown as `Error` with the Backend message. |
+| `profile.api.js` | `profileApi` | `/profile/public/:userId`, `/profile/name`, `/profile/email/*` | Public profile (a student's streak and stats included; `StudentPublicProfile` makes only this call, so it works for signed-out visitors), `updateName`, `requestEmailChange`, `confirmEmailChange`. Errors are rethrown as `Error` with the Backend message. |
 
 Raw `fetch` calls: `aiAssistantApi.streamRequest` and the PDF `DownloadButton` in `src/components/ai-agent/MessageBubble.jsx` go through `authorizedFetch`. `studyApi.endSessionOnPageExit` attaches the stored token by hand, because a `keepalive` request on `pagehide` can't wait for a refresh.
 
@@ -691,7 +691,13 @@ sequenceDiagram
   QA->>BE: POST /quiz/attempt/:attemptId/submit
   QA->>QR: navigate /quiz/result/:attemptId after 1.6 s celebration
   QR->>BE: GET /quiz/attempt/:attemptId/result
+  opt attempt.canRetry and the student taps Try Again
+    QR->>BE: POST /quiz/:quizId/start
+    QR->>QA: navigate /quiz/:quizId/attempt/:newAttemptId
+  end
 ```
+
+The quiz list header and the result page also link to `/quiz/history` (`QuizHistory`).
 
 ### 8.6 Chapter ingestion (SuperAdmin) and insights
 
@@ -901,7 +907,7 @@ npx vitest run -t "should pass a smoke test"
 
 ## 11. Design constraints and known limitations
 
-Technical facts first listed from the code at `75ce259`. Rows 6, 8, 10, 16, 19 and 22 and rows 27–29 were updated at `c2aa6a2`. There are no `TODO`/`FIXME` markers in `src/`.
+Technical facts first listed from the code at `75ce259`. Rows 6, 8, 10, 16, 19 and 22 and rows 27–29 were updated at `c2aa6a2`, row 12 at `ca26383`. There are no `TODO`/`FIXME` markers in `src/`.
 
 | # | Constraint or limitation | Evidence |
 |---|---|---|
@@ -916,7 +922,7 @@ Technical facts first listed from the code at `75ce259`. Rows 6, 8, 10, 16, 19 a
 | 9 | If `VITE_API_URL` is unset, the axios `baseURL` is undefined and requests go to the frontend origin. The production fallback exists only in `vite.config.ts` (PWA pattern) and the scripts. | `axios.js`, `vite.config.ts` |
 | 10 | `PATCH /sessions/:id/end` is sent once per session with at least one answer: on End Session, on unmount (in-app navigation), or as a `keepalive` fetch on `pagehide`. A session with no answers is never ended. | `QuestionPractice.jsx` |
 | 11 | `unsyncedAnswers` is drained only when `Home` mounts or a new session starts. | `Home.jsx` |
-| 12 | `QuizResult` retry button navigates to `/quiz/:quizId/start`, which has no route and renders `NotFound`. | `QuizResult.jsx`, `App.jsx` |
+| 12 | Resolved: `QuizResult`'s Try Again (shown when `attempt.canRetry` is `true`) starts a new attempt with `POST /quiz/:quizId/start` and opens it; a failure shows a toast. | `QuizResult.jsx` |
 | 13 | `POST /quiz/:quizId/start` runs twice on the normal path (list, then attempt page). The Backend is relied on to resume the in-progress attempt. | `StudentQuizList.jsx`, `QuizAttempt.jsx` |
 | 14 | Teacher analytics screens show mock data to SuperAdmins. | `src/mocks/teacherData.js`, `TeacherSubjectSelector.jsx` and siblings |
 | 15 | `App.jsx` allows `Parent` on `/teacher/*`, while `navItems.js` hides the Teacher link from Parents. | `App.jsx`, `navItems.js` |

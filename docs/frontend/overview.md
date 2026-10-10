@@ -11,7 +11,7 @@
 | State | Redux Toolkit (global) + React Context (UI/theme) |
 | Routing | React Router v7 with lazy-loaded routes |
 | HTTP | Axios with JWT interceptor, 30s timeout |
-| Forms | React Hook Form + Zod |
+| Forms | React Hook Form (built-in `register` rules) |
 | Analytics | Microsoft Clarity |
 
 ## Architecture

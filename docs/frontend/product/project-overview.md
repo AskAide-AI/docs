@@ -28,7 +28,7 @@ AskAideAI is a **MERN stack** (MongoDB, Express, React, Node.js) based EdTech pl
 | **Redux Toolkit** | Centralized state management |
 | **React Router DOM** | Client-side routing |
 | **Axios** | HTTP client with interceptors |
-| **React Hook Form + Zod** | Form handling and validation |
+| **React Hook Form** | Form handling and validation (`register` rules) |
 | **Lucide React** | Icon library |
 | **react-hot-toast** | Toast notifications |
 

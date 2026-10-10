@@ -491,7 +491,7 @@ This document outlines the Question and Session API endpoints available in the a
 #### Create Section
 - **URL**: `/api/v1/sections`
 - **Method**: POST
-- **Description**: Create a new class section (e.g., "9th-A")
+- **Description**: Create a new class section (e.g., "9th-A"). For a principal, `schoolId` is always their own school
 - **Request Body**:
   ```json
   {
@@ -636,7 +636,7 @@ This document outlines the Question and Session API endpoints available in the a
 #### Start Quiz (Student)
 - **URL**: `/api/v1/quiz/:quizId/start`
 - **Method**: POST
-- **Description**: Start an attempt for a published quiz.
+- **Description**: Start an attempt for a published quiz, or resume the one in progress. Returns `{ attempt, questions, quiz }`; questions never include answers.
 
 #### Submit Answer
 - **URL**: `/api/v1/quiz/attempt/:attemptId/answer`
@@ -644,6 +644,8 @@ This document outlines the Question and Session API endpoints available in the a
 - **Request Body**: `{ "quizQuestionId": "...", "selectedAnswer": "..." }`
 
 ### Teacher Dashboard APIs
+
+`:teacherId` is always the signed-in teacher's own id (a SuperAdmin may use any); other ids get `403 NOT_YOUR_DATA`.
 
 #### Get Subject Overview
 - **URL**: `/api/v1/teacher-dashboard/:teacherId/subject/:subjectId/dashboard`

@@ -49,7 +49,7 @@ Roles are the Backend's `accountType` values (`src/shared/middleware/auth.js`). 
 |---|---|
 | Student (and `NormalUser`) | Chapter-wise practice sessions, quizzes, streaks, badges, daily challenges, weekly leaderboard, AI learning insights, challenge-a-friend links, Refer & Earn, joining a teacher's class by link, notification bell |
 | Teacher | Self-signup (email or Google), class join links, class dashboards, quizzes, question papers, AI assistant for quizzes, worksheets, notes and assignments, notification bell |
-| Principal | School, section and teacher management, school-level dashboards |
+| Principal | School, section and teacher management for their own school, school-level dashboards |
 | Parent | Linked children's progress |
 | SuperAdmin | Curriculum and chapter PDF ingestion, user approval, feedback moderation, campaigns, platform metrics, live LLM selection (AI System tab) |
 

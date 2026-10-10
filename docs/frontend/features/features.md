@@ -450,8 +450,8 @@ Students open the teacher's link and join in one tap. A guest signs up with Goog
 
 ### Student Quiz Experience
 **Status:** ✅ Completed
-**Description:** Students can view available quizzes, take timed attempts, submit answers, and view detailed results with explanations. Includes offline answer safety net — answers that fail to save are queued in localStorage (`pendingQuizAnswers:<attemptId>`) and retried on reconnect + before final submit.
-**Pages:** /quizzes, /quiz/:quizId/attempt/:attemptId, /quiz/result/:attemptId
+**Description:** Students can view available quizzes, take timed attempts, submit answers, and view detailed results with explanations. Includes offline answer safety net — answers that fail to save are queued in localStorage (`pendingQuizAnswers:<attemptId>`) and retried on reconnect + before final submit. Reloading the quiz page resumes the attempt with its saved answers and the same question order. When another attempt is allowed, **Try Again** on the result page starts a new attempt and opens it. The quiz list header and the result page link to the quiz history.
+**Pages:** /quizzes, /quiz/:quizId/attempt/:attemptId, /quiz/result/:attemptId, /quiz/history
 **Components:** 
 - `StudentQuizList.jsx`
 - `QuizAttempt.jsx`

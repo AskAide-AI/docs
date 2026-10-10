@@ -36,7 +36,7 @@
 
 ## Role-Based Access Control
 **Status:** ✅ Completed  
-**Description:** Multi-role system supporting Admin, Teacher, Student, Principal, and Parent with role-specific dashboards.  
+**Description:** Multi-role system supporting Admin, Teacher, Student, Principal, and Parent with role-specific dashboards. Routes keyed by a user id serve only that user (a SuperAdmin may open anyone's); principals manage only their own school; teachers, parents and principals see students through their own dashboards.  
 **Endpoints:**
 - Role verified via JWT middleware on protected routes
 - Different controllers for each role type
@@ -115,7 +115,7 @@
 
 ## Practice Sessions
 **Status:** ✅ Completed  
-**Description:** Students can start practice sessions on chapters, answer questions, and receive immediate feedback.  
+**Description:** Students can start practice sessions on chapters, answer questions, and receive immediate feedback. A session is readable only by its owner or a SuperAdmin.  
 **Endpoints:**
 - `POST /api/v1/sessions` - Create session
 - `GET /api/v1/sessions/:id` - Get session
@@ -154,7 +154,7 @@
 
 ## Section Management
 **Status:** ✅ Completed  
-**Description:** Schools can create class sections (A, B, C) and assign teachers to specific class-sections.  
+**Description:** Schools can create class sections (A, B, C) and assign teachers to specific class-sections. A principal creates and changes sections only in their own school.  
 **Endpoints:**
 - `POST /api/v1/sections` - Create section
 - `GET /api/v1/sections/school/:schoolId/class/:classId` - Get sections
@@ -178,7 +178,7 @@
 
 ## Teacher Dashboard
 **Status:** ✅ Completed  
-**Description:** Subject-centric dashboard for teachers to monitor student progress, view chapter analytics, identify weak topics, and track individual student performance.  
+**Description:** Subject-centric dashboard for teachers to monitor student progress, view chapter analytics, identify weak topics, and track individual student performance. `:teacherId` must be the signed-in teacher's own id (a SuperAdmin may open any teacher's).  
 **Endpoints:**
 - `GET /api/v1/teacher-dashboard/:teacherId/my-assignments` - Get assigned subjects & classes
 - `GET /api/v1/teacher-dashboard/:teacherId/subject/:subjectId/dashboard` - Subject overview
@@ -212,7 +212,7 @@
 
 ## Quiz Mode
 **Status:** ✅ Completed  
-**Description:** Async quiz system for teachers to create, publish, and manage quizzes with auto-grading. Students can attempt quizzes with configurable time limits, multiple attempts, and view results.  
+**Description:** Async quiz system for teachers to create, publish, and manage quizzes with auto-grading. Students can attempt quizzes with configurable time limits, multiple attempts, and view results. Students see the published quizzes of the teachers they are assigned to, start or resume an attempt (shuffled questions keep their order for that attempt), see from the result whether another attempt is allowed (`canRetry`), and can review past attempts. Teacher analytics include per-question analysis. Only the quiz's teacher (or a SuperAdmin) can read the full quiz.  
 **Endpoints:**
 - `POST /api/v1/quiz` - Create quiz (draft)
 - `GET /api/v1/quiz/:quizId` - Get quiz details
@@ -228,6 +228,7 @@
 - `POST /api/v1/quiz/:quizId/start` - Start attempt
 - `POST /api/v1/quiz/attempt/:attemptId/submit` - Submit quiz
 - `GET /api/v1/quiz/attempt/:attemptId/result` - Get result
+- `GET /api/v1/quiz/student/history` - Quiz history (student)
 
 **Dependencies:** Quiz, QuizQuestion, QuizAttempt, QuizAnswer models, TeacherStudent model  
 **Added:** 2026-01-19
@@ -312,7 +313,7 @@
 
 ## Parent Dashboard
 **Status:** ✅ Completed  
-**Description:** Parents can link to their children's accounts and view their progress, subject mastery, and weak topics.  
+**Description:** Parents can link to their children's accounts and view their progress, subject mastery, and weak topics. The parent comes from the login token; the dashboard paths carry only the child (and subject) ids, and the child must be linked to that parent.  
 **Endpoints:**
 - `POST /api/v1/parent-students/bulk` - Bulk link children
 - `GET /api/v1/parent-students/links` - Get parent-student links
@@ -334,6 +335,8 @@
 - `GET /api/v1/streaks/:userId` - Get current streak info
 - `POST /api/v1/streaks/:userId/use-freeze` - Use a streak freeze
 
+Both serve only the student themself (or a SuperAdmin).
+
 **Dependencies:** Streak model, MongoDB  
 **Added:** 2026-04-18
 
@@ -341,7 +344,7 @@
 
 ## Daily Challenge System
 **Status:** ✅ Completed  
-**Description:** Daily practice challenges with completion tracking and history.  
+**Description:** Daily practice challenges with completion tracking and history. Each challenge is named after the topic it practises. The routes serve only the student themself (or a SuperAdmin).  
 **Endpoints:**
 - `GET /api/v1/daily-challenge/:userId` - Get today's challenge
 - `POST /api/v1/daily-challenge/:userId/complete` - Mark challenge complete
@@ -356,7 +359,7 @@
 **Status:** ✅ Completed  
 **Description:** Real-time badge awards with 21 achievements unlocked on practice milestones, streaks, study time, challenges and invites. Night Owl and Early Bird are judged by Indian time (IST). New badges also appear in the notification bell. Daily cron safety net for missed checks.  
 **Endpoints:**
-- `GET /api/v1/badges/:userId` - Get user badges
+- `GET /api/v1/badges/:userId` - Get user badges (the student themself or a SuperAdmin)
 - `POST /api/v1/badges/check` - Real-time badge check
 
 **Dependencies:** Achievement model, Achievement scheduler job  
@@ -382,7 +385,7 @@
 **Endpoints:**
 - `POST /api/v1/session-feedback/reaction` - Submit emoji reaction
 - `POST /api/v1/session-feedback/nps` - Submit NPS score
-- `GET /api/v1/session-feedback/nps/check/:userId` - Check if NPS due
+- `GET /api/v1/session-feedback/nps/check/:userId` - Check if NPS due (the user themself or a SuperAdmin)
 - `GET /api/v1/session-feedback/stats` - Feedback statistics
 - `GET /api/v1/session-feedback/nps/stats` - NPS statistics
 
@@ -438,11 +441,12 @@
 
 ## School Management
 **Status:** ✅ Completed  
-**Description:** Create and manage school entities for institutional users.  
+**Description:** Create and manage school entities for institutional users. A principal can edit only their own school.  
 **Endpoints:**
-- `POST /api/v1/schools` - Create school
-- `GET /api/v1/schools` - List schools
-- `GET /api/v1/schools/:id` - Get school details
+- `POST /api/v1/school` - Create school
+- `GET /api/v1/school` - List schools
+- `GET /api/v1/school/:id` - Get school details
+- `PUT /api/v1/school/:id` - Update school name and code
 
 **Dependencies:** School model  
 **Added:** 2024-03-01

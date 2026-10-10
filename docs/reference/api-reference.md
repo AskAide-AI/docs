@@ -94,10 +94,12 @@ Errors use `{ "success": false, "message": "...", "code": "ERROR_CODE" }` (see [
 | Role | Access Level |
 |------|-------------|
 | `Student` | Own data, practice sessions, quizzes, challenges, referrals |
-| `Teacher` | Teacher dashboard, quizzes, question papers, AI assistant, class join links |
-| `Principal` | School-scoped dashboards, school, section and teacher management |
+| `Teacher` | Their own teacher dashboard, quizzes, question papers, AI assistant, class join links |
+| `Principal` | School-scoped dashboards; teacher, school and section management within their own school |
 | `Parent` | Linked children's data and progress overview |
 | `SuperAdmin` | Full access; passes every role guard |
+
+Routes keyed by a user id (`/streaks/:userId`, `/progress/user/:userId`, `/teacher-dashboard/:teacherId/...` and the others noted below) serve only the signed-in user's own data; a SuperAdmin may open anyone's. Other callers get `403` with `code: "NOT_YOUR_DATA"`. Teachers, principals and parents see students through their own dashboards, which check the teacher–student, school or parent–child link.
 
 ---
 
@@ -364,7 +366,7 @@ Reset password with token from email. Revokes all of the user's refresh tokens.
 ```json
 {
   "token": "abc123def456",
-  "newPassword": "NewSecret456",
+  "password": "NewSecret456",
   "confirmPassword": "NewSecret456"
 }
 ```
@@ -588,7 +590,7 @@ Remove profile avatar (reverts to default).
 
 #### GET `/public/:userId`
 
-Get public profile for any user (no sensitive data).
+Get public profile for any user (no sensitive data). No auth needed: the shareable student page calls only this endpoint.
 
 **Params:** `userId` — MongoDB ObjectId
 
@@ -597,13 +599,18 @@ Get public profile for any user (no sensitive data).
 {
   "success": true,
   "data": {
-    "userName": "john",
+    "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+    "name": "John",
     "image": "https://...",
     "accountType": "Student",
-    "createdAt": "2024-01-15T10:30:00.000Z"
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "streak": { "currentStreak": 5, "longestStreak": 12 },
+    "stats": { "questionsAnswered": 480, "accuracy": 79, "subjectsCount": 3 }
   }
 }
 ```
+
+`streak` and `stats` are sent only for Student accounts. `accuracy` is the percentage of practice answers that were correct (0 with no answers); `subjectsCount` is the number of subjects practised.
 
 **Errors:** 404 (user not found)
 
@@ -1020,6 +1027,8 @@ Smart batch fetch — returns questions **not yet answered** in the given sessio
 
 Base: `/api/v1/sessions/`
 
+Sessions are private to their owner. `GET /sessions/user/:userId` and `GET /sessions/last-incomplete/:userId` need `:userId` to be the signed-in user; reading, ending or sharing a session needs it to be theirs. A SuperAdmin may access any. Other callers get `403`.
+
 ---
 
 #### POST `/sessions`
@@ -1304,7 +1313,7 @@ Get all answers for a session.
 
 #### GET `/user-answers/user/:userId`
 
-Get all answers for a user (across sessions).
+Get all answers for a user (across sessions). Only the user themself or a SuperAdmin (`403 NOT_YOUR_DATA` otherwise).
 
 **Params:** `userId`
 
@@ -1324,7 +1333,7 @@ Get all answers for a user (across sessions).
 
 Base: `/api/v1/` (routes mounted at `/topic-progress`, `/sessions`, `/user-answers`, `/progress`, `/streaks`, `/daily-challenge`, `/session-feedback`, `/badges` — no single `/progress` prefix)
 
-The `/topic-progress` endpoints always report on the **signed-in user** (taken from the token), so they have no `userId` in the path. Mastery scores are between 0 and 1.
+The `/topic-progress` endpoints always report on the **signed-in user** (taken from the token), so they have no `userId` in the path. Mastery scores are between 0 and 1. Routes with `:userId` in the path serve only that user or a SuperAdmin (`403 NOT_YOUR_DATA` otherwise).
 
 ---
 
@@ -1426,7 +1435,7 @@ AI-generated insights on a whole subject, through the AI Service `GET /v1/ai-ins
 
 #### GET `/topic-progress/mastery-summary`
 
-Mastery counts and highlights across all of the signed-in user's topics.
+Mastery counts and highlights across all of the signed-in user's topics. `topicName` is the topic's title (`"Unknown"` only if the topic no longer exists).
 
 **Response (200):**
 ```json
@@ -1470,7 +1479,7 @@ AI insights on a teacher's class for one subject. The Backend calls the AI Servi
 
 #### GET `/progress/user/:userId`
 
-Everything the student dashboard shows, in one call. The shape is large; the main fields are below.
+Everything the student dashboard shows, in one call. The shape is large; the main fields are below. Only the student themself or a SuperAdmin (`403 NOT_YOUR_DATA` otherwise).
 
 **Params:** `userId`
 
@@ -1506,7 +1515,7 @@ Everything the student dashboard shows, in one call. The shape is large; the mai
 
 ### 8. Gamification
 
-Base: `/api/v1/` — there is no single gamification prefix; each path below is the full path under `/api/v1` (`/streaks`, `/daily-challenge`, `/badges`, `/leaderboard`, `/goals`, `/referral`). All require auth.
+Base: `/api/v1/` — there is no single gamification prefix; each path below is the full path under `/api/v1` (`/streaks`, `/daily-challenge`, `/badges`, `/leaderboard`, `/goals`, `/referral`). All require auth. Routes with `:userId` in the path serve only that user or a SuperAdmin; anyone else gets `403` with `code: "NOT_YOUR_DATA"`.
 
 ---
 
@@ -1567,13 +1576,13 @@ Use a streak freeze to maintain streak for a missed day.
 
 `data` has the same shape as `GET /streaks/:userId`.
 
-**Errors:** 400 when no freeze is left ("No streak freezes available. Freezes reset every Monday.") or there is no streak to protect ("No active streak to protect."). These 400 responses keep the success body shape (`success: true`, the reason in `message`, the unchanged streak in `data`), so check the HTTP status.
+**Errors:** 400 when no freeze is left ("No streak freezes available. Freezes reset every Monday.") or there is no streak to protect ("No active streak to protect."). The body is `{ "success": false, "message": "<reason>", "data": <unchanged streak> }`. 403 (`NOT_YOUR_DATA`).
 
 ---
 
 #### GET `/daily-challenge/:userId`
 
-Get today's daily challenge, creating it on the first call of the day (IST). It holds 5 questions from one of the user's weakest topics (`WEAK` or `LEARNING`), topped up with random questions when that topic has fewer than 5. With no weak topic, the names are `"Mixed"` / `"Mixed Topics"`. `difficulty` is `Easy`, `Medium` or `Hard`, from the topic's mastery.
+Get today's daily challenge, creating it on the first call of the day (IST). It holds 5 questions from one of the user's weakest topics (`WEAK` or `LEARNING`), topped up with random questions when that topic has fewer than 5. `topicName` is that topic's title; with no weak topic, the names are `"Mixed"` / `"Mixed Topics"`. `difficulty` is `Easy`, `Medium` or `Hard`, from the topic's mastery.
 
 **Params:** `userId`
 
@@ -1631,7 +1640,7 @@ Mark today's challenge as completed. `score` is the number of answers sent with 
 
 **Response (200):** `message` is "Daily challenge completed!" and `data` has the same shape as `GET /daily-challenge/:userId`, with `completed: true`, `score`, `completedAt`, `answers` and the full questions.
 
-**Errors:** 400 when `answers` is not an array (this response also keeps `success: true`; check the status). The call fails with 500 if today's challenge was never fetched.
+**Errors:** 400 (`success: false`, "Answers array is required") when `answers` is not an array; 403 (`NOT_YOUR_DATA`). The call fails with 500 if today's challenge was never fetched.
 
 ---
 
@@ -1929,7 +1938,7 @@ Base: `/api/v1/quiz/`
 
 Full lifecycle: create (draft) → add questions → publish → start → answer → submit → result
 
-**Auth:** every route needs a signed-in user; there is no role guard on the routes. Teacher operations only work on quizzes the signed-in user created, and creating a quiz (or searching the bank for one) needs a teacher–student link for that class and subject. Students only see published quizzes for the class and subject their teachers are linked to.
+**Auth:** every route needs a signed-in user; there is no role guard on the routes. Teacher operations only work on quizzes the signed-in user created (a SuperAdmin may read any quiz and any teacher's list), and creating a quiz (or searching the bank for one) needs a teacher–student link for that class and subject. Students only see, and can only start, published quizzes from the teachers they are assigned to for that class and subject.
 
 Quiz `status`: `draft`, `published` or `closed`. Attempt `status`: `in_progress`, `completed` or `abandoned`.
 
@@ -2032,7 +2041,7 @@ Creates a draft quiz with no questions.
 
 #### GET `/teacher/:teacherId` — List My Quizzes (Teacher)
 
-`:teacherId` must be the signed-in user (otherwise 403). Deleted quizzes are left out.
+`:teacherId` must be the signed-in user, unless the caller is a SuperAdmin (otherwise 403). Deleted quizzes are left out.
 
 **Query:** `?status=published&subjectId=...&classId=...&page=1&limit=10`
 
@@ -2051,7 +2060,7 @@ Creates a draft quiz with no questions.
 
 #### GET `/:quizId` — Get Quiz
 
-Returns the quiz and its questions. For a Teacher account the quiz must be their own.
+Returns the quiz and its questions, including custom questions' answers. Only the teacher who created the quiz, or a SuperAdmin, may read it; anyone else gets 403 (`ACCESS_DENIED`). Students take a quiz through [`POST /:quizId/start`](#post-quizidstart--start-quiz-attempt), which never sends answers.
 
 **Response (200):**
 ```json
@@ -2247,7 +2256,7 @@ Draft quizzes only.
 }
 ```
 
-`avgScore` and `passRate` are percentages; times are in seconds. `topPerformers` (passed) and `strugglingStudents` (not passed) hold up to 5 each.
+`avgScore` and `passRate` are percentages; times are in seconds. `questionAnalysis` has one entry per quiz question, in quiz order. `topPerformers` (passed) and `strugglingStudents` (not passed) hold up to 5 each.
 
 ---
 
@@ -2285,15 +2294,55 @@ Published, not deleted quizzes for the student's class/subject links.
 }
 ```
 
-`attemptInfo.inProgressAttempt` is the ID of an unfinished attempt (or `null`); `bestScore` is the best percentage (or `null`); `canAttempt` is `false` once the deadline passed or no attempts are left.
+`attemptInfo.inProgressAttempt` is the ID of an unfinished attempt (or `null`); `bestScore` is the best percentage (or `null`); `canAttempt` is `true` while the deadline hasn't passed and attempts are left, and `false` otherwise.
 
 ---
 
 #### POST `/:quizId/start` — Start Quiz Attempt
 
-Starts an attempt on a published quiz, or resumes the student's attempt in progress.
+Starts an attempt on a published quiz, or returns the student's attempt in progress (the quiz page loads and resumes through this call). The student must be assigned to the quiz's teacher for its class and subject.
 
-**Response (201):** `{ "success": true, "message": "Quiz started", "data": { "attempt": { "_id": "64at1...", "...": "..." }, "...": "..." } }`
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Quiz started",
+  "data": {
+    "attempt": {
+      "_id": "64at1a2b3c4d5e6f7a8b9c0d1",
+      "studentId": "64f1...",
+      "quizId": "64qz1...",
+      "attemptNumber": 1,
+      "status": "in_progress",
+      "startedAt": "2026-10-10T09:00:00.000Z",
+      "totalQuestions": 20,
+      "answers": [
+        { "questionId": "64qq1a2b3c4d5e6f7a8b9c0d1", "answer": "4" }
+      ],
+      "...": "..."
+    },
+    "questions": [
+      {
+        "_id": "64qq1a2b3c4d5e6f7a8b9c0d1",
+        "questionText": "What is 2 + 2?",
+        "options": ["3", "4", "5", "6"],
+        "questionType": "mcq",
+        "difficulty": "Easy",
+        "marks": 1,
+        "order": 1
+      }
+    ],
+    "quiz": { "_id": "64qz1...", "title": "Midterm Practice", "settings": { "timeLimit": 30, "shuffleQuestions": true, "...": "..." }, "...": "..." }
+  }
+}
+```
+
+- Each question's `_id` is the quiz-question ID to send as `quizQuestionId` when answering. Questions never include the correct answer or explanation.
+- `attempt.answers` lists the answers saved so far (`questionId` is the quiz-question ID); it is empty for a new attempt.
+- With `shuffleQuestions` on, the order is shuffled once per attempt and stays the same every time that attempt is loaded.
+- A new attempt is created only while the quiz is published, before its deadline, and with attempts left. An attempt already in progress is returned as it is.
+
+**Errors:** 400 (`QUIZ_NOT_AVAILABLE`: not published; `DEADLINE_PASSED`; `MAX_ATTEMPTS_REACHED`), 403 (`ACCESS_DENIED`: not assigned to this quiz's teacher for its class and subject), 404 (`NOT_FOUND`: no such quiz, or deleted)
 
 ---
 
@@ -2416,7 +2465,8 @@ Same response as `GET /attempt/:attemptId` for the student's unfinished attempt 
       "correctAnswers": 16,
       "score": 16,
       "percentage": 80,
-      "passed": true
+      "passed": true,
+      "canRetry": false
     },
     "quiz": { "_id": "64qz1...", "title": "Midterm Practice", "totalMarks": 20, "passingPercentage": 50 },
     "questionDetails": [
@@ -2436,15 +2486,15 @@ Same response as `GET /attempt/:attemptId` for the student's unfinished attempt 
 }
 ```
 
-`correctAnswer` and `explanation` are `null` unless `showAnswers` is `true`, which follows the quiz's `showAnswersAfter` setting.
+`correctAnswer` and `explanation` are `null` unless `showAnswers` is `true`, which follows the quiz's `showAnswersAfter` setting. `attempt.canRetry` is `true` when the student may start another attempt: the quiz is still published, its deadline hasn't passed, and the completed attempts are below `allowedAttempts` (or attempts are unlimited).
 
 ---
 
 #### GET `/student/history` — Quiz History (Student)
 
-Completed attempts, newest first.
+The signed-in student's completed attempts, newest first.
 
-**Query:** `?subjectId=...&page=1&limit=10`
+**Query:** `?subjectId=...&page=1&limit=10` (all optional; `limit` defaults to 10, max 50). An invalid `subjectId` returns an empty list.
 
 **Response (200):**
 ```json
@@ -2476,11 +2526,13 @@ Three routers serve teachers and the people who manage them:
 
 | Base | Auth | Purpose |
 |------|------|---------|
-| `/api/v1/teacher-dashboard/:teacherId/` | Teacher role required | Analytics on the students assigned to one teacher. `:teacherId` is the teacher's user ID |
-| `/api/v1/teacher/` | Principal role required | Create, list, update and delete teacher accounts |
+| `/api/v1/teacher-dashboard/:teacherId/` | Teacher role required | Analytics on the students assigned to one teacher. `:teacherId` must be the signed-in teacher's own user ID (a SuperAdmin may use any); otherwise `403` with `code: "NOT_YOUR_DATA"` |
+| `/api/v1/teacher/` | Principal role required | Create, list, update and delete teacher accounts. A principal works only within their own school; a SuperAdmin has no limit |
 | `/api/v1/teacher-students/` | Teacher or Principal role required | Assign students to teachers |
 
 A student counts as assigned once a teacher–student link exists for a subject (made with `POST /teacher-students/bulk`, or when the student joins a class link, see [Teacher Class Links](#22-teacher-class-links)). Mastery scores are between 0 and 1.
+
+On the `/teacher` routes, a principal's school comes from their account. A principal with no school linked gets `403` with `code: "NO_SCHOOL"`.
 
 ---
 
@@ -2772,7 +2824,7 @@ Send one teacher object, or an array of them for a bulk create.
 }
 ```
 
-`name`, `email`, `password` (6–128 characters) and `schoolId` are required.
+`name`, `email` and `password` (6–128 characters) are required. For a principal, every new teacher goes into the principal's own school, whatever `schoolId` is sent (so it can be left out). A SuperAdmin must send `schoolId`.
 
 **Response (201), one teacher:**
 ```json
@@ -2785,7 +2837,7 @@ Send one teacher object, or an array of them for a bulk create.
 
 **Response (200), array:** `message` is "Bulk creation completed" and `data` is `{ "success": [{ "_id", "name", "email", "accountType", "schoolId" }], "failed": [{ "email", "error" }] }`.
 
-**Errors:** 400 (validation failed, `MISSING_FIELDS`, `USER_EXISTS`)
+**Errors:** 400 (validation failed, `MISSING_FIELDS`, `USER_EXISTS`), 403 (`NO_SCHOOL`)
 
 ---
 
@@ -2793,7 +2845,9 @@ Send one teacher object, or an array of them for a bulk create.
 
 **Auth:** Principal role required.
 
-**Query:** `?schoolId=...` (optional)
+A principal gets only their own school's teachers. A SuperAdmin gets every teacher, or one school's with `?schoolId=...`.
+
+**Query:** `?schoolId=...` (optional; SuperAdmin only, a principal's own school is always used)
 
 **Response (200):** `message` "Teachers fetched successfully", `data` is an array of teacher user records with their profile (`additionalDetails`) populated.
 
@@ -2807,7 +2861,7 @@ Send one teacher object, or an array of them for a bulk create.
 
 **Response (200):** `message` "Teacher updated successfully", `data` is the updated teacher.
 
-**Errors:** 400 (`EMAIL_EXISTS`), 404 (`NOT_FOUND`)
+**Errors:** 400 (`EMAIL_EXISTS`), 403 (`NO_SCHOOL`), 404 (`NOT_FOUND`: no such teacher, or, for a principal, a teacher in another school)
 
 ---
 
@@ -2819,7 +2873,7 @@ Deletes the teacher and all of their teacher–student links.
 
 **Response (200):** `{ "success": true, "message": "Teacher deleted successfully", "data": null }`
 
-**Errors:** 404 (`NOT_FOUND`)
+**Errors:** 403 (`NO_SCHOOL`), 404 (`NOT_FOUND`: no such teacher, or, for a principal, a teacher in another school)
 
 ---
 
@@ -2868,7 +2922,7 @@ Deletes the teacher and all of their teacher–student links.
 | `/api/v1/parent-dashboard/` | Parent role required | The signed-in parent's linked children and their progress |
 | `/api/v1/parent-students/` | See each endpoint | Link and unlink parents and students |
 
-Every `/parent-dashboard/child/:childId/...` request checks that the child is linked to the signed-in parent; otherwise it returns `403` (`FORBIDDEN`).
+The parent is always the signed-in user (from the token); the paths carry only `childId` and, where present, `subjectId`, and each must be a valid ObjectId (`400` validation error otherwise). Every `/parent-dashboard/child/:childId/...` request checks that the child is linked to the signed-in parent; otherwise it returns `403` (`FORBIDDEN`).
 
 ---
 
@@ -3251,7 +3305,7 @@ Delete one of your own papers (it is hidden, not erased).
 
 Base: `/api/v1/school/` and `/api/v1/sections/`
 
-**Auth:** reads need a signed-in user; creating and changing schools and sections needs the Principal role.
+**Auth:** reads need a signed-in user; creating and changing schools and sections needs the Principal role. A principal updates only their own school and creates, updates and deletes sections only in it; a principal with no school linked gets `403` with `code: "NO_SCHOOL"` on those routes. A SuperAdmin has no limit.
 
 ---
 
@@ -3340,7 +3394,7 @@ Only the name and code can be changed, and both are required.
 
 **Response (200):** `message` "School updated successfully", `data` is the updated school.
 
-**Errors:** 400 (`MISSING_FIELDS`), 404 (`SCHOOL_NOT_FOUND`), 409 (`DUPLICATE_CODE`)
+**Errors:** 400 (`MISSING_FIELDS`), 403 (`NOT_YOUR_SCHOOL`: a principal editing another school; `NO_SCHOOL`), 404 (`SCHOOL_NOT_FOUND`), 409 (`DUPLICATE_CODE`)
 
 There is no endpoint to delete a school.
 
@@ -3357,7 +3411,7 @@ There is no endpoint to delete a school.
 }
 ```
 
-The name is stored in capitals, and `displayName` is "`<class name>`-`<NAME>`".
+The name is stored in capitals, and `displayName` is "`<class name>`-`<NAME>`". For a principal, `schoolId` is always their own school, whatever is sent.
 
 **Response (201):**
 ```json
@@ -3378,7 +3432,7 @@ The name is stored in capitals, and `displayName` is "`<class name>`-`<NAME>`".
 }
 ```
 
-**Errors:** 400 (`MISSING_FIELDS`), 404 (`SCHOOL_NOT_FOUND`, `CLASS_NOT_FOUND`), 409 (`DUPLICATE_SECTION`)
+**Errors:** 400 (`MISSING_FIELDS`), 403 (`NO_SCHOOL`), 404 (`SCHOOL_NOT_FOUND`, `CLASS_NOT_FOUND`), 409 (`DUPLICATE_SECTION`)
 
 ---
 
@@ -3392,6 +3446,8 @@ The name is stored in capitals, and `displayName` is "`<class name>`-`<NAME>`".
   "sections": ["A", "B", "C"]
 }
 ```
+
+As with a single section, a principal's sections always go into their own school.
 
 **Response (201):**
 ```json
@@ -3441,7 +3497,7 @@ A new name also updates `displayName`.
 
 **Response (200):** `message` "Section updated successfully", `data` is the updated section.
 
-**Errors:** 404 (`SECTION_NOT_FOUND`), 409 (`DUPLICATE_SECTION`)
+**Errors:** 403 (`NO_SCHOOL`), 404 (`SECTION_NOT_FOUND`: no such section, or, for a principal, a section in another school), 409 (`DUPLICATE_SECTION`)
 
 ---
 
@@ -3451,7 +3507,7 @@ Soft delete: sets `isActive` to `false`.
 
 **Response (200):** `message` "Section deleted (soft delete)", `data` is the section.
 
-**Errors:** 404 (`SECTION_NOT_FOUND`)
+**Errors:** 403 (`NO_SCHOOL`), 404 (`SECTION_NOT_FOUND`: no such section, or, for a principal, a section in another school)
 
 ---
 
@@ -5472,7 +5528,7 @@ Deletes the feature's own choice; it follows the live model at the provider's de
 |------|---------|
 | `400` | Bad Request — missing or invalid fields |
 | `401` | Unauthorized — invalid/missing JWT token |
-| `403` | Forbidden — insufficient role permissions |
+| `403` | Forbidden — insufficient role permissions, or another user's or school's records (`NOT_YOUR_DATA`, `NOT_YOUR_SCHOOL`, `NO_SCHOOL`) |
 | `404` | Not Found — resource does not exist |
 | `409` | Conflict — duplicate entry (email, code, etc.) |
 | `413` | Payload Too Large — file exceeds limit |

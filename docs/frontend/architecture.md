@@ -97,7 +97,7 @@ Operation modules (19). `auth.api.js` returns Redux thunks that dispatch actions
 
 - **Components**: PascalCase `.jsx` (no TypeScript)
 - **Hooks**: camelCase with `use` prefix in `src/hooks/`
-- **Forms**: React Hook Form + Zod schema validation
+- **Forms**: React Hook Form with its built-in `register` rules (see [Forms & Validation](./development/forms-and-validation.md))
 - **API calls**: through `src/api/*.api.js` thunks only
 - **No inline styles**: Tailwind utility classes only
 - **Lazy loading**: all route components use `React.lazy()`

@@ -73,7 +73,7 @@ Backend/
 │   │   ├── services/           # business logic, singleton class instances
 │   │   ├── models/             # Mongoose schemas owned by the module
 │   │   ├── validators/         # Joi schemas (not every module)
-│   │   ├── tests/              # Jest service tests (not every module)
+│   │   ├── tests/              # Jest service, controller and route tests (not every module)
 │   │   ├── jobs/               # node-cron jobs (supporting, notification)
 │   │   └── index.js            # barrel re-exporting routers/services
 │   └── shared/
@@ -211,7 +211,7 @@ Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`
 | Key functions | `progress.service.js`: `createSession`, `endSession`, `submitAnswerBatch`, `_syncSessionTotals`, `_queueProgressUpdate`, `applyAnswersToProgress`, `calculateAndUpdateProgress`, `updateTopicProgress`, `calculateMasteryScore`, `getProgress`, `getLastIncompleteSession`, `getMasterySummary`. `topicProgress.controller.js`: `calculateChapterProgress`, `getSubjectProgressData`, AI insight handlers. `streak.service.js`: `recordPractice`, `useStreakFreeze`, `addBonusFreezes`, `getStreakData`. `badge.service.js`: 21 badge definitions, `checkAndAwardBadges`, `getUserBadges`. `dailyChallenge.service.js`, `sessionFeedback.service.js`, `shareCard.service.js` (Chromium PNG) |
 | Models owned | `Session`, `UserAnswer`, `StudentTopicProgress`, `Streak`, `DailyChallenge`, `SessionFeedback` |
 | Collaborators | `Question`, `ChapterTopics`, `Chapter`, `User`, `Profile` (badges stored in `Profile.achievements`), `Achievement`, `Referral`, `Challenge`, `ChallengeAttempt` (social badges), `referral.service.js` (`checkActivation` after each answer batch), `notification.service.js` (new badges), AI Service `/v1/ai-insights/*` |
-| Notes | Topic-progress routes take the user from the JWT (`req.user.id`), not from a URL parameter. Night Owl and Early Bird read the session hour in `Asia/Kolkata`. Streak freezes: one weekly freeze (`total`/`used`, reset on Monday) plus earned `bonus` freezes that never reset and are spent after the weekly one |
+| Notes | Topic-progress routes take the user from the JWT (`req.user.id`), not from a URL parameter. Routes keyed by `/:userId` (streak and `use-freeze`, daily challenge with `complete` and `history`, `/progress/user`, `/user-answers/user`, badges, NPS check) pass `isSelfOrSuperAdmin('userId')`; session reads, ending a session and share cards use `canAccessUser` (owner or SuperAdmin). Mastery summary and daily challenge read the topic's `title`. Night Owl and Early Bird read the session hour in `Asia/Kolkata`. Streak freezes: one weekly freeze (`total`/`used`, reset on Monday) plus earned `bonus` freezes that never reset and are spent after the weekly one |
 
 ### 5.6 question-paper
 
@@ -233,7 +233,7 @@ Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`
 | Key functions | `teacher.service.js`: `createTeacher`, `getAllTeachers`, `updateTeacher`, `deleteTeacher`, `createTeacherStudentBulk` (also `$addToSet`s the class onto each student's `User.class`), `getTeacherStudents`. `teacherDashboard.service.js`: `getMyAssignments`, `getSubjectDashboard`, `getStudentsList`, `getChapterAnalytics`, `getStudentProgress`, `getWeakTopics`, `getActivityFeed`. `teacherClass.service.js`: `create`, `getPublic`, `join`, `listMine`, `setActive`, `getReport`, `getCertificate`, `_ensureSchool`, `_ensureSection` |
 | Models owned | `TeacherStudent` (`joinedVia` set for class-link joins), `TeacherClass` |
 | Collaborators | `User`, `School`, `Section`, content models, `UserAnswer`, `StudentTopicProgress`, `Session`, `getSubjectProgressData`, `notification.service.js` |
-| Notes | Class links (flow 8.10): joining creates an ordinary `TeacherStudent` row, so the dashboards need no changes. A teacher without a school gets a private `School` with `kind: 'independent'` on the first link. The class report unlocks at 10 students who practised after joining (`CLASS_REPORT_AT`), the certificate at 25 across all links (`CERTIFICATE_AT`) |
+| Notes | `/teacher-dashboard/:teacherId/...` passes `isSelfOrSuperAdmin('teacherId')`: a teacher opens only their own dashboard. `/teacher` routes pass `principalSchoolScope`, so a principal creates, lists, updates and deletes only their own school's teachers (another school's teacher is a 404). Class links (flow 8.10): joining creates an ordinary `TeacherStudent` row, so the dashboards need no changes. A teacher without a school gets a private `School` with `kind: 'independent'` on the first link. The class report unlocks at 10 students who practised after joining (`CLASS_REPORT_AT`), the certificate at 25 across all links (`CERTIFICATE_AT`) |
 
 ### 5.8 quiz
 
@@ -241,15 +241,16 @@ Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`
 |---|---|
 | Responsibility | Teacher-authored quizzes (draft, publish, close, clone, soft delete), question management, analytics; student availability, attempts, server-side grading, history |
 | Base path | `/quiz` |
-| Key functions | `quiz.service.js`: `createQuiz` (requires a matching `TeacherStudent` row), `updateQuiz`, `deleteQuiz`, `publishQuiz`, `closeQuiz`, `cloneQuiz`, `addQuestionsToQuiz`, `removeQuestionFromQuiz`, `reorderQuestions`, `getStudentAvailableQuizzes`, `submitAnswer`, `submitQuiz`, `getAttemptResult`, `getAttempt`, `getInProgressAttempt`, `shouldShowAnswers`, `getStudentQuizHistory`, `getQuizAnalytics`, `searchQuestionsForQuiz` |
+| Key functions | `quiz.service.js`: `createQuiz` (requires a matching `TeacherStudent` row), `updateQuiz`, `deleteQuiz`, `publishQuiz`, `closeQuiz`, `cloneQuiz`, `addQuestionsToQuiz`, `removeQuestionFromQuiz`, `reorderQuestions`, `getQuizById`, `getStudentAvailableQuizzes`, `startQuizAttempt`, `submitAnswer`, `submitQuiz`, `getAttemptResult`, `getAttempt`, `getInProgressAttempt`, `shouldShowAnswers`, `getStudentQuizHistory`, `getQuizAnalytics`, `getQuestionAnalysis`, `searchQuestionsForQuiz` |
 | Models owned | `Quiz`, `QuizQuestion`, `QuizAttempt`, `QuizAnswer` |
 | Collaborators | `TeacherStudent`, `Question`, content models |
-| Notes | Routes use `auth` only; ownership (`createdBy`) and attempt ownership are enforced in the service. See 13 for the missing `startQuizAttempt` |
+| Notes | Routes use `auth` only; ownership (`createdBy`) and attempt ownership are enforced in the controller or service. `GET /quiz/:quizId` (the full quiz, custom answers included) needs the quiz's teacher or a SuperAdmin. `startQuizAttempt` needs a `TeacherStudent` row for the quiz's teacher, class and subject (the same rule as the student's quiz list), returns the attempt in progress if there is one, and shuffles with the attempt id as seed so the order is stable. The student aggregations cast ids to `ObjectId` |
 
 ### 5.9 school
 
 - **Responsibility:** school and section CRUD. **Base paths:** `/school`, `/sections`. **Models owned:** `School` (unique `schoolCode`; `kind` is `school` or `independent`, the latter created for a self-signed-up teacher with `ownerTeacherId`), `Section`. **Collaborators:** `Class`.
 - **Key functions** (`school.service.js`): `createSchool`, `updateSchool`, `getAllSchools`, `getSchoolById`, `createSection`, `bulkCreateSections`, `getSectionsBySchool`, `getSectionsBySchoolAndClass`, `updateSection`, `deleteSection`.
+- **Principal scope:** `PUT /school/:id` and the section writes pass `principalSchoolScope`. A principal edits only their own school (`403 NOT_YOUR_SCHOOL` otherwise); new sections always go into it, and another school's section is a 404 on update or delete. SuperAdmin has no limit.
 
 ### 5.10 principal
 
@@ -270,6 +271,7 @@ Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`
 | Key functions | `parent.service.js`: `createParentStudentBulk` (optionally creates parent accounts), `getParentStudents`, `unlinkParentStudent`, `verifyParentChildLink`. `parentDashboard.service.js`: `_validateParentChildLink`, `getMyChildren`, `getChildOverview`, `getChildSubjectProgress`, `getChildWeakTopics`, `getChildActivity` |
 | Models owned | `ParentStudent` |
 | Collaborators | `User`, `Session`, `StudentTopicProgress`, `progress.service.js`, `getSubjectProgressData` |
+| Notes | Dashboard routes take the parent from the JWT (`req.user.id`); the validators check only the ids in the path (`childId`, `subjectId`), and the service checks the `ParentStudent` link |
 
 ### 5.12 supporting (including SuperAdmin admin metrics and AI System)
 
@@ -673,21 +675,21 @@ Conventions:
 | `/topic` | content | `auth`; create and mapping need `isTeacher` | Topics and chapter mapping |
 | `/study` | content | `/configuration` public (cached); `/filter` needs `auth` | Practice picker hierarchy |
 | `/questions` | questions | `auth` for reads and batches; create, `generate/chapter/:id`, `counts` need `isTeacher`; `public-batch` and `public-preview` public | Question bank and generation |
-| `/sessions` | progress | `auth`; `DELETE /` SuperAdmin (inline check) | Practice sessions, share card |
-| `/user-answers` | progress | `auth` | Answer batches and history |
+| `/sessions` | progress | `auth`; reads, end and share cards need the owner or SuperAdmin (`canAccessUser`); `DELETE /` SuperAdmin (inline check) | Practice sessions, share card |
+| `/user-answers` | progress | `auth`; `GET /user/:userId` also `isSelfOrSuperAdmin` | Answer batches and history |
 | `/topic-progress` | progress | `auth`; `teacher/class-insights` needs `isTeacher` | Chapter/subject mastery, AI insights |
-| `/progress` | progress | `auth` | Dashboard aggregate |
-| `/streaks`, `/daily-challenge`, `/badges`, `/session-feedback` | progress | `auth` | Engagement features |
-| `/teacher` | teacher | `auth` + `isPrincipal` | Teacher accounts |
+| `/progress` | progress | `auth` + `isSelfOrSuperAdmin` | Dashboard aggregate |
+| `/streaks`, `/daily-challenge`, `/badges`, `/session-feedback` | progress | `auth`; routes keyed by `/:userId` also `isSelfOrSuperAdmin` | Engagement features |
+| `/teacher` | teacher | `auth` + `isPrincipal` + `principalSchoolScope` | Teacher accounts |
 | `/teacher-students` | teacher | `auth` + `isTeacherOrPrincipal` | Assignments |
 | `/teacher-classes` | teacher | `GET /join/:code` public (120 per 10 min); `POST /join/:code` needs `auth` (students only, checked in the service); everything else `auth` + `isTeacher` | Class join links, report, certificate |
-| `/teacher-dashboard` | teacher | `auth` + `isTeacher` (router level) | Teacher analytics |
+| `/teacher-dashboard` | teacher | `auth` + `isTeacher` + `isSelfOrSuperAdmin('teacherId')` (router level) | Teacher analytics |
 | `/parent-students` | parent | Bulk and list: `isTeacherOrPrincipal`; unlink: `isParent` | Parent links |
 | `/parent-dashboard` | parent | `auth` + `isParent` (router level) | Child analytics |
 | `/principal` | principal | `auth` + `isPrincipal` (router level) | School dashboards |
 | `/principals` | principal | `auth` + `isSuperAdmin` (router level) | Principal accounts |
 | `/quiz` | quiz | `auth`; ownership and assignment checks in service | Quizzes and attempts |
-| `/school`, `/sections` | school | `auth`; writes need `isPrincipal` | Schools and sections |
+| `/school`, `/sections` | school | `auth`; writes need `isPrincipal`; school update and section writes also `principalSchoolScope` | Schools and sections |
 | `/leaderboard` | supporting | `auth` | Top 10 of this week (global, first names); top 10 all-time per subject |
 | `/feedback` | supporting | `POST /` public (limiter + `optionalAuth`); `/admin*` needs `isSuperAdmin` | Feedback inbox |
 | `/logs` | supporting | `auth` + SuperAdmin (inline check) | API log search, stats, purge |
@@ -957,14 +959,16 @@ sequenceDiagram
     S->>BE: GET /quiz/student/available
     BE->>DB: TeacherStudent assignments, published quizzes, attempt stats
     S->>BE: POST /quiz/:quizId/start
-    Note over BE: Controller calls quizService.startQuizAttempt, not defined at this commit (see section 13)
+    BE->>DB: TeacherStudent match for quiz teacher, class, subject (403 otherwise)
+    BE->>DB: return attempt in progress, or check published, deadline, attempts left and create one
+    BE-->>S: attempt with saved answers, questions without answers (seeded shuffle), quiz
     S->>BE: POST /quiz/attempt/:attemptId/answer
     BE->>DB: owner and in_progress check, time limit check
     BE->>DB: grade against stored correct answer, upsert QuizAnswer
     S->>BE: POST /quiz/attempt/:attemptId/submit
     BE->>DB: sum marks, percentage, passed, status completed
     S->>BE: GET /quiz/attempt/:attemptId/result
-    BE-->>S: answers shown per showAnswersAfter policy
+    BE-->>S: answers shown per showAnswersAfter policy, canRetry
 ```
 
 Quiz settings defaults (`createQuiz`): `allowedAttempts` 1, `passingPercentage` 50, `showAnswersAfter` `immediately` (other values `submission`, `deadline`, `never`), optional `timeLimit` in minutes and `deadline`. Unlike practice, quiz answers are graded on the server.
@@ -1214,13 +1218,15 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | `auth` | 401 with `error: noToken`, `tokenExpired` or `tokenInvalid`; sets `req.user` to the decoded claims, then calls `recordActivity` (upsert today's `UserActivityDay`, set `User.lastActiveAt`; at most once per user per 15 min, always on the first request of a new IST day; not awaited; a failure is logged and retried on the next request) | `auth.js`, `src/shared/utils/activityTracker.js` |
 | `optionalAuth` | Attaches `req.user` when a valid token is present; never rejects | `auth.js` |
 | Role guards | `isStudent`, `isTeacher`, `isPrincipal`, `isParent`, `isNormalUser`, `isTeacherOrPrincipal` (all also admit `SuperAdmin`), `isSuperAdmin` (only `SuperAdmin`); 403 on mismatch | `auth.js` |
-| Ownership helper | `canAccessUser(reqUser, ownerId)`: owner, or any of `SuperAdmin`, `Teacher`, `Principal`, `Parent` | `src/shared/utils/access.js` |
-| Ownership checks | Applied per controller or service (for example sessions, share cards, quiz attempts, parent-child links, principal school scope), not by a shared middleware | module controllers and services |
+| `isSelfOrSuperAdmin(param)` | Continues only when `req.params[param]` is the caller's own id, or the caller is a SuperAdmin; otherwise 403 with `code: 'NOT_YOUR_DATA'`. Used on `/teacher-dashboard/:teacherId` and the progress routes keyed by `/:userId` | `auth.js` |
+| `principalSchoolScope` | After `isPrincipal`: sets `req.schoolScope` to the principal's `User.schoolId` (`null` for SuperAdmin, meaning no limit); a principal with no school gets 403 `NO_SCHOOL`. The teacher, school-update and section-write handlers keep the principal inside that school | `auth.js` |
+| Ownership helper | `canAccessUser(reqUser, ownerId)`: the owner, or a SuperAdmin. Teachers, principals and parents see students through their own dashboards, which check the teacher–student, school or parent–child link | `src/shared/utils/access.js` |
+| Ownership checks | The guards above, plus per-controller or per-service checks (for example sessions, share cards, quiz ownership and attempts, parent-child links, principal dashboards) | module controllers and services |
 
 | Role | Created by | Typical scope |
 |---|---|---|
 | `SuperAdmin` | Not creatable through the API | Admin metrics, logs, feedback inbox, suggestions moderation, campaigns, principal accounts, live LLM selection |
-| `Principal` | SuperAdmin via `/principals` (linked to a school) | School dashboards, teacher accounts, schools and sections |
+| `Principal` | SuperAdmin via `/principals` (linked to a school) | School dashboards; teacher accounts, school details and sections of their own school |
 | `Teacher` | Self-signup (email or Google) or principal via `/teacher` | Content upload, question generation, quizzes, papers, AI assistant, teacher dashboards, class join links |
 | `Parent` | Teacher/principal via `/parent-students/bulk` (with `createParentsIfNotExist`) | Parent dashboard for linked children |
 | `Student` | Self-signup, Google login, or teacher/principal via `/student/create` | Practice, quizzes, progress, challenges, joining class links |
@@ -1329,8 +1335,9 @@ All three cron jobs start through side-effect imports at the top of `index.js`. 
 | Item | Detail |
 |---|---|
 | Framework | Jest 30 in native ESM mode (`NODE_OPTIONS=--experimental-vm-modules`); no Jest config file at the repo root (defaults) |
-| Layout | `src/modules/<module>/tests/*.test.js`: 20 files covering `auth` (3: service, refresh rotation, activity tracker), `challenge`, `content`, `notification`, `principal` (2), `progress`, `question-paper`, `questions`, `quiz`, `referral`, `school`, `supporting` (3: service, LLM service, LLM validator), `teacher` (2: service, class links), `user`; roughly 420 `it`/`test` cases (grep count) |
-| No tests | `ai-assistant`, `campaign`, `feedback`, `goal`, `parent`; no controller, route or middleware tests |
+| Layout | `src/modules/<module>/tests/*.test.js`: 25 files covering `auth` (3: service, refresh rotation, activity tracker), `challenge`, `content`, `notification`, `parent` (dashboard routes), `principal` (2), `progress` (2: service, user-data routes), `question-paper`, `questions`, `quiz` (2: service, controller), `referral`, `school`, `supporting` (3: service, LLM service, LLM validator), `teacher` (4: service, class links, dashboard routes, principal school scope routes), `user`; roughly 480 `it`/`test` cases (grep count) |
+| Route tests | The `*.routes.test.js` files and `userDataRoutes.test.js` mount the real router on a bare Express app listening on a random port, sign test JWTs and call it with `fetch`; controllers or services are mocked |
+| No tests | `ai-assistant`, `campaign`, `feedback`, `goal` |
 | Mocking | `jest.unstable_mockModule` declared before `await import()` of the service; Mongoose models mocked by module path; `logger.js` disables file and Loki transports when `NODE_ENV=test` |
 | Commands | `npm test` (all), `NODE_OPTIONS=--experimental-vm-modules npx jest path/to/file.test.js` (single file), `npm run lint`, `npm run lint:fix` |
 | CI | No CI workflow in the repo |
@@ -1363,20 +1370,18 @@ Data integrity:
 
 Defects present at this commit:
 
-16. `POST /quiz/:quizId/start` calls `quizService.startQuizAttempt`, which is not defined in `quiz.service.js`, and nothing else creates `QuizAttempt` documents, so starting a quiz returns 500 "Failed to start quiz".
-17. `getTeacherClassInsights` reads `req.user._id`, but the JWT claims carry `id`, so `GET /topic-progress/teacher/class-insights` fails with 500.
-18. `resetPasswordSchema` validates `newPassword` and `confirmPassword`, while `password.controller.js` compares `password` with `confirmPassword` and saves `password`.
-19. `goalService.recordProgress` has no callers, so `Goal.currentProgress` is never advanced on the server.
-20. The `retry` query parameter of the batch endpoint is not used by `_handleNoQuestions`.
+16. `getTeacherClassInsights` reads `req.user._id`, but the JWT claims carry `id`, so `GET /topic-progress/teacher/class-insights` fails with 500.
+17. `goalService.recordProgress` has no callers, so `Goal.currentProgress` is never advanced on the server.
+18. The `retry` query parameter of the batch endpoint is not used by `_handleNoQuestions`.
 
 Integration and tooling:
 
-21. Conversation, `ai-agent/classes`, `ai-agent/tasks`, `ai-agent/health` and `ai-agent/generation/:id` calls use a bare `fetch` (with `correlationHeaders`) instead of `fetchWithTimeout`, so they have no effective timeout; no AI call is retried by the Backend.
-22. `supporting.service.js` imports `googleSheets.js`, which loads its Google credentials synchronously at import time; the process cannot start without them.
-23. Profile pictures are not uploaded anywhere (Cloudinary call commented out) and WhatsApp delivery is a logging mock.
-24. `npm test` uses POSIX inline environment syntax and needs a POSIX shell (Git Bash, WSL) on Windows.
-25. `scripts/` is gitignored, so seed and maintenance scripts referenced in repo docs may not exist in a given checkout.
-26. Joi validation covers 67 of 225 route definitions; the rest rely on controller and service checks.
+19. Conversation, `ai-agent/classes`, `ai-agent/tasks`, `ai-agent/health` and `ai-agent/generation/:id` calls use a bare `fetch` (with `correlationHeaders`) instead of `fetchWithTimeout`, so they have no effective timeout; no AI call is retried by the Backend.
+20. `supporting.service.js` imports `googleSheets.js`, which loads its Google credentials synchronously at import time; the process cannot start without them.
+21. Profile pictures are not uploaded anywhere (Cloudinary call commented out) and WhatsApp delivery is a logging mock.
+22. `npm test` uses POSIX inline environment syntax and needs a POSIX shell (Git Bash, WSL) on Windows.
+23. `scripts/` is gitignored, so seed and maintenance scripts referenced in repo docs may not exist in a given checkout.
+24. Joi validation covers 67 of 225 route definitions; the rest rely on controller and service checks.
 
 ## 14. Related docs
 
