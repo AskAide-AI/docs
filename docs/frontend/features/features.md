@@ -9,16 +9,31 @@
 
 ### Login
 **Status:** ✅ Completed
-**Description:** Users can log in with email or username and password, or with Google, using JWT authentication. The 2-hour access token is refreshed automatically, once at a time across all open tabs (a Web Lock), so two tabs never log each other out. On session expiry, the system stores `auth:sessionExpired` + `auth:returnTo` flags in sessionStorage, redirects to `/login`, and shows a toast: "Your session expired. Please sign in again to continue." After login, the user is returned to their original destination.
+**Description:** Users can log in with email or username and password, or with Google, using JWT authentication. The 2-hour access token is refreshed automatically, once at a time across all open tabs (a Web Lock), so two tabs never log each other out. On session expiry, the system stores `auth:sessionExpired` + `auth:returnTo` flags in sessionStorage, redirects to `/login`, and shows a toast: "Your session expired. Please sign in again to continue." After login, the user is returned to their original destination. A Pixel Buddy mascot on this screen explains a failed sign-in and offers the next step (see Pixel Buddy below).
 **Pages:** /login
 **Components:** 
 - `Login.jsx`
 - `FitGoogleLogin.jsx` (sizes Google's button to its container)
+- `buddy/buddy.js`, `buddy/friendlyError.js` (Pixel Buddy)
 **API Dependencies:** 
 - POST `/authenticate/login`
 - POST `/authenticate/google`
 - POST `/authenticate/refresh`
 **Added:** Initial release
+
+---
+
+### Pixel Buddy (Login)
+**Status:** ✅ Completed
+**Description:** A small green pixel robot (the open-source Pixel Buddy, MIT, vendored in `src/buddy/vendor/`) greets visitors on the sign-in screen. When a sign-in fails it explains the problem in plain English and offers the next step as a button: **Reset password** or **Create an account**. The inline error box stays as it was. The buddy is skipped for users who prefer reduced motion. It only appears on screens listed in `BUDDY_ROUTES` (`src/buddy/config.js`), which is `/login` only, so it never shows on teacher, principal, admin, parent or School Ops screens. `VITE_BUDDY_ENABLED=false` turns it off everywhere.
+**Pages:** /login
+**Components:**
+- `buddy/BuddyHost.jsx` (mounted once in `App.jsx`, shows or hides the buddy by route)
+- `buddy/buddy.js` (`buddy.say()`, a no-op on screens that are not enabled)
+- `buddy/friendlyError.js` (API errors to short student-friendly lines)
+- `buddy/config.js`, `buddy/vendor/pixelbuddy.js`
+**API Dependencies:** None
+**Added:** October 2026
 
 ---
 
@@ -71,7 +86,7 @@
 
 ### Study Configuration
 **Status:** ✅ Completed
-**Description:** Users select class, subject, chapter, question type, and difficulty before starting a practice session. Can also be pre-populated from the Progress page ("Start Learning" button navigates here with class/subject/chapter pre-selected), from a class the student just joined, or from a challenge's chapter. A visitor who tried a chapter on `/try` and then signed up gets their first session on that same chapter (remembered for a day, used once). The class dropdown shows all 7 classes (6th–12th) without an inner scroll.
+**Description:** Users select class, subject, chapter, question type, and difficulty before starting a practice session. Can also be pre-populated from the Progress page ("Start Learning" button navigates here with class/subject/chapter pre-selected), from a class the student just joined, or from a challenge's chapter. A visitor who tried a chapter on `/try` and then signed up gets their first session on that same chapter (remembered for a day, used once). The class dropdown shows all 7 classes (6th–12th) without an inner scroll. The last committed class, subject and chapter are remembered per user in the browser (`utils/studyLastConfig.js`), so a returning student confirms the chapter and starts. New sessions default to Easy difficulty.
 **Pages:** /study
 **Components:** 
 - `Home.jsx`
@@ -106,7 +121,7 @@
 
 ### Session Results
 **Status:** ✅ Completed
-**Description:** Users can view session summary with correct/incorrect answers. Any new badge pops up first, then the result card opens. After a session of 3 or more answers, **Challenge on WhatsApp** (and a copy-link button) sits in the card's pinned footer, so it is on screen without scrolling on any phone.
+**Description:** Users can view session summary with correct/incorrect answers. Any new badge pops up first, then the result card opens. After a session of 3 or more answers, **Challenge on WhatsApp** (and a copy-link button) sits in the card's pinned footer, so it is on screen without scrolling on any phone. A student's first finished session shows a short first-session hero above the score, once per user; it praises the real score and points at tomorrow's streak.
 **Pages:** /study
 **Components:** 
 - `SessionResultModal.jsx`
@@ -183,7 +198,7 @@
 
 ### Refer & Earn
 **Status:** ✅ Completed
-**Description:** The Refer & Earn page gives each student an invite link and message. When a friend joins and answers enough questions on a new account, both get a gift: a free practice paper and a streak shield. Students redeem a practice paper for any chapter (PDF), see their squad badges, the friends who joined and their status, and the challenges they sent. Every share button adds the student's `?ref=` code to links to our own site.
+**Description:** The Refer & Earn page gives each student an invite link and message. When a friend joins and answers 3 questions on a new account, both get a gift: a free practice paper and a streak shield. Students redeem a practice paper for any chapter (PDF), see their squad badges, the friends who joined and their status, and the challenges they sent. Every share button adds the student's `?ref=` code to links to our own site.
 **Pages:** /referral
 **Components:**
 - `pages/ReferralPage.jsx`
@@ -292,13 +307,16 @@
 
 ### Chapter PDF Upload
 **Status:** ✅ Completed
-**Description:** Upload chapter PDFs for AI processing and topic extraction
+**Description:** Upload chapter PDFs for AI processing and topic extraction. Chapter management shows a coverage line for the selected class (covered, ready, need PDF) and a **Generate next 3 empty** button, which starts question generation for up to three chapters that have no questions yet. Run it, wait for questions to land, then run it again.
 **Pages:** /admin
 **Components:** 
 - `ChapterUpload.jsx`
+- `admin/ChapterManagement.jsx` (coverage line and fill-gaps button)
 **API Dependencies:** 
 - POST `/chapters/create-with-pdf`
-**Added:** Initial release
+- GET `/questions/coverage`
+- POST `/questions/generate/missing`
+**Added:** Initial release (coverage and fill-gaps: October 2026)
 
 ---
 
@@ -359,21 +377,24 @@
 The welcome wizard decision is owned by `FirstRunGate.jsx`, mounted **app-level** in `App.jsx` for any authenticated, non-public route — not by the dashboard. This fires the wizard wherever a new student first lands (signup drops students on `/study`, not `/dashboard`). Behavior:
 - **Student-only** — staff roles (Teacher/Principal/Parent/SuperAdmin) never see the practice wizard; a missing `accountType` is treated as `Student`.
 - **localStorage flag + history fallback** — if `onboarding_<userId>` is unset, it confirms the student has no session history via `studyApi.fetchSessionsByUserId` before showing, so a returning user with cleared storage (new device/cleared cache) isn't re-onboarded; a network failure falls back to showing (the escape hatch makes a false positive harmless).
-- **Selection carried into study** — on completion, `OnboardingOverlay` navigates to `/study` with `location.state.preselectConfig` (class/subject/chapter + `mcq`/`Medium` defaults), so the student doesn't re-pick everything. If the student tried a chapter of the same subject on `/try`, that chapter is used instead.
+- **Selection carried into study** — on completion, `OnboardingOverlay` navigates to `/study` with `location.state.preselectConfig` (class/subject/chapter + `mcq`/`Easy` defaults), so the student doesn't re-pick everything. If the student tried a chapter of the same subject on `/try`, that chapter is used instead.
 - **Greets by first name** — the wizard uses the student's real first name, not the auto-generated username.
 - **Tour de-confliction** — the dashboard tour now auto-starts only for established users (question count > 0); the study config tour is suppressed when arriving with a preselected config or while onboarding is still pending, so no tour renders behind the modal.
 
 ---
 
 ### Parent Dashboard
-**Status:** 🚧 In Progress (Mock Data)
-**Description:** Parent oversight of student's grades and activities
+**Status:** ✅ Completed
+**Description:** Parent oversight of a child's practice. For a child on a school class list, a **School card** sits under the practice view: today's attendance, this month's register, fees due, overdue and next with receipts, published report cards, notices from school and **Homework this week**. The card is read-only; fee disputes go to the school office. Notices count as seen when the card loads. A child who is not on a school roster shows no card.
 **Pages:** /parent
 **Components:** 
 - `ParentDashboard.jsx`
+- `ChildSchoolCard.jsx` (School card)
 **API Dependencies:** 
-- Currently uses mock data
-**Added:** Initial release
+- GET `/parent-dashboard/children` and the child progress endpoints
+- GET `/parent-dashboard/child/:childId/school` (optional `?month=YYYY-MM`)
+- POST `/parent-dashboard/notices/read`
+**Added:** Initial release (School card: October 2026)
 
 ---
 
@@ -384,7 +405,7 @@ The welcome wizard decision is owned by `FirstRunGate.jsx`, mounted **app-level*
 **Components:** 
 - `TeacherDashboard.jsx`
 **API Dependencies:** 
-- Currently uses mock data
+- GET `/teacher-dashboard/:teacherId/my-assignments` and the subject analytics endpoints
 **Added:** Initial release
 
 ---
@@ -431,6 +452,23 @@ Students open the teacher's link and join in one tap. A guest signs up with Goog
 
 ---
 
+### Homework Status
+**Status:** ✅ Completed
+**Description:** Teachers see who has done a quiz (homework) and act on it. The **Who has done it** panel on the quiz analytics page lists every student the quiz is for, as Done, In progress, Not done or Never logged in (never signed in), with the time of the last reminder. Per student, a teacher can send a reminder, open a prepared WhatsApp message to the parent, or give more time (move the deadline). Only the quiz owner can load it. Parents see the same homework in **Homework this week** on the School card, with Done (and score), In progress, Not done or To do, and "N of M done".
+**Pages:** /teacher/quiz/:quizId/analytics, /parent
+**Components:**
+- `teacher/quiz/QuizStudentsPanel.jsx`
+- `teacher/quiz/QuizAnalytics.jsx`
+- `dashboard/ChildSchoolCard.jsx` (parent view)
+**API Dependencies:**
+- GET `/quiz/:quizId/students`
+- POST `/quiz/:quizId/remind`
+- PATCH `/quiz/:quizId/deadline`
+- GET `/parent-dashboard/child/:childId/school` (parent view)
+**Added:** October 2026
+
+---
+
 ### Teacher Question Paper Generator
 **Status:** ✅ Completed
 **Description:** Teachers and SuperAdmins can generate custom question papers with specific questions, view history, and download PDFs.
@@ -468,6 +506,97 @@ Students open the teacher's link and join in one tap. A guest signs up with Goog
 
 ---
 
+## School Ops
+
+Screens for running a school, at `/school-ops/*`. They appear in the **SCHOOL OPS** group of the nav for SuperAdmin, Principal and Teacher. Each job is one tabbed screen, and the tabs shown depend on the account. The server enforces roles; the UI only hides what a role cannot use.
+
+### School Ops Screens
+**Status:** ✅ Completed
+**Description:** One job per screen, each with its own tabs:
+
+| Screen | Tabs (role) |
+|--------|-------------|
+| Fees `/school-ops/fees` | Collect, Billing, Receipts (all three roles); Setup (SuperAdmin) |
+| Day book `/school-ops/collections` | Every receipt in a date range, with totals by mode and cashier; CSV download and print |
+| Attendance `/school-ops/attendance` | Mark, Day view, Staff (all three roles) |
+| Timetable `/school-ops/timetable` | Today, Cover (Principal and SuperAdmin); Setup (SuperAdmin) |
+| Gradebook `/school-ops/gradebook` | Enter marks; Plans (SuperAdmin); Report cards (Principal and SuperAdmin) |
+| TC `/school-ops/tc` | Request (Teacher and Principal); dues-block override (Principal and SuperAdmin) |
+| Notices `/school-ops/notices` | All three roles (see School Notices below) |
+| Parent logins `/school-ops/parents` | Principal and SuperAdmin (see Parent Logins below) |
+| Import `/school-ops/import` | SuperAdmin: CSV of students, up to 500 rows, previewed before import |
+
+Collect can take an advance or several months in one payment: the server spreads it oldest-first and applies the principal's advance discount when every remaining month of a fee is paid. One receipt is issued for the whole payment. Pickers choose the school, class, section and student from lists, not pasted IDs.
+**Pages:** /school-ops/fees, /school-ops/collections, /school-ops/attendance, /school-ops/timetable, /school-ops/gradebook, /school-ops/tc, /school-ops/notices, /school-ops/parents, /school-ops/import
+**Components:**
+- `school-ops/fees/*` (FeesLayout, CollectPanel, BillingPanel, ReceiptsPanel, SetupPanel), `school-ops/CollectSection.jsx`
+- `school-ops/attendance/*` (AttendanceLayout, MarkPanel, DayPanel, StaffPanel)
+- `school-ops/timetable/*` (TimetableLayout, TodayPanel, CoverPanel, SetupPanel)
+- `school-ops/gradebook/*` (GradebookLayout, EntryPanel, PlansPanel, CardsPanel)
+- `school-ops/CollectionsPanel.jsx`, `school-ops/TcPanel.jsx`, `school-ops/ImportPanel.jsx`
+- `school-ops/shared.jsx` (`useOpsRole()`: `canSetup` is SuperAdmin, `canApprove` is Principal and SuperAdmin), `school-ops/pickers.jsx`
+**API Dependencies:**
+- `/fees/*` (heads, structures, invoices, payments, collect, receipts, defaulters, collections)
+- `/attendance/*` (days, school-day, monthly, absentees, staff, settings)
+- `/timetable/*`, `/gradebook/*`
+- `/tc/request`, `/tc/:studentId`, `/school/import-students`
+- `/notices`, `/parent-logins`
+**Added:** October 2026
+
+---
+
+### Principal Today
+**Status:** ✅ Completed
+**Description:** The principal's first screen at `/principal` is "Today at my school": attendance, fee collection, staff and transfer certificates for the day, at a glance. Each card links to the School Ops page that acts on it (registers and absentees, defaulters and collect, staff register, substitutions, day book). Counts only, computed when the screen opens. On a day with no school it says so.
+**Pages:** /principal
+**Components:**
+- `principal/PrincipalToday.jsx`
+- `principal/shared.jsx` (PrincipalTabs: Today, Overview, Classes, Subjects, Teachers, Students)
+**API Dependencies:**
+- GET `/principal/today` (optional `schoolId`)
+**Added:** October 2026
+
+---
+
+### Printable School Documents
+**Status:** ✅ Completed
+**Description:** Fee receipt, report card, transfer certificate, day book and parent login slips open in their own tab as A4 pages with no app chrome. Colours are black on white, for cheap printers. Print links come from School Ops and from the parent's School card (receipts and report cards).
+**Pages:** /print/receipt/:receiptNo, /print/report-card/:planId/:studentId, /print/tc/:studentId, /print/day-book, /print/parent-slips
+**Components:**
+- `school-ops/print/PrintShell.jsx`, `ReceiptPrint.jsx`, `ReportCardPrint.jsx`, `TcPrint.jsx`, `DayBookPrint.jsx`, `ParentSlipsPrint.jsx`, `printLinks.js`
+**API Dependencies:** The same endpoints as the screens above (receipt lookup, report cards, TC, collections, parent logins)
+**Added:** October 2026
+
+---
+
+### Parent Logins and Password Slips
+**Status:** ✅ Completed
+**Description:** A principal gives each family a login for the parent portal, with no email or SMS. Brothers and sisters on one family share one login (same phone in the import). The screen lists each section's families with a status: No login yet, Slip given (not used yet), or Using AskAide. **Make slips** creates the logins for a section and opens printable slips, eight to an A4 page, to cut out and send home. **New slip** gives a family a new password. A password exists only in the response that set it: the slip page keeps it for that tab's history entry, and nothing stores it readable.
+**Pages:** /school-ops/parents, /print/parent-slips
+**Components:**
+- `school-ops/ParentLoginsPanel.jsx`
+- `school-ops/print/ParentSlipsPrint.jsx`
+**API Dependencies:**
+- GET `/parent-logins?schoolId&sectionId`
+- POST `/parent-logins` (`{ schoolId, sectionId }`), POST `/parent-logins/renew` (`{ schoolId, studentId }`)
+**Added:** October 2026
+
+---
+
+### School Notices
+**Status:** ✅ Completed
+**Description:** Staff post notices to parents at `/school-ops/notices`, for the whole school, one class or one section, and can edit or delete them. Parents see them on the School card on `/parent`, with a **New** badge until their next visit. A staff member can share a notice to a class parents' WhatsApp group; the text carries the notice itself, so it reads without opening AskAide.
+**Pages:** /school-ops/notices, /parent
+**Components:**
+- `school-ops/NoticesPanel.jsx`
+- `dashboard/ChildSchoolCard.jsx` (parent view)
+**API Dependencies:**
+- GET `/notices?schoolId&page`, POST `/notices`, PATCH `/notices/:id`, DELETE `/notices/:id`
+- POST `/parent-dashboard/notices/read`
+**Added:** October 2026
+
+---
+
 ## User Experience
 
 ### Landing Page
@@ -489,6 +618,21 @@ Students open the teacher's link and join in one tap. A guest signs up with Goog
 - `pages/info/PricingPage.jsx`
 - `pages/info/HowItWorksPage.jsx`
 - `pages/info/InfoLayout.jsx`
+**Added:** October 2026
+
+---
+
+### Demo School
+**Status:** ✅ Completed
+**Description:** **See a live demo school** on For Schools opens a public demo school with real-looking data. It signs the visitor in without a password as the demo Principal, Class Teacher, Parent or Student, through a rate-limited endpoint. Each opens its home: Principal `/principal`, Class Teacher `/school-ops/attendance`, Parent `/parent`, Student `/dashboard`. A banner on every app page says the school resets every night, with a **Leave demo** button. The first-run wizard is skipped. The school is rebuilt every night at 2 am IST and its activity is never counted in metrics. SuperAdmin can rebuild it on demand from the Import screen.
+**Pages:** /for-schools, all app pages while signed in to the demo
+**Components:**
+- `pages/ForSchools.jsx` (demo buttons)
+- `common/DemoBanner.jsx`
+- `school-ops/DemoSchoolCard.jsx` (SuperAdmin)
+**API Dependencies:**
+- POST `/demo/login` (`{ role }`: principal, teacher, parent or student)
+- GET `/demo/status`, POST `/demo/rebuild` (SuperAdmin)
 **Added:** October 2026
 
 ---

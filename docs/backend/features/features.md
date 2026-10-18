@@ -1,19 +1,19 @@
 # AskAide AI - Features
 
-**Last Updated:** 2026-10-10
+**Last Updated:** 2026-10-18
 
 ---
 
 ## User Authentication
 **Status:** ✅ Completed  
-**Description:** Students and teachers can register themselves (principal accounts are created by an admin, parents are linked through the parent module), log in with email/password or Google, verify their email with an OTP, and stay signed in with JWT access tokens and single-use refresh tokens. Teachers can sign up on their own, by email or Google. Signup accepts an invite code and first-touch attribution details.  
+**Description:** Students and teachers can register themselves (principal accounts are created by an admin, parents are linked through the parent module), log in with email/password or Google, verify their email with an OTP, and stay signed in with JWT access tokens (2 hours) and single-use refresh tokens (30 days). Students and teachers can sign up on their own, by email or Google; any other account type is refused at signup. Signup accepts an invite code and first-touch attribution details. A retry of a refresh token just after it was rotated gets a fresh pair, so a dropped response does not sign the user out.  
 **Endpoints:**
 - `POST /api/v1/authenticate/signup` - User registration
 - `POST /api/v1/authenticate/login` - Email/password login
 - `POST /api/v1/authenticate/google` - Google sign-in (creates a Student, or a Teacher when asked)
 - `POST /api/v1/authenticate/sendotp` - OTP request
 - `POST /api/v1/authenticate/verify-email` - OTP verification
-- `POST /api/v1/authenticate/refresh` - Refresh the token pair (each refresh token works once)
+- `POST /api/v1/authenticate/refresh` - Refresh the token pair (each refresh token works once, with a 2 to 60 second retry grace)
 - `POST /api/v1/authenticate/logout` - Session logout
 
 **Dependencies:** MongoDB, JWT, bcrypt, google-auth-library, SendGrid  
@@ -235,6 +235,33 @@
 
 ---
 
+## Quiz Homework
+**Status:** ✅ Completed  
+**Description:** A quiz set as homework shows the teacher who has done it. Each assigned student is marked done, in progress, not done, or never logged in, with their best score, and a "very fast, check" hint when someone averages under 5 seconds an answer (a hint about guessing, not an accusation). The teacher can send one reminder per student who has not finished, and move a published deadline later. A quiz set for certain sections is seen only by students in those sections. Parents see this week's homework on the School card, never the questions or answers.  
+**Endpoints:**
+- `GET /api/v1/quiz/:quizId/students` - Per-student status, best score and phone (for students not done), teacher only
+- `POST /api/v1/quiz/:quizId/remind` - One reminder per student not done (once per quiz)
+- `PATCH /api/v1/quiz/:quizId/deadline` - Move a published deadline later (`{ deadline }`)
+
+**Dependencies:** Quiz, QuizAttempt, TeacherStudent, Notification models  
+**Added:** 2026-10-18
+
+---
+
+## Parent School View
+**Status:** ✅ Completed  
+**Description:** A parent sees their child's school in one place: this month's attendance (with today's status, absent and half-day dates, and whether a day was a working day or a holiday), fees due by today, overdue and next bill with receipts, published report cards (provisional until the plan is locked), notices from the last 60 days, and homework. Receipts and report cards can be printed. It is read-only and works only through the parent's link to the child.  
+**Endpoints:**
+- `GET /api/v1/parent-dashboard/child/:childId/school` - School card (optional `?month=YYYY-MM`)
+- `GET /api/v1/parent-dashboard/child/:childId/receipts/:receiptNo` - Receipt print data
+- `GET /api/v1/parent-dashboard/child/:childId/report-cards/:planId` - Report card print data
+- `POST /api/v1/parent-dashboard/notices/read` - Mark notices seen (`{ noticeIds }`, up to 50)
+
+**Dependencies:** ParentStudent, AttendanceDay, FeeInvoice, FeePayment, ReportCard, Notice, NoticeRead, Quiz models  
+**Added:** 2026-10-11
+
+---
+
 ## AI Assistant (Teacher Content Generation)
 **Status:** ✅ Completed  
 **Description:** Teachers can generate lesson content (quizzes, notes, worksheets, assignments, question papers) via AI prompts with follow-up clarifications. Proxied through Backend to AI Service `/v1/ai-agent` endpoint.  
@@ -271,14 +298,14 @@
 
 ## Referral System
 **Status:** ✅ Completed  
-**Description:** Every user has a 6-character invite code and link. A new account that signs up with the link (email or Google), or that plays a friend's challenge and then signs up, is credited to the inviter. Nothing is given at signup: once the friend has answered 10 questions (practice answers and challenge answers both count), both people get a free practice paper credit and a streak shield (bonus streak freeze). Rewards are capped at 10 friends per inviter per month, and only accounts less than a day old can be credited. Milestone badges unlock at 1, 3 and 5 practising friends.  
+**Description:** Every user has a 6-character invite code and link. A new account that signs up with the link (email or Google), or that plays a friend's challenge and then signs up, is credited to the inviter. Nothing is given at signup: once the friend has answered 3 questions (practice answers and challenge answers both count), both people get a free practice paper credit and a streak shield (bonus streak freeze). Rewards are capped at 10 friends per inviter per month, and only accounts less than a day old can be credited. Milestone badges unlock at 1, 3 and 5 practising friends.  
 **Endpoints:**
 - `GET /api/v1/referral/my-code` - Code, link, friends, rewards and milestones
 - `POST /api/v1/referral/redeem/:code` - Apply a code after signup (new accounts only)
 - `POST /api/v1/referral/rewards/practice-paper` - Spend a credit on a 20-question practice paper
 
 **Dependencies:** Referral, UserAnswer, ChallengeAttempt, Streak models; question paper service  
-**Added:** 2026-04-18 (activation-based rewards 2026-10-10)
+**Added:** 2026-04-18 (activation-based rewards 2026-10-10; activation threshold lowered to 3 answers 2026-10-11)
 
 ---
 
@@ -300,7 +327,7 @@
 
 ## In-App Notifications
 **Status:** ✅ Completed  
-**Description:** A notification bell inside the app. It shows when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift. Notifications are kept for 60 days after their last event. Emails continue to go out as before.  
+**Description:** A notification bell inside the app. It shows when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift, and nudges students who practised in the last week but not today (the evening streak reminder). Notifications are kept for 60 days after their last event. Emails continue to go out as before.  
 **Endpoints:**
 - `GET /api/v1/notifications` - List notifications, newest first
 - `GET /api/v1/notifications/unread-count` - Unread count for the bell
@@ -450,6 +477,154 @@ Both serve only the student themself (or a SuperAdmin).
 
 **Dependencies:** School model  
 **Added:** 2024-03-01
+
+---
+
+## School Fees
+**Status:** ✅ Completed  
+**Description:** Fee collection for schools. A principal sets up fee heads and structures (tuition, transport and so on, with instalments and due dates), and generates bills per student. Staff record payments at the counter. One payment can clear several bills (advance or multi-month) and produces one receipt; the bills change together or not at all. A principal can give an advance-payment discount of 0 to 50% per structure, waive late fines, cancel bills, and refund a payment (a refund is a new row; a payment can be refunded once). UPI and online payments stay pending until reconciled. Every money change is audited with a reason. Amounts are stored in paise and shown in rupees.  
+**Endpoints:**
+- `POST /api/v1/fees/heads`, `POST /api/v1/fees/structures`, `POST /api/v1/fees/structures/:id/publish` - Set up the price list
+- `PATCH /api/v1/fees/structures/:id/advance-discount` - Advance-payment discount
+- `POST /api/v1/fees/invoices/generate` - Generate bills (`allInstallments` bills the whole year ahead)
+- `GET /api/v1/fees/defaulters` - Overdue bills
+- `GET /api/v1/fees/students/:studentId/bills` - A student's open bills
+- `POST /api/v1/fees/payments/collect` - One payment for several bills, one receipt
+- `POST /api/v1/fees/payments` and `POST /api/v1/fees/payments/:id/reconcile` - Single-bill payment and UPI confirmation
+- `POST /api/v1/fees/payments/:id/refund` - Refund (principal)
+- `GET /api/v1/fees/receipts/:receiptNo` - Receipt print data
+- `GET /api/v1/fees/collections` - Day book for a date range (teachers see only their own)
+- `GET /api/v1/fees/settings` and `PUT /api/v1/fees/settings` - Receipt prefix, UPI ID, late fine per day
+
+**Dependencies:** FeeHeadMaster, FeeStructure, FeeInvoice, FeePayment, FeeSettings, FeeAudit models  
+**Added:** 2026-10-11
+
+---
+
+## Attendance Registers
+**Status:** ✅ Completed  
+**Description:** Daily attendance per section (present, absent, half day, leave) with an optional period register, and staff attendance with leave types. A teacher can submit a register up to 2 days late; a locked register can be edited only by the principal, with a reason. The principal's monthly and absentee views and an audit of sections that are almost always all-present are included. Absence messages are queued as rows but not yet sent.  
+**Endpoints:**
+- `GET /api/v1/attendance/roster` - Students in a section
+- `POST /api/v1/attendance/days/mark` and `GET /api/v1/attendance/days` - Mark and read a section's day
+- `GET /api/v1/attendance/school-day` - Every section's register for a day
+- `POST /api/v1/attendance/periods/mark` - Period register (when period tracking is on)
+- `GET /api/v1/attendance/monthly` and `GET /api/v1/attendance/absentees` - Reports
+- `POST /api/v1/attendance/staff/mark` and `POST /api/v1/attendance/staff/:id/regularize` - Staff attendance
+- `GET /api/v1/attendance/settings` and `PUT /api/v1/attendance/settings` - Working days, holidays, period tracking
+
+**Dependencies:** AttendanceDay, AttendancePeriod, StaffAttendance, AbsenteeEvent, SchoolSettings models  
+**Added:** 2026-10-11
+
+---
+
+## Timetable and Substitutions
+**Status:** ✅ Completed  
+**Description:** A weekly timetable for each school, kept as versions: a principal publishes a version and it takes effect from its start date, so next term's grid does not replace this term's early. Teachers and sections cannot clash in a period. A teacher's day view shows their periods, and when a teacher is absent the principal assigns a substitute from the free-teacher list (same subject first, then the lightest load that day).  
+**Endpoints:**
+- `GET /api/v1/timetable/versions` and `POST /api/v1/timetable/versions` - Versions
+- `POST /api/v1/timetable/versions/:id/publish` - Publish a version
+- `POST /api/v1/timetable/slots` - Set a draft version's slots
+- `GET /api/v1/timetable/week` - Grid for a section
+- `GET /api/v1/timetable/teacher-day` - A teacher's periods for a day
+- `GET /api/v1/timetable/free-teachers` - Teachers free in a period
+- `POST /api/v1/timetable/substitutions` and `POST /api/v1/timetable/substitutions/:id/cancel` - Assign or cancel cover
+
+**Dependencies:** TimetableVersion, TimetableSlot, Substitution models  
+**Added:** 2026-10-11
+
+---
+
+## Notices
+**Status:** ✅ Completed  
+**Description:** A principal posts a notice to the whole school, a class or a section; a teacher posts to a class or section. Authors and principals can edit (the notice is marked edited) or delete. Parents see the last 60 days of their child's notices and mark them seen. Staff see how many parents of the audience have seen each notice ("seen by X of Y").  
+**Endpoints:**
+- `GET /api/v1/notices` - Staff list with "seen by" counts
+- `POST /api/v1/notices` - Post a notice
+- `PATCH /api/v1/notices/:id` - Edit
+- `DELETE /api/v1/notices/:id` - Delete
+- `POST /api/v1/parent-dashboard/notices/read` - Parent marks notices seen
+
+**Dependencies:** Notice, NoticeRead models  
+**Added:** 2026-10-11
+
+---
+
+## Gradebook and Report Cards
+**Status:** ✅ Completed  
+**Description:** Exam plans for a school year (for example Term 1 with weighted exams), entered mark sheets per section, subject and exam, and report cards. An absent student is left out of the averages, and an exam with no mark yet is left out of a student's percentage until it is entered. The grade is computed from the weighted percentage. Publishing a report card freezes a snapshot; a plan can be locked so that no sheet or card changes. The school publishes no class ranks.  
+**Endpoints:**
+- `GET /api/v1/gradebook/plans` and `POST /api/v1/gradebook/plans` - Exam plans
+- `POST /api/v1/gradebook/plans/:id/publish` and `POST /api/v1/gradebook/plans/:id/lock` - Publish or lock
+- `GET /api/v1/gradebook/marks` and `POST /api/v1/gradebook/marks` - Mark sheets
+- `POST /api/v1/gradebook/cards/publish` - Publish a student's report card (principal)
+- `GET /api/v1/gradebook/cards` - Report card
+- `GET /api/v1/gradebook/class-totals` - Class totals
+
+**Dependencies:** ExamPlan, MarkSheet, ReportCard models, Attendance  
+**Added:** 2026-10-11
+
+---
+
+## Bulk Student Import and Transfer Certificates
+**Status:** ✅ Completed  
+**Description:** A principal imports a class list of up to 500 students at once (admission number, name, class and section, parent phone). Admission numbers are unique per school. A transfer certificate (TC) is issued from the student's record; a student with open fee dues is blocked unless the principal overrides with a reason. An issued TC marks the student as having left, so no new attendance or fee bills are created for them.  
+**Endpoints:**
+- `POST /api/v1/school/import-students` - Bulk import (principal)
+- `POST /api/v1/tc/request` - Request a TC (`override` needs the principal)
+- `GET /api/v1/tc/:studentId` - TC for a student
+
+**Dependencies:** User (admissionNo, leftSchoolAt), TcCertificate, TcCounter, FeeInvoice models  
+**Added:** 2026-10-11
+
+---
+
+## Parent Logins on Password Slips
+**Status:** ✅ Completed  
+**Description:** Parents get a login on a printed password slip, with no email or SMS needed. A family is the children who share the parent phone from the import, so siblings share one login. The login ID is the 10-digit mobile number, or `<school code>-<admission no>` when there is no phone. Passwords are stored only as hashes, so a slip can be printed only in the response that set it. A reprint renews only families that have not logged in since their last slip. A new slip ends that family's sessions. The parent can type the ID as they like (spaces, +91, capitals).  
+**Endpoints:**
+- `GET /api/v1/parent-logins` - A section's families and their login state
+- `POST /api/v1/parent-logins` - Issue or reprint logins for a section
+- `POST /api/v1/parent-logins/renew` - New slip for one family
+
+**Dependencies:** User, ParentStudent, School, Section models  
+**Added:** 2026-10-11
+
+---
+
+## Demo School
+**Status:** ✅ Completed  
+**Description:** A public demo school that anyone can try without an account. The sign-in is passwordless and picks a role: principal (default), teacher, parent or student. The school has about 420 students in 10 sections, teachers, fee collections and defaulters, about six weeks of registers, marks and report cards, a timetable, notices, and practice activity for the student account. It is rebuilt from scratch every night at 02:00 IST, and SuperAdmin can rebuild it on demand. Demo accounts cannot change their profile or password and do not count in platform metrics, leaderboards or public stats.  
+**Endpoints:**
+- `POST /api/v1/demo/login` - Sign in as a demo role (`{ role }`, 20 per hour per IP)
+- `GET /api/v1/demo/status` - Rebuild status (SuperAdmin)
+- `POST /api/v1/demo/rebuild` - Rebuild now (SuperAdmin)
+
+**Dependencies:** School (isDemo), User (isDemo) models, node-cron  
+**Added:** 2026-10-11 (practice data 2026-10-13)
+
+---
+
+## Principal "Today at My School"
+**Status:** ✅ Completed  
+**Description:** A phone-friendly summary for the principal: attendance (present percentage, sections not yet marked, holiday-aware), fees collected today, this month and overdue, pending UPI, staff away and substitutions, and TCs issued this month. Counts only, computed by aggregation. The fee day book (`GET /api/v1/fees/collections`) lists every receipt for a date range.  
+**Endpoints:**
+- `GET /api/v1/principal/today` - Today's summary
+
+**Dependencies:** AttendanceDay, FeePayment, Substitution, TcCertificate models  
+**Added:** 2026-10-11
+
+---
+
+## Question Coverage (SuperAdmin)
+**Status:** ✅ Completed  
+**Description:** Shows how many chapters have questions and which need a PDF, and can start generation for chapters that have none. The bulk fill-gaps step starts a few chapters per call (1 to 10, default 3), using the same race-safe claim as on-demand generation. Chapters with no topics are reported and not started.  
+**Endpoints:**
+- `GET /api/v1/questions/coverage` - Coverage (teacher or SuperAdmin, optional `classId`)
+- `POST /api/v1/questions/generate/missing` - Fill gaps (SuperAdmin, `?classId=&limit=`)
+
+**Dependencies:** Chapter, Question, QuestionGenerationJob models  
+**Added:** 2026-10-11
 
 ---
 

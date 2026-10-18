@@ -39,7 +39,7 @@ All endpoints return:
 
 Errors use `AppError` class with global error handler.
 
-## Modules (19 total)
+## Modules (26 total)
 
 | Module | Purpose |
 |--------|---------|
@@ -50,7 +50,7 @@ Errors use `AppError` class with global error handler.
 | `progress` | Sessions, answers, topic progress, AI insights, streaks, badges, session feedback |
 | `question-paper` | Board-style paper generation |
 | `teacher` | Teacher accounts, teacher-student assignments, teacher dashboard, class join links |
-| `quiz` | Full quiz lifecycle (CRUD, attempts, scoring, analytics) |
+| `quiz` | Full quiz lifecycle (CRUD, attempts, scoring, analytics), homework status, reminders and deadline extension |
 | `school` | Schools and sections |
 | `principal` | Principal dashboard and principal accounts |
 | `parent` | Parent dashboard, parent-student linking |
@@ -58,10 +58,17 @@ Errors use `AppError` class with global error handler.
 | `ai-assistant` | Teacher AI content generation |
 | `feedback` | Inline feedback, behavioral prompts, suggestions |
 | `goal` | Daily student goal management |
-| `referral` | Invite codes, signup attribution, rewards after the friend answers 10 questions |
+| `referral` | Invite codes, signup attribution, rewards after the friend answers 3 questions |
 | `challenge` | Challenge-a-friend links: public play without login, claim after signup, results |
 | `notification` | In-app notification bell and the daily 5 pm IST notification job |
 | `campaign` | SuperAdmin email campaigns and one-click unsubscribe |
+| `demo` | Public demo school: passwordless sign-in for four roles, nightly rebuild |
+| `fees` | School fee structures, bills, counter payments with one receipt per payment, refunds, day book |
+| `attendance` | Daily and period registers, staff attendance, locks, absentee message outbox |
+| `timetable` | Weekly timetable versions, slots, free-teacher lookup, substitutions |
+| `notice` | School notices to the whole school, a class or a section, with parent "seen by" counts |
+| `gradebook` | Exam plans, mark sheets, weighted report cards |
+| `onboarding` | Bulk student import, transfer certificates with the dues block, parent logins on printed slips |
 
 ## AI Integration
 

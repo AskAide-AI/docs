@@ -35,9 +35,10 @@ All routes use `React.lazy()` for code splitting. Three tiers:
 | Path | Role |
 |------|------|
 | `/admin` | SuperAdmin |
-| `/teacher/*` (incl. `/teacher/classes`) | SuperAdmin, Teacher, Parent |
+| `/teacher/*` (incl. `/teacher/classes`) | SuperAdmin, Teacher |
 | `/principal/*` | SuperAdmin, Principal |
 | `/parent/*` | SuperAdmin, Parent |
+| `/school-ops/*`, `/print/*` (some screens narrower; receipt and report-card prints also allow Parent) | SuperAdmin, Principal, Teacher |
 | `/question-paper/*` | SuperAdmin, Teacher |
 
 Signed-in pages also set their own tab title (`<Page> | AskAide`) from `APP_TITLES` in `App.jsx`.

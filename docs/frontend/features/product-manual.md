@@ -44,6 +44,8 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 - **Roster Management**: Bulk upload and management of Teachers and Students.
 - **Curriculum Management**: Upload Textbook PDFs to automatically extract Chapters and Topics via AI.
 - **Class Links**: Teachers sign up on their own and bring students in with a link or QR code, no admin needed.
+- **School Ops**: Fees and receipts, day book, attendance, timetable and cover, gradebook and report cards, transfer certificates, notices and parent logins, for principals, teachers and SuperAdmin. Each job is its own tabbed screen.
+- **Printables**: Fee receipts, report cards, transfer certificates, the day book and parent login slips print as A4 pages.
 
 ### Friends, Classes & Notifications
 - **Challenge a Friend**: Send the questions you just practised on WhatsApp. Friends play without logging in and see who won.
@@ -52,6 +54,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 
 ### Public Pages
 - **About**, **How It Works** (how questions are made and checked) and **Pricing** pages, plus a free trial on `/try` and SEO pages per class, subject and chapter.
+- **Live demo school**: **For Schools** has **See a live demo school**, which signs you in without a password as the demo principal, class teacher, parent or student. See the Demo workflow below.
 
 ---
 
@@ -66,7 +69,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
     *   **Class**: Select Grade (e.g., "10th").
     *   **Subject**: Select Subject (e.g., "Mathematics"). *(Enabled after Class)*
     *   **Chapter**: Select a specific Chapter. *(Enabled after Subject)*
-3.  **Customize**: Choose **Question Type** (MCQ/Fill-in-Blanks) and **Difficulty** (Easy/Medium/Hard).
+3.  **Customize**: Choose **Question Type** (MCQ/Fill-in-Blanks) and **Difficulty** (Easy/Medium/Hard). New sessions start on Easy. The app remembers your last class, subject and chapter on this browser, so you can start with one tap.
 4.  **Practice**:
     *   Click "Start Learning".
     *   Answer questions in the interactive interface.
@@ -133,12 +136,13 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 2.  **Upload**: Upload a textbook PDF for a specific Subject/Class.
 3.  **Process**: The system uses AI to parse the PDF, creating **Chapters** and extracting **Topics** automatically.
 4.  **Verify**: Check **Chapter-Topic View** to ensure content was ingested correctly.
+5.  **Fill gaps**: Pick a class in chapter management. The coverage line shows how many chapters are covered, ready and still need a PDF. **Generate next 3 empty** starts questions for three chapters with none, so run it again once questions land.
 
 ---
 
 ### 👩‍🏫 **Teacher**
 *Monitors student performance and guides learning.*
-> **Status**: *Dashboard currently uses mock data. Full analytics integration depends on "Teacher-Student Linking" data.*
+> **Status**: *Analytics come from the students linked to you (see "Teacher-Student Linking"). SuperAdmin sees sample data on the student list.*
 
 #### **Workflow: Sign Up as a Teacher**
 1.  **Navigate**: Open "Teacher? Create a free teacher account" on the login or sign-up page (`/signup?role=teacher`), or the teacher link on **For Schools**.
@@ -150,6 +154,17 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 3.  **Share**: Send the link to your class or parents' WhatsApp group, copy it, or download the QR code for the projector.
 4.  **Track**: Each link shows how many students joined, practised and were active this week. Turn a link off when you're done.
 5.  **Unlock**: Once enough students practise, open the printable class progress report. Reach the goal across your classes to earn the printable Champion Teacher certificate.
+
+#### **Workflow: Track Homework**
+1.  **Navigate**: Open a quiz and its analytics (`/teacher/quiz/:quizId/analytics`).
+2.  **Check**: The **Who has done it** list shows every student as Done, In progress, Not done or Never logged in.
+3.  **Act**: Send a reminder, open a WhatsApp message to a student's parent, or give more time.
+
+#### **Workflow: Post Fees and Attendance (School Ops)**
+1.  **Navigate**: Open **School Ops** in the nav. Your screens are Fees, Day book, Attendance, Timetable, Gradebook, TC, and Notices.
+2.  **Mark**: Use **Attendance > Mark** for your section's register.
+3.  **Collect**: Use **Fees > Collect** to take a payment. One payment gives one receipt, and the receipt can be printed.
+4.  **Request a TC**: Use **TC** to request a transfer certificate. The principal approves it.
 
 #### **Core Workflow (Planned/In-Progress)**
 1.  **Dashboard**: Login to see an overview of assigned Classes/Sections.
@@ -163,6 +178,62 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 4.  **Preview & Action**: Download as PDF, view Answer Keys, or browse the generation history to retrieve past papers.
 
 
+
+### 🏫 **Principal**
+*Runs the school day and its money, and approves what staff request.*
+
+#### **Workflow 1: Start Your Day at Today**
+1.  **Navigate**: Open **Principal** in the nav. The first screen is **Today at my school**.
+2.  **Review**: Attendance, fee collection, staff and transfer certificates for today. Each card opens the School Ops page that acts on it.
+
+#### **Workflow 2: Collect Fees and Print Receipts**
+1.  **Navigate**: Open **School Ops > Fees**.
+2.  **Collect**: Pick the student, then the months (or an amount the parent gave). One payment, one receipt. Your advance discount applies when every remaining month of a fee is paid.
+3.  **Print**: Open the receipt in its own A4 tab. End the day with the **Day book** and print it or download it as CSV.
+
+#### **Workflow 3: Approve Transfer Certificates and Report Cards**
+1.  **TC**: Teachers request a transfer certificate. Approve it from **School Ops > TC**; it can override a dues block.
+2.  **Report cards**: Approve and publish report cards under **School Ops > Gradebook > Report cards**.
+
+#### **Workflow 4: Give Parents Their Logins**
+1.  **Navigate**: Open **School Ops > Parent logins**.
+2.  **Make slips**: For a section, create one login per family. Brothers and sisters share one login.
+3.  **Print**: Print the slips (eight to a page), cut them out and send them home. There are no emails or SMS.
+
+#### **Workflow 5: Send a Notice**
+1.  **Navigate**: Open **School Ops > Notices**.
+2.  **Post**: Choose the whole school, one class or one section. Parents see it on their child's School card.
+3.  **Share**: Optionally share the notice to a class parents' WhatsApp group.
+
+---
+
+### 👪 **Parent**
+*Follows a child's practice and school record.*
+
+#### **Workflow 1: Sign In with Your Slip**
+1.  **Sign in**: Use the login ID and password printed on the slip from the school.
+2.  **Land**: You arrive on **Parent** (`/parent`).
+
+#### **Workflow 2: Check Your Child's School Card**
+1.  **Open**: The **School card** sits under the practice view for a child on a school class list.
+2.  **Read**: Today's attendance, this month's register (use the arrows to move between months), fees due, overdue and next, receipts, report cards, and notices from school.
+3.  **Homework**: **Homework this week** shows what is due, and whether it is Done, In progress, Not done or To do.
+
+#### **Workflow 3: Get a Receipt or Report Card**
+1.  **Open**: Tap a receipt or report card on the School card. It opens as a printable A4 page.
+2.  **Questions about an amount**: Ask the school office. The card is read-only.
+
+---
+
+### 🧪 **Try the Demo School**
+*A public, passwordless demo school with sample data, to explore the product.*
+
+#### **Workflow: Open a Demo Role**
+1.  **Navigate**: Open **For Schools** and tap **See a live demo school**, or one of the **Open as** buttons (Principal, Class Teacher, Parent, Student).
+2.  **Explore**: You arrive signed in on that role's home. A banner on every page reminds you that the school resets every night.
+3.  **Leave**: Tap **Leave demo** in the banner to sign out.
+
+---
 
 ## 4. Technical Context for AI Agents
 *If you are an AI attempting to modify or debug this project, read this section.*

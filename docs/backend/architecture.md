@@ -63,9 +63,10 @@ src/modules/<name>/
 Started by side-effect imports at the top of `index.js`:
 | Job | File | Schedule | Purpose |
 |-----|------|----------|---------|
-| Keep-alive | `src/shared/jobs/keepAlive.js` | Every 14 min | Prevent Render cold start |
+| Keep-alive | `src/shared/jobs/keepAlive.js` | Every 14 min (Render only) | Prevent Render cold start; pings `RENDER_EXTERNAL_URL` |
 | Badge check | `src/modules/supporting/jobs/achievementScheduler.js` | Daily, `35 11 * * *` (server time) | Badge safety net |
-| Daily notifications | `src/modules/notification/jobs/notificationScheduler.js` | Daily, 5 pm IST | Gift reminders for invited friends, teacher class-report and certificate notices |
+| Daily notifications | `src/modules/notification/jobs/notificationScheduler.js` | Daily, 5 pm IST | Gift reminders for invited friends, teacher class-report and certificate notices, evening streak nudge |
+| Demo school rebuild | `src/modules/demo/jobs/demoScheduler.js` | Daily, 02:00 IST | Wipe and rebuild the public demo school |
 
 ## Swagger API Docs
 

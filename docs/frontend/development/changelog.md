@@ -2,7 +2,7 @@
 
 > All notable changes to the AskAideAI frontend will be documented in this file.
 > Format: [Semantic Versioning](https://semver.org/)
-> Last Updated: October 10, 2026
+> Last Updated: October 18, 2026
 
 ---
 
@@ -11,6 +11,23 @@
 ### October 2026
 
 #### Added
+- **Homework status** — the quiz analytics page (`/teacher/quiz/:quizId/analytics`) lists every student the quiz is for as Done, In progress, Not done or Never logged in, with a one-tap reminder, a WhatsApp message to the parent and a way to give more time. Parents see **Homework this week** on the School card. New `teacher/quiz/QuizStudentsPanel.jsx`.
+- **Pixel Buddy on Login** — a small pixel robot explains a failed sign-in in plain English and offers the next step as a button (Reset password or Create an account). Only `/login` is enabled (`BUDDY_ROUTES` in `src/buddy/config.js`); `VITE_BUDDY_ENABLED=false` turns it off everywhere.
+- **Live demo school** — **See a live demo school** on For Schools signs in without a password as the demo Principal, Class Teacher, Parent or Student (`demoLogin()`, `POST /demo/login`). A banner on every app page says the school resets every night and has a **Leave demo** button. New `common/DemoBanner.jsx` and `school-ops/DemoSchoolCard.jsx` (SuperAdmin rebuild, on the Import screen).
+- **School Ops** (`/school-ops/*`) — role-gated jobs for SuperAdmin, Principal and Teacher, one job per tabbed screen:
+  - **Fees**: Collect (advance and several months in one receipt), Billing, Setup (SuperAdmin), Receipts.
+  - **Attendance**: Mark, Day view, Staff. **Timetable**: Today, Cover (Principal), Setup (SuperAdmin). **Gradebook**: Enter marks, Plans (SuperAdmin), Report cards (Principal).
+  - **Day book** (`/school-ops/collections`): every receipt in a date range, downloadable as CSV and printable.
+  - **TC**: request (Teacher or Principal), dues check, Principal override.
+  - **Notices** (`/school-ops/notices`): for the whole school, one class or one section. Staff can share a notice to a class WhatsApp group.
+  - **Parent logins** (`/school-ops/parents`, Principal and SuperAdmin): one login per family, printed on password slips with no email or SMS.
+  - **Import** (SuperAdmin): CSV up to 500 rows, previewed before import.
+- **Printable school documents** — A4 pages without app chrome: fee receipt (`/print/receipt/:receiptNo`), report card (`/print/report-card/:planId/:studentId`), TC (`/print/tc/:studentId`), day book (`/print/day-book`) and parent login slips, eight to a page (`/print/parent-slips`).
+- **Principal Today** — `/principal` opens "Today at my school": attendance, fee collection, staff and TCs, each card linking to the School Ops page that acts on it.
+- **Parent School card** — on `/parent`, for a child on a school class list: today's attendance, the month's register, fees due, overdue and next with receipts, report cards, notices from school and homework this week. New `dashboard/ChildSchoolCard.jsx`.
+- **Study memory** — the last class, subject and chapter are remembered per browser (`utils/studyLastConfig.js`), so a returning student starts with one tap.
+- **First-session result** — a student's first finished session shows a short hero above the score, once.
+- **Chapter coverage (Admin)** — a coverage line per class (covered, ready, need PDF) and a **Generate next 3 empty** button in chapter management.
 - **In-app notifications** — a bell, panel and toast for signed-in users. One shared store (`hooks/useNotifications.js`) polls the unread count every 60 s while the tab is visible. Bells sit in the desktop `AppSidebar`, the public `Navbar` and beside the dashboard greeting on phones; on phones the BottomNav **Menu** tab shows the count and the mobile menu has a Notifications row. `NotificationCenter` is a top sheet on phones and a popover on desktop, and opening it marks everything read. `NotificationToaster` shows the newest unread once and stays quiet on `/study` and `/quiz/`. New `notification.api.js`.
 - **Challenge a friend** — `/c/:code` lets friends play a classmate's questions from WhatsApp without logging in and see who won; `/c/:code/results` (signed in) shows answers and the scoreboard. A guest's play is claimed after sign-up. "Challenge on WhatsApp" on the session result card. New `challenge.api.js`, `ChallengePlay`, `ChallengeResults`, `ChallengeShareCard`, `ChallengeGiftNote`.
 - **Invite attribution** — the first visit's `?ref=` code and UTM tags are remembered (`utils/acquisition.js`) and sent with both email and Google signup (Google signup used to drop the code). Every share button adds the student's `?ref=` to links to our own site (`hooks/useReferralCode.js`).
@@ -25,6 +42,12 @@
 - **`authorizedFetch()`** — `fetch` with the axios refresh-and-retry, used by the teacher AI stream and PDF export.
 
 #### Changed
+- **Study starts on Easy** — new sessions, the first onboarding session and the study picker's default difficulty are Easy (they were Medium).
+- **Role access matches the nav** — `/teacher/*` is for SuperAdmin and Teacher only (Parent removed). A missing account type counts as Student in route guards, as it does in the nav.
+- **Refer & Earn gift** — a referred friend's new account answers 3 questions (not 10) to unlock the gift; the copy says so.
+- **Public pages match the product** — difficulty levels, contact emails and upload copy corrected; GitHub and LinkedIn links hidden in the landing and About footers.
+- **School Ops polish** — the School Ops, principal Today and parent screens share the Quiet Scholar styling.
+- **Referral page** — challenge-first hero on top, plain invite link secondary.
 - **Refer & Earn rebuilt** — invite link, progress to the friend's gift (free practice paper and streak shield), practice-paper redeem (PDF), squad badges, friends' status and challenges sent.
 - **Signed-in tab titles** — signed-in pages set `<Page> | AskAide` per route instead of keeping the last public page's title.
 - **No tab-switch warning during practice** — answers save as they are given, so the "leave session?" dialog no longer fires on tab or app switches and there is no native unload prompt. In-app navigation still asks to confirm.
@@ -42,6 +65,10 @@
 - **Result card** — "Challenge on WhatsApp" is pinned in the footer, visible without scrolling on every phone (shorter label below 360px).
 
 #### Fixed
+- **Refresh race before logout** — a refresh rejected because another tab had already rotated the token re-reads storage once and retries, instead of logging the user out.
+- **School Ops pickers** — class lists and pickers replace pasted IDs; the principal's or teacher's school name shows; a cancelled bill has no Collect button; SuperAdmin publish works.
+- **Demo banner** — sits in the content column, not over the desktop sidebar.
+- **Parent slip** — the header wraps the full school name; long login IDs fit on one line.
 - **Quiz Try Again and history** — **Try Again** on the result page (shown when `attempt.canRetry` is `true`) starts a new attempt and opens it. The quiz list header and the result page link to `/quiz/history`.
 - **Quiz page load** — `QuizAttempt` declares `flushPending` before the effect that depends on it, so the page renders instead of the error screen.
 - **Public student page stats** — `StudentPublicProfile` reads the streak and stats from `GET /profile/public/:userId` alone, so signed-out visitors see the real numbers.

@@ -28,7 +28,7 @@
 | `/c/:code` | ChallengePlay | Public | All | Play a friend's challenge without logging in |
 | `/c/:code/results` | ChallengeResults | Protected | All | Challenge answers and full scoreboard |
 | `/join/:code` | JoinClass | Public | All | Join a teacher's class from a class link |
-| `/for-schools` | ForSchools | Public | All | Marketing page for schools |
+| `/for-schools` | ForSchools | Public | All | Marketing page for schools, with the live demo school (sign in as demo principal, teacher, parent or student) |
 | `/referral` | ReferralPage | Protected | All | Refer & Earn: invite link, gifts, friends, challenges |
 | `/study` | Home | Protected | All | Study session interface |
 | `/dashboard` | Dashboard | Protected | All | Student dashboard |
@@ -44,9 +44,14 @@
 | `/question-paper` | QuestionPaperGenerator | Protected | SuperAdmin, Teacher | Teacher paper generation |
 | `/question-paper/preview/:paperId` | QuestionPaperPreview | Protected | SuperAdmin, Teacher | View paper and PDF download |
 | `/question-paper/history` | QuestionPaperHistory | Protected | SuperAdmin, Teacher | Generation history |
-| `/parent/*` | ParentDashboard | Protected | SuperAdmin, Parent | Parent oversight |
-| `/teacher/*` | TeacherDashboard | Protected | SuperAdmin, Teacher, Parent | Teacher analytics, class links, AI generator, quizzes |
-| `/principal/*` | PrincipalDashboard | Protected | SuperAdmin, Principal | School-scoped analytics |
+| `/parent/*` | ParentDashboard | Protected | SuperAdmin, Parent | Parent oversight, School card (attendance, fees, notices, homework) |
+| `/teacher/*` | TeacherDashboard | Protected | SuperAdmin, Teacher | Teacher analytics, class links, AI generator, quizzes, homework status |
+| `/principal/*` | PrincipalDashboard | Protected | SuperAdmin, Principal | Today at my school (index), then school-scoped analytics |
+| `/school-ops/fees`, `/school-ops/collections`, `/school-ops/attendance`, `/school-ops/timetable`, `/school-ops/gradebook`, `/school-ops/tc`, `/school-ops/notices` | School Ops screens | Protected | SuperAdmin, Principal, Teacher | One job per tabbed screen; tabs depend on role |
+| `/school-ops/parents` | ParentLoginsPanel | Protected | SuperAdmin, Principal | Parent logins and password slips |
+| `/school-ops/import` | ImportPanel | Protected | SuperAdmin | Bulk student import (CSV) and demo school rebuild |
+| `/print/receipt/:receiptNo`, `/print/report-card/:planId/:studentId`, `/print/tc/:studentId`, `/print/day-book` | Print pages (A4, no app chrome) | Protected | SuperAdmin, Principal, Teacher (receipt and report card also Parent) | Printable school documents |
+| `/print/parent-slips` | ParentSlipsPrint | Protected | SuperAdmin, Principal | Printable parent login slips |
 | `/admin` | AdminDashboard | Protected | SuperAdmin | Admin panel |
 | `/feedback` | FeedbackForm | Public | All | User feedback form |
 | `/privacy-policy` | LegalPolicy | Public | All | Privacy policy |
@@ -103,6 +108,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 - Google sign-in button (`FitGoogleLogin`, sized to its container so it never spills off a small phone)
 - "Forgot password" link
 - Link to signup, plus "Teacher? Create a free teacher account" (`/signup?role=teacher`)
+- Pixel Buddy mascot (`src/buddy/`) explains a failed sign-in and offers the next step (Reset password, Create an account). It runs on this screen only (`BUDDY_ROUTES`); `VITE_BUDDY_ENABLED=false` turns it off
 - After sign-in, a pending class join (`/join/:code`) or a guest's challenge play (`/c/:code/results`) wins over the usual role landing
 
 ---
@@ -289,11 +295,14 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 - `GET /parent-dashboard/child/:studentId/overview` - Child progress
 - `GET /parent-dashboard/child/:studentId/subject/:subjectId/progress` - Subject progress
 - `GET /parent-dashboard/child/:studentId/subject/:subjectId/weak-topics` - Weak topics
+- `GET /parent-dashboard/child/:studentId/school` - School card (attendance, fees, receipts, report cards, notices, homework)
+- `POST /parent-dashboard/notices/read` - Marks notices as seen
 **Features:**
 - Child's grades overview
 - Activity summary
 - Progress alerts
 - Weak topic identification
+- School card for a child on a school class list: today's attendance, the month's register (prev/next month), fees due/overdue/next with receipts, report cards (print), notices from school ("New" until the next visit), and "Homework this week". Renders nothing for a child who is not on a school roster
 
 ---
 
@@ -301,7 +310,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Component:** `src/components/dashboard/TeacherDashboard.jsx` (nested routes)
 **Description:** Teacher analytics dashboard, class links, AI generator and quizzes
 **Authentication:** Protected (RoleProtectedRoute)
-**Allowed Roles:** SuperAdmin, Teacher, Parent
+**Allowed Roles:** SuperAdmin, Teacher
 **Nested routes:**
 
 | Path | Component |
@@ -312,7 +321,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 | `/teacher/classes/:id/report` | `TeacherClassReport` (printable) |
 | `/teacher/certificate` | `TeacherCertificate` (printable) |
 | `/teacher/ai-generator` | `TeacherAIGenerator` |
-| `/teacher/quizzes`, `/teacher/quiz/new`, `/teacher/quiz/:quizId` (+ `/edit`, `/questions`, `/analytics`) | Quiz authoring |
+| `/teacher/quizzes`, `/teacher/quiz/new`, `/teacher/quiz/:quizId` (+ `/edit`, `/questions`, `/analytics`) | Quiz authoring. `/analytics` includes the "Who has done it" homework panel (`QuizStudentsPanel`) |
 
 **API Calls:**
 - `GET /teacher-dashboard/:teacherId/my-assignments` - Assigned subjects/classes
@@ -345,8 +354,44 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Description:** School-scoped analytics for principals
 **Authentication:** Protected (RoleProtectedRoute)
 **Allowed Roles:** SuperAdmin, Principal
-**Nested routes:** index (overview), `classes`, `subjects`, `teachers`, `students`, `student/:studentId`
-**API Calls:** `/principal/*` (`principal.api.js`)
+**Nested routes:** index (Today: "Today at my school", attendance, fees, staff and TCs for the day), `overview`, `classes`, `subjects`, `teachers`, `students`, `student/:studentId`
+**API Calls:** `/principal/*` (`principal.api.js`), including `GET /principal/today`
+
+---
+
+### /school-ops/*
+**Component:** `src/components/school-ops/` (one screen per job, with tabs)
+**Description:** School operations: fees and receipts, day book, attendance, timetable, gradebook, transfer certificates, notices, parent logins and bulk import
+**Authentication:** Protected (RoleProtectedRoute)
+**Allowed Roles:** SuperAdmin, Principal, Teacher (`/school-ops/parents`: SuperAdmin, Principal; `/school-ops/import`: SuperAdmin)
+**Nested routes:**
+
+| Path | Tabs (index first) |
+|------|--------------------|
+| `/school-ops/fees` | Collect (index), `billing`, `setup` (SuperAdmin), `receipts` |
+| `/school-ops/attendance` | Mark (index), `day`, `staff` |
+| `/school-ops/timetable` | Today (index), `cover` (Principal), `setup` (SuperAdmin) |
+| `/school-ops/gradebook` | Enter marks (index), `plans` (SuperAdmin), `cards` (Principal) |
+| `/school-ops/collections` | Day book |
+| `/school-ops/tc` | Transfer certificates |
+| `/school-ops/notices` | Notices |
+| `/school-ops/parents` | Parent logins |
+| `/school-ops/import` | Bulk import (SuperAdmin) |
+
+**Features:**
+- The nav shows a tab only when the role can use it (`useOpsRole()` in `school-ops/shared.jsx`); the server still enforces roles
+- Pickers choose school, class, section and student from lists
+- Advance and several-month payments in one receipt
+- Notices for the whole school, a class or a section
+- Parent login slips: one login per family, printed eight to a page
+
+---
+
+### /print/*
+**Component:** `src/components/school-ops/print/` (A4 pages, opened in their own tab)
+**Description:** Printable school documents. App chrome is not rendered on `/print/*` (`isPrintRoute` in `App.jsx`)
+**Authentication:** Protected (RoleProtectedRoute)
+**Routes:** `/print/receipt/:receiptNo`, `/print/report-card/:planId/:studentId` (also Parent), `/print/tc/:studentId`, `/print/day-book` (SuperAdmin, Principal, Teacher), `/print/parent-slips` (SuperAdmin, Principal)
 
 ---
 
@@ -651,7 +696,7 @@ Every share button adds the signed-in student's `?ref=` code to links to our own
 **Location:** `/src/components/auth/RoleProtectedRoute.jsx`
 - Extends ProtectedRoute functionality
 - Shows a spinner while the profile loads
-- Checks if user role is in `allowedRoles` array
+- Checks if user role is in `allowedRoles` array. A missing account type counts as `Student`, the same rule the nav uses, so a link and its route can never disagree
 - Shows an error toast and redirects to `/` if role not allowed
 - Renders children if role is allowed
 

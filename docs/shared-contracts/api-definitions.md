@@ -74,6 +74,7 @@ Ownership guards:
 | Backend Login (`/login`, `/google`) | 10 req / 15 min |
 | Backend Signup | 10 req / hour |
 | Backend Password reset (`/reset-password-token`, `/reset-password`) | 5 req / 15 min |
+| Backend Demo sign-in (`POST /demo/login`) | 20 req / hour per IP |
 | Backend Email change (`/profile/email/*`) | 10 req / 15 min |
 | Backend Public challenge view (`GET /challenges/:code`) and class join info (`GET /teacher-classes/join/:code`) | 120 req / 10 min each |
 | Backend Public challenge play (`POST /challenges/:code/attempts`) | 20 req / 10 min |
@@ -99,9 +100,9 @@ Ownership guards:
 
 **Token model:**
 - `accessToken`: short-lived JWT (2h expiry), sent as `Authorization: Bearer` header
-- `refreshToken`: long-lived JWT (7d expiry), stored hashed in MongoDB, used only to get new access tokens
-- Token rotation: each `/refresh` call invalidates the old refresh token and issues a new one. Refresh tokens are **single-use**: the old token is claimed atomically, so of two refreshes sent with the same token only one succeeds; the other gets `401 REFRESH_TOKEN_REVOKED`
-- Max 5 active refresh tokens per user (multi-device support)
+- `refreshToken`: long-lived JWT (30d expiry by default, `REFRESH_TOKEN_EXPIRY`), stored hashed in MongoDB, used only to get new access tokens
+- Token rotation: each `/refresh` call invalidates the old refresh token and issues a new one. Refresh tokens are **single-use**: the old token is claimed atomically, so of two refreshes sent with the same token only one succeeds; the other gets `401 REFRESH_TOKEN_REVOKED`. Retry grace: a repeat of a token rotated 2–60 s earlier gets a fresh pair (a lost response does not log the user out)
+- Max 10 active refresh tokens per user (`MAX_REFRESH_TOKENS`; the oldest is dropped; multi-device support)
 - Password change/reset revokes all refresh tokens, forcing re-login on all devices
 
 ### 1.2 Profile (`/api/v1/profile`)
@@ -169,6 +170,8 @@ Ownership guards:
 | GET | `/public-preview/class/:classSlug/subject/:subjectSlug/chapter/:chapterSlug` | none | Public SEO preview by slug; deterministic sample incl. explanations; always 200 |
 | POST | `/generate/chapter/:chapterId` | auth, isTeacher | Admin fire-and-forget generation trigger; 409 if chapter has no topics |
 | POST | `/counts` | auth, isTeacher | Batch question counts: `{ chapterIds: [] }` → `{ chapterId: count }` |
+| GET | `/coverage` | auth, isTeacher | Chapter coverage: `?classId=` → `{ total, covered, ready, needPdf }` |
+| POST | `/generate/missing` | auth, isSuperAdmin | Fill gaps: `?classId=&limit=` (1–10, default 3) starts background generation for chapters that have topics but no questions → `{ startedChapters, processed[], message }` |
 
 **Batch response** (`GET /batch/…`) — wrapped in standard `ApiResponse` envelope:
 ```json
@@ -316,6 +319,9 @@ Other callers get `403` (`canAccessUser`: own records, or SuperAdmin).
 | POST | `/:quizId/close` | auth | |
 | POST | `/:quizId/clone` | auth | |
 | GET | `/:quizId/analytics` | auth | Includes `questionAnalysis` (per question) |
+| GET | `/:quizId/students` | auth + `isTeacher`, quiz owner only (else `403 ACCESS_DENIED`) | Homework status: `QuizStudentsResponse` — every student the quiz is for (same roster as `analytics.totalStudentsAssigned`, minus students who left school), each `done` / `in_progress` / `not_done` / `never_logged_in`, best score, `tooFast` hint, `remindedAt`, and `parentPhone` for students who are not done. Standard `{ success, message, data }` envelope |
+| POST | `/:quizId/remind` | auth + `isTeacher`, owner only; empty body | `QuizRemindResult` `{ reminded, alreadyReminded }`. One `homework_reminder` in-app notification per `not_done` / `in_progress` student (`once` per student per quiz, so a second tap adds nothing). `400 QUIZ_NOT_AVAILABLE` unless published, `400 DEADLINE_PASSED`. A demo-school teacher gets the counts and nothing is written |
+| PATCH | `/:quizId/deadline` | auth + `isTeacher`, owner only; body `{ deadline }` (ISO) | `QuizDeadlineResult` `{ quizId, deadline }`. Published quiz with a deadline only; the new deadline must be in the future and later than the current one (`400 NO_DEADLINE` / `DEADLINE_IN_PAST` / `DEADLINE_NOT_LATER`); one atomic update, `409 CONFLICT` if the quiz changed meanwhile. Late attempts are never accepted (answers can be revealed at the deadline), so extending is how a teacher gives more time |
 | POST | `/:quizId/questions` | auth | Add question |
 | DELETE | `/:quizId/questions/:questionId` | auth | |
 | PUT | `/:quizId/questions/reorder` | auth | |
@@ -408,7 +414,7 @@ Writes need `isPrincipal` + `principalSchoolScope`: a principal's `POST /` and `
 | Referral | `/api/v1/referral` | `GET /my-code` (auth) → `ReferralSummary`, `POST /redeem/:code` (auth; new accounts only, same rules as signup), `POST /rewards/practice-paper` `{ chapterId }` (auth) → `PracticePaperRedeemResult` (201; spends one credit, `400 NO_CREDITS` when none; credit refunded if the paper can't be made). Rewards are given when the referred friend has answered **10** questions, not at signup: both sides get +1 `paperCredits` and +1 `streakFreezes.bonus`; max 10 rewarded friends per referrer per month. |
 | Teacher class links | `/api/v1/teacher-classes` | `POST /` `{ classId, subjectId, sectionName?, expectedStudents? }` (isTeacher) → `ClassLinkSummary` (201; reuses the active link for the same class/subject/section; a teacher with no school gets a private `kind: 'independent'` School first), `GET /mine` (isTeacher) → `MyClassLinks`, `PATCH /:id` `{ active }` (isTeacher, own links), `GET /:id/report` (isTeacher) → `ClassReport` (`403 REPORT_LOCKED` below 10 practised), `GET /certificate` (isTeacher) → `TeacherCertificate` (`403 CERTIFICATE_LOCKED` below 25 practised), `GET /join/:code` (public, 120/10 min) → `ClassLinkPublic`, `POST /join/:code` (auth, students only else `403 ONLY_STUDENTS`; `410 LINK_INACTIVE`) → `ClassJoinResult`. Joining creates a normal `TeacherStudent` row (`joinedVia` = the link) so the student appears in every `/teacher-dashboard` view; the student's `schoolId` is left unset so their practice stays unrestricted. |
 | Challenges | `/api/v1/challenges` | `POST /` `{ sessionId }` (auth) → `ChallengeSummary` (201; one per session, needs ≥3 MCQ answers else `400 NOT_ENOUGH_QUESTIONS`), `GET /mine` (auth) → `MyChallenge[]`, `GET /:code` (public, optional auth, 120/10 min) → `PublicChallenge` (no answers), `POST /:code/attempts` `{ name?, answers: { questionId, selected }[] }` (public, optional auth, 20/10 min) → `ChallengeAttemptResult` (201; scored server-side; guests get a single-use `claimToken`; owner → `400 OWN_CHALLENGE`), `POST /attempts/:attemptId/claim` `{ claimToken }` (auth) → `ChallengeClaimResult` (links a guest play to the account and credits the owner as referrer if the account is new; the play's answers count towards the referral gift, so `gift` can come back already unlocked), `GET /:code/review` (auth; owner or a player, else `403 PLAY_FIRST`) → `ChallengeReview` |
-| Notifications | `/api/v1/notifications` | All auth, any role. `GET /` `?before=<nextCursor>&limit=` (≤50, default 20) → `NotificationList` (newest first by `lastAt`), `GET /unread-count` → `{ unread }` (the bell polls this every 60 s while the tab is visible), `POST /read` `{ ids }` or `{ all: true }` → `NotificationReadResult`. Rows are written by the backend on challenge plays, referral joins/gifts, badges, class-link joins and a daily 5 pm IST job (gift reminders, teacher milestones); one-time events never repeat; rows expire 60 days after their last event. |
+| Notifications | `/api/v1/notifications` | All auth, any role. `GET /` `?before=<nextCursor>&limit=` (≤50, default 20) → `NotificationList` (newest first by `lastAt`), `GET /unread-count` → `{ unread }` (the bell polls this every 60 s while the tab is visible), `POST /read` `{ ids }` or `{ all: true }` → `NotificationReadResult`. Rows are written by the backend on challenge plays, referral joins/gifts, badges, class-link joins, a teacher's homework reminder (`homework_reminder`, `POST /quiz/:quizId/remind`) and a daily 5 pm IST job (gift reminders, teacher milestones); one-time events never repeat; rows expire 60 days after their last event. |
 | Goals | `/api/v1/goals` | `GET /` (auth), `PUT /` (auth) |
 
 ### 1.29 Health
@@ -554,3 +560,147 @@ URL path: `/api/v1/`. Breaking changes → `/api/v2/`.
 | `content.completed` | Chapter/lesson completed |
 | `quiz.submitted` | Quiz attempt submitted |
 | `document.processed` | AI RAG ingestion done |
+| `fee.paid` | Fee payment recorded (invoice PAID/PARTIAL) |
+
+---
+
+## Fees Module (school fee collection)
+
+Base: `/api/v1/fees`. All require JWT. Masters/structures/settings/concession/cancel/refund = `isPrincipal`. Generate/list/record/reconcile = `isTeacherOrPrincipal`. Principals are scoped to their own `schoolId` via `principalSchoolScope` (SuperAdmin unrestricted). Money in requests/responses is **rupees** (human); DB stores **paise**.
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| POST | `/fees/heads` | `{ schoolId, name, amount, type? }` Principal only | `FeeHeadMaster` |
+| GET | `/fees/heads?schoolId=` | query (auto-scoped to own school) | `{ heads: FeeHeadMaster[] }` |
+| PATCH | `/fees/heads/:id` | `{ name?, amount?, type? }` future structures only | `FeeHeadMaster` |
+| POST | `/fees/heads/:id/retire` | `{ reason }` soft-delete, old structures keep working | `FeeHeadMaster` |
+| POST | `/fees/structures` | `{ schoolId, academicYear, classId?, name, headIds[]?, inlineHeads[]?, installments?, dueDates?, lateFinePerDay? }` creates DRAFT | `FeeStructure` |
+| POST | `/fees/structures/:id/publish` | `{ reason? }` DRAFT→PUBLISHED | `FeeStructure` |
+| GET | `/fees/structures?schoolId=&academicYear=&status=` | query | `{ structures: FeeStructure[] }` |
+| POST | `/fees/invoices/generate` | `{ schoolId, structureId, studentIds[], dueDate?, installmentNo?, allInstallments? }` idempotent; `allInstallments: true` bills every instalment at once, each with its own due date (bill the year ahead); first success locks structure. `installmentNo` > structure's instalments → `400 BAD_INSTALLMENT`; non-students / other schools → `403 NOT_YOUR_STUDENT`; students who left (TC) → `400 STUDENT_LEFT` | `{ invoices: FeeInvoice[], skipped: {studentId,reason}[] }` |
+| GET | `/fees/invoices?schoolId=&status=&studentId=` | query, paginated `page/limit` | `{ invoices, pagination }` |
+| GET | `/fees/defaulters?schoolId=&academicYear=` | query | `{ defaulters: FeeInvoice[], total }` |
+| GET | `/fees/dues/check?schoolId=&studentId=` | query (TC-block check) | `{ hasDues, openInvoices }` |
+| PATCH | `/fees/invoices/:id/concession` | `{ concession, reason }` Principal only, audit-written | `FeeInvoice` |
+| POST | `/fees/invoices/:id/cancel` | `{ reason }` Principal only, unpaid only | `FeeInvoice` |
+| POST | `/fees/payments` | `{ invoiceId, amount, mode, transactionRef?, clientRequestId?, notes? }` cash/bank settle now (atomic: only if that much is still due, else 400 `OVERPAYMENT`), gateway→PENDING. Same `clientRequestId` or same UTR on the same bill → `200 duplicate:true` with the first receipt; a UTR already used on another bill → `409 REF_USED_ELSEWHERE`; another school's invoice → `403 NOT_YOUR_SCHOOL` before any write | `{ payment, invoice, duplicate }` |
+| POST | `/fees/payments/:id/reconcile` | `{ success, gatewayRef? }` PENDING→SUCCESS/FAILED, claimed atomically (a retry → `400 ALREADY_SETTLED`); money beyond the due is kept in `amountPaidPaise` (due stays 0) | `{ payment, invoice }` |
+| POST | `/fees/payments/:id/refund` | `{ reason }` Principal only, new REFUND row; once per payment (`400 ALREADY_REFUNDED`) | `{ refund, invoice }` |
+| GET | `/fees/collections?schoolId=&from=&to=&receivedBy=&page=&limit=` | Teacher/Principal (scoped; a Teacher always sees only what they collected). IST day range, max 1 year; `limit` ≤ 5000 for print/export | `{ from, to, rows: [{_id,receiptNo,at,status,mode,transactionRef,amountPaise (refund negative),months,student:{name,admissionNo,classSection},receivedByName}], pagination, totals: { byMode:{cash,upi,bank,online}, collectedPaise, refundsPaise, netPaise, receipts, pending:{paise,count} }, byCashier: [{id,name,collectedPaise,refundedPaise,netPaise,receipts}] }` — the day book; pending UPI is listed but not counted |
+| GET | `/fees/students/:studentId/bills?schoolId=` | Teacher/Principal (scoped). Open bills oldest due first, late fines refreshed | `{ bills: (FeeInvoice & { label, structureName, installments, advanceDiscountPct })[] }` |
+| POST | `/fees/payments/collect` | `{ schoolId?, studentId, invoiceIds[] \| amount, mode, transactionRef?, clientRequestId?, notes?, expectedTotalPaise?, preview? }` — one payment, one receipt for several bills (advance / multi-month). `invoiceIds` = those bills in full; `amount` = spread oldest-first (last may be part-paid; more than all open bills → `400 MORE_THAN_DUE`). Advance discount: when every remaining bill of a structure is paid together, its `advanceDiscountPct` comes off the bills not yet due (stored as concession, audited). All bills change together or none (`409 BILLS_CHANGED`, also when the total differs from `expectedTotalPaise`). `preview: true` returns only the plan | preview: `{ plan: { allocations: [{invoiceId,label,dueDate,duePaise,discountPaise,payPaise,partial}], discountPaise, totalPaise } }`; record: `{ payment: FeePayment, plan, duplicate }` |
+| PATCH | `/fees/structures/:id/advance-discount` | `{ advanceDiscountPct (0–50), reason }` Principal, audited `DISCOUNT_RULE` | `FeeStructure` |
+| GET | `/fees/receipts/:receiptNo?schoolId=` | params (`schoolId` for SuperAdmin — numbers are unique per school) | `{ payment: FeePayment, invoice: FeeInvoice, print: { docType: 'RECEIPT'\|'PENDING'\|'REFUND'\|'FAILED', school, student, structure: {name,academicYear,installments,heads[]}, installmentNo, amountPaise, amountWords, mode, transactionRef, receivedByName, date, balanceDuePaise, invoiceStatus, refundOf, refundReason, items: [{label,dueDate,amountPaise,discountPaise}] \| null, discountPaise } }` (`items` = one row per bill for a multi-month payment) — feeds the printable receipt (`/print/receipt/:receiptNo`) |
+| GET | `/fees/settings?schoolId=` | query | `FeeSettings` |
+| PUT | `/fees/settings` | `{ schoolId, receiptPrefix?, upiId?, gatewayProvider?, gatewayKeyRef?, lateFinePerDay? }` Principal only | `FeeSettings` |
+
+## Attendance Module (day/period registers, staff, absentee outbox)
+
+Base: `/api/v1/attendance`. All require JWT. Settings/regularize/bulk-audit = `isPrincipal`. Mark/list/reports = `isTeacherOrPrincipal`. Principals scoped to own `schoolId` via `principalSchoolScope` (SuperAdmin unrestricted). Dates are IST-midnight; future dates rejected; holidays/non-working days blocked (Principal `force` override).
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| GET | `/attendance/roster?schoolId=&sectionId=` | Teacher/Principal (scoped). Students of the section who have not left, by name | `{ section: {_id,name,displayName,classId}, students: [{_id,name,admissionNo}] }` |
+| POST | `/attendance/days/mark` | `{ schoolId, sectionId, date?, entries[{studentId,status}], reason?, force? }` whole-list upsert. Entries must be this section's students, once each, not left (`NOT_IN_SECTION` / `DUPLICATE_STUDENT` / `STUDENT_LEFT`). Teachers: today or a missed register ≤ 2 days back (`403 TOO_OLD`), never a locked day | `AttendanceDay` |
+| GET | `/attendance/days?schoolId=&sectionId=&date=` | query (period overlay applied) | `{ day, periods }` |
+| GET | `/attendance/school-day?schoolId=&date=` | query | `{ date, sections, totals, rows }` |
+| GET | `/attendance/audit/bulk-present` | Principal only (proxy-marking flags) | `{ flagged: {sectionId,streak}[] }` |
+| POST | `/attendance/periods/mark` | `{ schoolId, sectionId, date?, periodNo, subjectId?, teacherId?, entries[], reason? }` flag-gated; same entry, working-day and lock rules as the day register (Principal post-lock edit needs `reason`) | `{ dayId, period }` |
+| GET | `/attendance/monthly?schoolId=&sectionId=&studentId=&year=&month=` | query, computed on read (half=0.5, leave excluded) | `{ workingDays, present, absent, half, leave, pct }` |
+| GET | `/attendance/absentees?schoolId=&date=` | query (parent-call list) | `{ date, count, absentees }` |
+| POST | `/attendance/staff/mark` | `{ schoolId, staffId, date?, status?, leaveType? }` **Principal only**; `staffId` must be a Teacher/Principal of the school (`400 NOT_STAFF`) | `StaffAttendance` |
+| GET | `/attendance/staff/day?schoolId=&date=` | query | `{ date, count, rows }` |
+| POST | `/attendance/staff/:id/regularize` | `{ status?, leaveType?, reason }` Principal only | `StaffAttendance` |
+| GET | `/attendance/settings?schoolId=` | query | `SchoolSettings` |
+| PUT | `/attendance/settings` | `{ schoolId, periodTracking?, workingDays?, holidays? }` Principal only | `SchoolSettings` |
+
+## Onboarding Module (bulk import + transfer certificates)
+
+Import: `POST /school/import-students` (Principal own-school / SuperAdmin). Body `{ schoolId, rows[{admissionNo,name,className,sectionName,parentPhone?}] }` max 500 rows; per-row validate, auto-create missing sections, idempotent on `schoolId+admissionNo`. Response `ImportResult { created, skipped, failed, total }`. Student logins minted as `adm<schoolcode><admissionNo>` with random bcrypt password + dicebear avatar; parent phone → `Profile.contactNumber`.
+
+TC: `POST /tc/request` (Teacher/Principal, scoped) body `{ schoolId, studentId, academicYear?, reason, override? }`. Server sums ALL open dues across years → dues>0 without Principal override = `409 { tc: BLOCKED, duesPaise }` (paper-trail row); dues=0 or Principal override = `201 { tc: ISSUED }` with atomic `tcNo` (`TC25-000123`); repeat request returns existing (`duplicate: true`). Override writes `FeeAudit TC_OVERRIDE`. A Teacher sending `override: true` while dues are open gets `403 OVERRIDE_PRINCIPAL_ONLY`. Each BLOCKED row has its own `tcNo` (`BLOCKED-<rowId>`), so any number of blocked requests per school can be recorded. Late fines are brought up to date before dues are summed. An ISSUED TC sets the student's `leftSchoolAt`: they leave the class list and can no longer be marked present (from the TC day) or billed; marks and the final report card still work. `GET /tc/:studentId` lists history.
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| POST | `/school/import-students` | `{ schoolId, rows[] }` max 500 | `ImportResult` |
+| POST | `/tc/request` | `{ schoolId, studentId, academicYear?, reason, override? }` | `{ tc, duplicate?, blocked?, duesPaise?, advancePaidPaise? }` — `advancePaidPaise`: fees already paid for bills due after today (the principal decides a refund) |
+| GET | `/tc/:studentId?schoolId=` | query | `{ certificates: TcCertificate[], print: { school, student, attendance: {workingDays,present} } }` — printable TC / dues slip (`/print/tc/:studentId`) |
+
+Parent logins on printed password slips (Principal own-school / SuperAdmin with `schoolId`; no email, no SMS). A family = the school's students (on a class list, not left) who share the parent phone from the import, so brothers and sisters in any section share one login. A phone on more than 4 children (an office number), or no phone, gives each child a login of its own. Login ID = the 10-digit phone, else `<schoolcode>-<admissionNo>` (lower-case letters and digits; `<schoolcode>-<phone>` or a `-2` suffix if taken). Password = 8 characters without look-alikes, stored hashed — **the response that sets it is the only readable copy**. Parent accounts: `accountType: 'Parent'`, `schoolId`, `loginSlipAt`, linked to each child by `ParentStudent`; in the demo school they are `isDemo` and wiped nightly. A new password ends all the parent's sessions (refresh tokens revoked). `POST /authenticate/login` accepts the slip ID as typed (`+91 98765 43210`, `098765-43210`, capitals) for slip accounts only.
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| GET | `/parent-logins?sectionId=&schoolId=` | query | `{ school: {name, code}, section: {_id, name}, counts: { families, new, 'not-used', using }, families: ParentLoginFamily[] }` |
+| POST | `/parent-logins` | `{ sectionId, schoolId? }` | `201 { school, section, made, renewed, skipped: [{ key, reason: 'using' \| 'busy', children: string[] }], slips: ParentLoginSlip[] }` — families with no login get one; families who have not logged in since their last slip get a new password (conditional update, so one who logs in meanwhile is not reset); families using it are skipped |
+| POST | `/parent-logins/renew` | `{ studentId, schoolId? }` | `201 { school, slips: [ParentLoginSlip] }` — lost slip: a new password for that student's family even if they use it. `404 STUDENT_NOT_FOUND` (not on a class list), `409 SLIP_BUSY` (changed by someone else at the same moment) |
+
+Parent: the child's school (`/parent-dashboard`, `auth` + `isParent`, read-only). Every route checks a `ParentStudent` link for this parent and child (else `403 FORBIDDEN`) and reads only from the link's school. Shown on `/parent` under the practice stats; receipts and report cards open in `/print/receipt/:no?child=` and `/print/report-card/:planId/:childId?child=` (parent copy only).
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| GET | `/parent-dashboard/child/:childId/school?month=YYYY-MM` | IST month, default this month | `ParentChildSchool` — `{ onRoster: false, child }` for a practice-only child (not on a class list). Includes `homework: ParentChildHomework` — quizzes the child's teachers set with a deadline from Monday (IST) to 7 days ahead (`done` / `in_progress` / `not_done` / `upcoming`, % when done, max 10, nearest deadline first; sections respected; never questions or answers) |
+| GET | `/parent-dashboard/child/:childId/receipts/:receiptNo` | — | `{ print }` (same print shape as `GET /fees/receipts/:receiptNo`; the payment row is not sent). `404` if the receipt is another child's |
+| GET | `/parent-dashboard/child/:childId/report-cards/:planId` | — | published card + `print`, same as `GET /gradebook/cards`. `404 CARD_NOT_FOUND` until published; `print.provisional` until the plan is locked |
+
+## Notices Module (school notices for parents)
+
+Plain-text notices (title ≤ 120, text ≤ 1000) for the whole school (Principal / SuperAdmin only), one class (`classId`, a class with a section in the school) or one section. Teachers post to a class or section (`403 TEACHER_SCOPE` for whole school). The author or the Principal can edit (sets `editedAt`, shown as "edited") or delete (seen rows go too); the audience cannot change. Parents get them on the School card (`ParentChildSchool.notices`, last 60 days, school + child's class + section, with `read`); the card marks shown ones seen. Staff see `seen` of `parents` = parent logins linked to a child in the audience. Sharing is a client-side `https://wa.me/?text=` link (no API). Demo school: four seeded notices, wiped nightly.
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| GET | `/notices?schoolId=&page=&limit=` | Teacher/Principal (own school) / SuperAdmin | `{ items: (Notice & { seen, parents })[], pagination }` newest first |
+| POST | `/notices` | `{ schoolId?, title, body, scope: 'school' \| 'class' \| 'section', classId?, sectionId?, lastDate? }` | `201 Notice`. `404 SECTION_NOT_FOUND` / `CLASS_NOT_IN_SCHOOL` |
+| PATCH | `/notices/:id` | `{ schoolId?, title?, body?, lastDate? }` | `Notice` — `404 NOTICE_NOT_FOUND` if missing or another teacher's |
+| DELETE | `/notices/:id?schoolId=` | — | `{ deleted: true }` |
+| POST | `/parent-dashboard/notices/read` | Parent: `{ noticeIds }` (≤ 50) | `{ marked }` — only notices of a school where the parent has a child |
+
+## Timetable Module (weekly grid versions + daily substitutions)
+
+Grid setup (versions/slots) = SuperAdmin/Principal scoped; published grids frozen (new term = new version). Substitutions = Principal+ with reason; planning horizon today + tomorrow. Teacher day-view forced to own id server-side for Teachers.
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| POST | `/timetable/versions` | `{ schoolId, academicYear, term?, effectiveFrom }` creates DRAFT | `TimetableVersion` |
+| POST | `/timetable/versions/:id/publish` | `{ schoolId? }` (SuperAdmin may omit it: the version's own school is used) | `TimetableVersion` |
+| GET | `/timetable/versions?schoolId=&academicYear=` | query | `{ versions }` |
+| POST | `/timetable/slots` | `{ versionId, schoolId, slots[{sectionId,weekday,periodNo,subjectId,teacherId,room?}] }` DRAFT only, per-row double-book report | `{ saved, failed, total }` |
+| GET | `/timetable/week?schoolId=&sectionId=&versionId?&date?` | query. Default = the grid in force on `date` (today): latest PUBLISHED whose `effectiveFrom` ≤ that day, so next year's grid published early does not replace this term's. Slot subjects must belong to the section's class (`SUBJECT_NOT_IN_CLASS`) | `{ version, slots }` |
+| GET | `/timetable/teacher-day?schoolId=&teacherId?&date=` | query (teachers forced to self) | `{ date, weekday, own, substitutionsCovering, ownCoveredByOthers }` |
+| GET | `/timetable/free-teachers?schoolId=&weekday=&periodNo=&date=&subjectId?` | query, same-subject first | `{ date, free: [{teacher,sameSubject,load}] }` |
+| POST | `/timetable/substitutions` | `{ schoolId, sectionId, date, periodNo, subjectId, absentTeacherId, substituteTeacherId, reason }` slot-holder + free checks | `Substitution` |
+| POST | `/timetable/substitutions/:id/cancel` | `{ reason }` | `Substitution` |
+| GET | `/timetable/substitutions?schoolId=&date=` | query (morning board) | `{ date, count, rows }` |
+
+## Gradebook Module (exam plans, mark sheets, report cards)
+
+Base: `/api/v1/gradebook`. Plans = Principal/SuperAdmin (scoped); marks = Teacher/Principal; cards = Principal publishes, staff view. SuperAdmin may omit `schoolId` on publish/lock (the plan's own school is used).
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| POST | `/gradebook/plans` | `{ schoolId, academicYear, name, exams[{key,name,maxMarks,weightage}] }` weightage sums to 100, unique keys; DRAFT | `ExamPlan` |
+| POST | `/gradebook/plans/:id/publish` | `{ schoolId? }` DRAFT→PUBLISHED (marks accepted) | `ExamPlan` |
+| POST | `/gradebook/plans/:id/lock` | `{ schoolId? }` freezes the plan: teachers can no longer write any sheet, including new ones (`403 SHEET_LOCKED`); Principal edits need `reason` | `ExamPlan` |
+| GET | `/gradebook/plans?schoolId=&academicYear=` | query | `ExamPlan[]` |
+| POST | `/gradebook/marks` | `{ planId, schoolId, sectionId, subjectId, examKey, entries[{studentId,marks?,absent?}], reason? }` entries **merge** by student (re-entering one mark keeps the rest); per-cell range check (`failed[]`); subject must belong to the section's class (`SUBJECT_NOT_IN_CLASS`); students must be in the section (`NOT_IN_SECTION`) — students who left may still get marks | `{ sheet, failed, total }` |
+| GET | `/gradebook/marks?planId=&schoolId=&sectionId=&subjectId=&examKey=` | query | `{ planStatus, maxMarks, sheet }` |
+| POST | `/gradebook/cards/publish` | `{ planId, schoolId, sectionId, studentId, remark?, reason? }` Principal. Subject % = Σ(obtained/max × weight) / Σ(weight) over exams entered for the student (absent = 0; not entered = left out, `counted:false`); subjects with no entry are left off; `weightedPct` = average of subject %. No marks → `400 NO_MARKS`; re-publish needs `reason` (`409 CARD_EXISTS`) | `ReportCard` |
+| GET | `/gradebook/cards?planId=&schoolId=&studentId=` | query | `ReportCard & { print: { school, student, plan: {name,academicYear,status,exams}, provisional } }` — `provisional` until the plan is LOCKED; printable card at `/print/report-card/:planId/:studentId` |
+| GET | `/gradebook/class-totals?planId=&schoolId=&sectionId=` | query | `{ students: [{studentId,obtained,max,exams,pct}] }` |
+
+Printable documents share two shapes: `school = { name, code, address, phone, email, board }` (letterhead) and `student = { _id, name, admissionNo, className, sectionName, classSection, leftSchoolAt }`. Amounts in words use Indian numbering (lakh/crore).
+
+## Principal — Today at my school
+
+| Method | Route | Body / Query | Response `data` |
+|--------|-------|--------------|-----------------|
+| GET | `/principal/today?schoolId=` | Principal (own school) / SuperAdmin (`schoolId` required). Counts only, computed on open | `{ school, date, asOf, attendance: { workingDay, holiday, enrolled, sectionsTotal, sectionsMarked, notMarked[], present, absent, halfDay, leave, presentPct }, fees: { today: { cashPaise, upiPaise, bankPaise, onlinePaise, refundPaise, receipts, netPaise }, monthPaise, openDuePaise, studentsWithDues, overduePaise, overdueStudents, pendingUpi: {paise,count} }, staff: { total, marked, onLeaveOrAbsent, substitutions }, tc: { issued, blocked } }` (this calendar month for TC) |
+
+## Demo school (public "Try the demo")
+
+Saraswati Vidya Mandir (Demo), school code `DEMO-SVM`, `isDemo: true`: 420 students in Classes 6–10, fees with advance payers and defaulters, 45 days of attendance, timetable, Term-1 marks and report cards, TCs. Rebuilt from scratch every night at 02:00 IST (and on first start). Demo accounts are excluded from SuperAdmin metrics, public stats, email campaigns, badges and activity tracking, and get `403 DEMO_READ_ONLY` on name/email/password/photo changes and on creating teachers or parents.
+
+| Method | Route | Body / Query | Response |
+|--------|-------|--------------|----------|
+| POST | `/demo/login` | `{ role: 'principal' \| 'teacher' \| 'parent' \| 'student' }` — public, 20/hour per IP (parent = a parent of a 9th-A child and a 7th-A sibling, with a slip login; student = a 9th-A student with weeks of practice history — practises from the existing question bank, never triggers AI generation) | Same shape as `/authenticate/login`: `{ success, tokens: { accessToken, refreshToken, expiresIn }, user }` (user.isDemo = true). `503 DEMO_NOT_READY` / `DEMO_REBUILDING` while it is being built |
+| GET | `/demo/status` | SuperAdmin | `{ ready, rebuilding, school: { name, builtAt } \| null }` |
+| POST | `/demo/rebuild` | SuperAdmin — wipes and rebuilds in the background | `202 { started, message }` |

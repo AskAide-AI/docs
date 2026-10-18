@@ -1,6 +1,6 @@
 # AskAide AI - Database Schema
 
-**Last Updated:** 2026-10-10  
+**Last Updated:** 2026-10-18  
 **Database:** MongoDB with Mongoose ODM (42 models)
 
 ---
@@ -29,6 +29,7 @@ User ──→ Referral (one code) ──→ referrals[] (invited friends)
 User ──→ Challenge (from one Session) ──→ (N) ChallengeAttempt
 User (teacher) ──→ TeacherClass (join link) ──→ (N) TeacherStudent (joinedVia)
 User ──→ (N) Notification, (N) UserActivityDay
+School ──→ (N) FeeStructure, FeeInvoice, FeePayment, AttendanceDay, TimetableVersion, MarkSheet, ReportCard, Notice, TcCertificate
 ```
 
 ---
@@ -55,6 +56,11 @@ User ──→ (N) Notification, (N) UserActivityDay
 | class | [ObjectId] | REF: Class | Classes the student can practise |
 | subject | [ObjectId] | REF: Subject | Subjects |
 | schoolId | ObjectId | REF: School | For institutional users and teachers with class links |
+| admissionNo | String | MAX: 30, DEFAULT: null | School admission number, set for school-imported students. Unique per school (partial index on `schoolId` + `admissionNo`) |
+| sectionId | ObjectId | REF: Section | Class list the student is on (attendance, marks and billing check entries against it) |
+| leftSchoolAt | Date | DEFAULT: null | Set when a TC is issued; the student keeps their history but gets no new attendance or fee bills |
+| loginSlipAt | Date | DEFAULT: null | Set for a parent login issued on a printed password slip; only these accounts accept the loose slip ID |
+| isDemo | Boolean | DEFAULT: false | Account of the public demo school. Rebuilt nightly, never emailed, excluded from metrics, cannot change its identity |
 | lastLoginAt | Date | | Last login |
 | loginCount | Number | DEFAULT: 0 | Logins |
 | lastActiveAt | Date | | Last signed-in request (updated at most every 15 minutes) |
@@ -86,6 +92,7 @@ User ──→ (N) Notification, (N) UserActivityDay
 | schoolName | String | REQUIRED | School name |
 | schoolCode | String | REQUIRED, UNIQUE | School code |
 | address, phone, email, website, board | String | | Contact and board details |
+| isDemo | Boolean | DEFAULT: false | The public demo school (rebuilt nightly, excluded from metrics) |
 | kind | String | ENUM, DEFAULT: school | `school`, or `independent` for the private school created for a self-signed-up teacher's first class link |
 | ownerTeacherId | ObjectId | REF: User | Teacher who owns an `independent` school |
 | createdAt | Date | DEFAULT: now | Timestamp |
@@ -543,7 +550,7 @@ A pending change of a user's login email. The code goes to the new address; the 
 | source | String (ENUM: link, challenge; DEFAULT: link) | How the friend arrived |
 | challengeId | ObjectId (REF: Challenge) | Set when `source` is `challenge` |
 | joinedAt | Date | When the friend was credited |
-| activatedAt | Date (DEFAULT: null) | Set once the friend has answered 10 questions; rewards are given then |
+| activatedAt | Date (DEFAULT: null) | Set once the friend has answered 3 questions; rewards are given then |
 | rewardClaimed | Boolean (DEFAULT: false) | `false` when the friend activated but the referrer was over the monthly cap |
 
 **Indexes:** `userId` (unique), `referralCode` (unique), `referrals.referredUserId`
@@ -602,7 +609,7 @@ One row in a user's notification bell. Events with the same type and `groupKey` 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | userId | ObjectId | REF: User, REQUIRED | Who sees it |
-| type | String | REQUIRED, ENUM | challenge_played, friend_joined, gift_unlocked, gift_reminder, badge_earned, class_joined, class_milestone |
+| type | String | REQUIRED, ENUM | challenge_played, friend_joined, gift_unlocked, gift_reminder, badge_earned, class_joined, class_milestone, streak_reminder, homework_reminder |
 | groupKey | String | REQUIRED | Target the events are grouped by (for example a challenge code or a class link) |
 | day | String | REQUIRED | IST `YYYY-MM-DD`, or `once` for one-time events |
 | count | Number | | Events folded into the row |
@@ -688,6 +695,354 @@ One row in a user's notification bell. Events with the same type and `groupKey` 
 | npsScore | Number | MIN: 0, MAX: 10 | Net Promoter Score |
 | feedbackText | String | | Optional comments |
 | createdAt | Date | AUTO | Timestamp |
+
+---
+
+## School Operations Models
+
+These models back the school modules (fees, attendance, timetable, notices, gradebook and onboarding). Every row carries `schoolId`, and every route is limited to the caller's school (SuperAdmin excepted). Money is always integer paise.
+
+### FeeHeadMaster
+**File:** `src/modules/fees/models/feeHeadMaster.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| name | String | REQUIRED, MAX: 60 | Head name (for example Tuition) |
+| amountPaise | Number | REQUIRED, INTEGER, MIN: 0 | Default amount |
+| type | String | ENUM, DEFAULT: tuition | tuition, transport, exam, admission, hostel, library, activity, other |
+| isActive | Boolean | DEFAULT: true | Retired heads stay for history |
+| createdBy, updatedBy, deletedBy | ObjectId | REF: User | Who changed it |
+| deletedAt | Date | DEFAULT: null | Soft delete |
+
+### FeeStructure
+**File:** `src/modules/fees/models/feeStructure.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| academicYear | String | REQUIRED | For example `2026-27` |
+| classId | ObjectId | REF: Class | Class it is for (null for all) |
+| name | String | REQUIRED | Structure name |
+| lines | [Object] | REQUIRED, at least 1 | Each line: `headId` (REF: FeeHeadMaster), `name`, `amountPaise`, `type` |
+| totalPaise | Number | REQUIRED, INTEGER | Sum of the lines per year |
+| installments | Number | DEFAULT: 1, MIN 1, MAX 12 | Number of instalments |
+| dueDates | [Date] | | One per instalment |
+| lateFinePaisePerDay | Number | DEFAULT: 0 | Late fine per full IST day past the due date |
+| advanceDiscountPct | Number | DEFAULT: 0, MIN 0, MAX 50 | Advance-payment discount |
+| status | String | ENUM, DEFAULT: DRAFT | DRAFT, PUBLISHED, LOCKED. Heads freeze at the first bill generation |
+| publishedBy, publishedAt | ObjectId, Date | | Publication record |
+
+**Indexes:** `{ schoolId, academicYear, classId, name }` (unique), `{ schoolId, status }`
+
+### FeeInvoice
+**File:** `src/modules/fees/models/invoice.model.js`
+
+One bill: one student, one structure, one instalment.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, studentId | ObjectId | REF: School, User, REQUIRED | Owner |
+| structureId | ObjectId | REF: FeeStructure, REQUIRED | Source structure |
+| academicYear | String | REQUIRED | Year |
+| installmentNo | Number | DEFAULT: 1 | Instalment number |
+| totalPaise | Number | REQUIRED, INTEGER | Bill amount |
+| concessionPaise | Number | DEFAULT: 0 | Concession and advance discount |
+| lateFinePaise | Number | DEFAULT: 0 | Late fine accrued so far (only grows) |
+| amountDuePaise | Number | REQUIRED, INTEGER | Still to pay |
+| amountPaidPaise | Number | DEFAULT: 0 | Paid so far (can exceed the bill; refunded by the principal) |
+| status | String | ENUM, DEFAULT: UNPAID | UNPAID, PARTIAL, PAID, OVERDUE, CANCELLED |
+| dueDate | Date | | Due date of the instalment |
+| idempotencyKey | String | REQUIRED, UNIQUE | `student + structure + installment`, so a retry never bills twice |
+| generatedBy, cancelledBy | ObjectId | REF: User | Who generated and who cancelled |
+| cancelReason, cancelledAt | String, Date | | Cancellation record |
+| replacesInvoiceId | ObjectId | REF: FeeInvoice | Reserved for bill replacement; the current code does not write it |
+
+**Indexes:** `{ schoolId, status, dueDate }`, `{ schoolId, studentId, academicYear }`
+
+### FeePayment
+**File:** `src/modules/fees/models/payment.model.js`
+
+Append-only money-in event. Corrections are new REFUND rows, never edits.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, invoiceId, studentId | ObjectId | REQUIRED | Owner and first bill |
+| amountPaise | Number | REQUIRED, INTEGER, MIN: 1 | Amount |
+| mode | String | ENUM, REQUIRED | cash, bank-transfer, upi-link, online |
+| status | String | ENUM, DEFAULT: SUCCESS | PENDING, SUCCESS, FAILED, REFUNDED |
+| transactionRef | String | | UTR or gateway reference. Unique per school when present |
+| receiptNo | String | REQUIRED | Receipt number, unique per school |
+| receivedBy | ObjectId | REF: User, REQUIRED | Cashier |
+| notes | String | MAX: 300 | Notes |
+| clientRequestId | String | | One key per screen submit. Unique per school when present, so a double click returns the first receipt |
+| reversesPaymentId | ObjectId | REF: FeePayment | The payment a REFUND row reverses. Unique: a payment can be refunded once |
+| refundReason | String | | Reason for the refund |
+| allocations | [Object] | | For a multi-bill payment: `invoiceId`, `amountPaise`, `discountPaise` per bill. Empty for a single-bill payment |
+
+**Indexes:** `{ schoolId, receiptNo }` (unique), `{ schoolId, transactionRef }` (unique, partial), `{ schoolId, clientRequestId }` (unique, partial), `{ reversesPaymentId }` (unique, partial), `{ invoiceId, status }`
+
+### FeeSettings
+**File:** `src/modules/fees/models/feeSettings.model.js`
+
+One row per school.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, UNIQUE | School |
+| receiptPrefix | String | DEFAULT: SCH, MAX: 8 | Receipt number prefix |
+| receiptCounter | Number | DEFAULT: 0 | Advanced only with atomic `$inc` |
+| upiId | String | MAX: 60 | UPI ID shown to parents |
+| gatewayProvider, gatewayKeyRef | String | MAX: 40, 120 | Gateway name and the vault key name. The secret itself is never stored here |
+| lateFinePaisePerDay | Number | DEFAULT: 0 | School default late fine |
+| updatedBy | ObjectId | REF: User | Last editor |
+
+### FeeAudit
+**File:** `src/modules/fees/models/feeAudit.model.js`
+
+Who changed a money rule and why.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| actorId | ObjectId | REF: User, REQUIRED | Who acted |
+| action | String | ENUM, REQUIRED | STRUCTURE_PUBLISH, CONCESSION, INVOICE_CANCEL, REFUND, SETTINGS_CHANGE, MASTER_CHANGE, TC_OVERRIDE, DISCOUNT_RULE |
+| entityType, entityId | String, ObjectId | REQUIRED | What changed |
+| before, after | Mixed | | Snapshots |
+| reason | String | REQUIRED, 5 to 500 chars | Why |
+
+**Indexes:** `{ schoolId, createdAt: -1 }`
+
+### AttendanceDay
+**File:** `src/modules/attendance/models/attendanceDay.model.js`
+
+One register per section per IST day. The whole list is submitted at once, and the unique key makes a retry idempotent.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| sectionId | ObjectId | REF: Section, REQUIRED | Section |
+| date | Date | REQUIRED | IST midnight, stored as UTC |
+| status | String | ENUM, DEFAULT: DRAFT | DRAFT, SUBMITTED, LOCKED |
+| entries | [Object] | | Per student: `studentId`, `status` (PRESENT, ABSENT, HALFDAY, LEAVE), `source` (manual, device) |
+| presentCount | Number | DEFAULT: 0 | Summary count |
+| markedBy, lastMarkedBy, editedAfterLockBy | ObjectId | REF: User | Who marked, last changed it, and who edited after a lock |
+
+**Indexes:** `{ sectionId, date }` (unique), `{ schoolId, date, status }`
+
+### AttendancePeriod
+**File:** `src/modules/attendance/models/attendancePeriod.model.js`
+
+Period register (only when period tracking is on), one per day and period.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| dayId | ObjectId | REF: AttendanceDay, REQUIRED | Parent day |
+| schoolId, sectionId | ObjectId | REQUIRED | Scope |
+| date | Date | REQUIRED | Denormalised from the day |
+| periodNo | Number | REQUIRED, 1 to 12 | Period |
+| subjectId, teacherId | ObjectId | REF: Subject, User | Who taught it |
+| substitutionId | ObjectId | REF: Substitution | Set when a cover took the period |
+| entries | [Object] | | Per student status, as on AttendanceDay |
+| markedBy | ObjectId | REF: User | Who marked it |
+
+**Indexes:** `{ dayId, periodNo }` (unique), `{ schoolId, date }`
+
+### StaffAttendance
+**File:** `src/modules/attendance/models/staffAttendance.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, staffId | ObjectId | REF: School, User, REQUIRED | Staff are the school's teachers and principal |
+| date | Date | REQUIRED | IST day |
+| status | String | ENUM, DEFAULT: PRESENT | PRESENT, ABSENT, HALFDAY, LEAVE, HOLIDAY |
+| leaveType | String | ENUM | CL, SL, EL, LWP |
+| source | String | ENUM, DEFAULT: manual | manual, device |
+| markedBy, regularizedBy | ObjectId | REF: User | Who marked and who regularised |
+
+**Indexes:** `{ schoolId, staffId, date }` (unique), `{ schoolId, date, status }`
+
+### AbsenteeEvent
+**File:** `src/modules/attendance/models/absenteeEvent.model.js`
+
+Absence-message outbox. A row is queued per absent or half-day student with a Hindi and an English message. No sender job is wired yet, so rows stay `PENDING`.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, studentId, sectionId | ObjectId | REQUIRED | Scope |
+| date | Date | REQUIRED | Day |
+| kind | String | ENUM, REQUIRED | ABSENT, HALFDAY |
+| messageHi, messageEn | String | REQUIRED | Message text |
+| status | String | ENUM, DEFAULT: PENDING | PENDING, SENT, FAILED |
+| idempotencyKey | String | REQUIRED, UNIQUE | One row per student, section and day |
+
+**Indexes:** `{ schoolId, status, date }`
+
+### SchoolSettings (attendance)
+**File:** `src/modules/attendance/models/schoolSettings.model.js`
+
+One row per school.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, UNIQUE | School |
+| periodTracking | Boolean | DEFAULT: false | Turns on period registers |
+| workingDays | [Number] | DEFAULT: [1..6] | 0 = Sunday to 6 = Saturday, IST |
+| holidays | [Date] | | Explicit holidays |
+| updatedBy | ObjectId | REF: User | Last editor |
+
+### TimetableVersion
+**File:** `src/modules/timetable/models/timetableVersion.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| academicYear | String | REQUIRED | Year |
+| term | String | DEFAULT: Annual | Term name |
+| effectiveFrom | Date | REQUIRED | Start of the version's term |
+| status | String | ENUM | DRAFT, PUBLISHED |
+| createdBy, publishedBy | ObjectId | REF: User | Who created and published |
+| publishedAt | Date | DEFAULT: null | Publication time |
+
+**Indexes:** `{ schoolId, academicYear, effectiveFrom: -1 }`, `{ schoolId, status }`
+
+### TimetableSlot
+**File:** `src/modules/timetable/models/timetableSlot.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| versionId | ObjectId | REF: TimetableVersion, REQUIRED | Grid version |
+| schoolId, sectionId, subjectId | ObjectId | REQUIRED | Scope |
+| teacherId | ObjectId | REF: User, REQUIRED | Teacher of the period |
+| weekday | Number | REQUIRED | 0 = Sunday to 6 = Saturday |
+| periodNo | Number | REQUIRED | Period |
+
+**Indexes:** `{ versionId, sectionId, weekday, periodNo }` (unique), `{ versionId, teacherId, weekday, periodNo }` (unique), `{ schoolId, teacherId, weekday }`
+
+### Substitution
+**File:** `src/modules/timetable/models/substitution.model.js`
+
+Cover for one absent teacher's period on one date.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, sectionId, subjectId | ObjectId | REQUIRED | Scope |
+| date | Date | REQUIRED | Day |
+| periodNo | Number | REQUIRED | Period |
+| absentTeacherId, substituteTeacherId | ObjectId | REF: User, REQUIRED | Who is out and who covers |
+| status | String | ENUM | ASSIGNED, CANCELLED |
+| assignedBy, cancelledBy | ObjectId | REF: User | Who assigned and cancelled |
+
+**Indexes:** `{ schoolId, sectionId, date, periodNo }` (unique), `{ schoolId, substituteTeacherId, date }`, `{ schoolId, date, status }`
+
+### Notice
+**File:** `src/modules/notice/models/notice.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| title | String | REQUIRED, MAX: 120 | Title |
+| body | String | REQUIRED, MAX: 1000 | Text |
+| scope | String | ENUM, REQUIRED | school, class, section |
+| classId, sectionId | ObjectId | REF: Class, Section | Audience for class or section notices |
+| lastDate | Date | DEFAULT: null | Optional last date |
+| createdBy | ObjectId | REF: User, REQUIRED | Author |
+| createdByName | String | | Author's name, shown on the parent's notice
+| editedAt | Date | DEFAULT: null | Set when edited |
+
+**Indexes:** `{ schoolId, createdAt: -1 }`
+
+### NoticeRead
+**File:** `src/modules/notice/models/noticeRead.model.js`
+
+One row when a parent has seen a notice ("seen by").
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| noticeId | ObjectId | REF: Notice, REQUIRED | Notice |
+| parentId | ObjectId | REF: User, REQUIRED | Parent who saw it |
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+
+**Indexes:** `{ noticeId, parentId }` (unique), `{ parentId }`
+
+### ExamPlan
+**File:** `src/modules/gradebook/models/examPlan.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, REQUIRED | School |
+| academicYear | String | REQUIRED | Year |
+| name | String | REQUIRED, MAX: 80 | Plan name (for example Term 1) |
+| exams | [Object] | REQUIRED, at least 1 | Each exam: `key` (MAX 30), `name` (MAX 60), `maxMarks` (MIN 1), `weightage` (0 to 100) |
+| status | String | ENUM, DEFAULT: DRAFT | DRAFT, PUBLISHED, LOCKED. LOCKED freezes all sheets and cards |
+| createdBy, publishedBy | ObjectId | REF: User | Who created and published |
+| publishedAt | Date | DEFAULT: null | Publication time |
+
+**Indexes:** `{ schoolId, academicYear, name }` (unique), `{ schoolId, status }`
+
+### MarkSheet
+**File:** `src/modules/gradebook/models/markSheet.model.js`
+
+One grid per section, subject and exam.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| planId | ObjectId | REF: ExamPlan, REQUIRED | Plan |
+| schoolId, sectionId, subjectId | ObjectId | REQUIRED | Scope |
+| examKey | String | REQUIRED | Exam within the plan |
+| maxMarks | Number | REQUIRED, MIN 1 | Snapshot taken at submit, so later plan edits never rewrite marks |
+| entries | [Object] | | Per student: `studentId`, `marks` (null = not entered yet, distinct from 0), `absent` |
+| status | String | ENUM, DEFAULT: DRAFT | DRAFT, SUBMITTED, LOCKED |
+| markedBy, lastMarkedBy | ObjectId | REF: User | Who marked |
+
+**Indexes:** `{ planId, sectionId, subjectId, examKey }` (unique), `{ schoolId, sectionId }`
+
+### ReportCard
+**File:** `src/modules/gradebook/models/reportCard.model.js`
+
+An immutable published snapshot per student per plan. Republishing needs the principal and a reason.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| planId | ObjectId | REF: ExamPlan, REQUIRED | Plan |
+| schoolId, studentId | ObjectId | REQUIRED | Scope |
+| subjects | [Object] | | Per subject: `subjectId`, `subjectName`, `exams` (`key`, `obtained`, `max`, `absent`, `counted`), `totalObtained`, `totalMax`, `pct`, `grade` |
+| weightedPct | Number | REQUIRED, 0 to 100 | Weighted percentage over exams entered so far |
+| grade | String | REQUIRED, MAX: 3 | CBSE-style grade |
+| attendancePct | Number | DEFAULT: null | Attendance percentage for the card |
+| attendanceDays | Object | | `present`, `total` |
+| remark | String | MAX: 300 | Remark on the card |
+| status | String | ENUM, DEFAULT: PUBLISHED | PUBLISHED |
+| publishedBy, publishedAt | ObjectId, Date | REQUIRED | Who published and when |
+
+**Indexes:** `{ planId, studentId }` (unique), `{ schoolId, studentId }`
+
+### TcCertificate
+**File:** `src/modules/onboarding/models/tcCertificate.model.js`
+
+Transfer certificate record. A BLOCKED row is kept as a paper trail for each refused request.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, studentId | ObjectId | REQUIRED | Scope |
+| tcNo | String | REQUIRED | Certificate number, unique per school |
+| academicYear | String | REQUIRED | Year |
+| duesSnapshotPaise | Number | REQUIRED, INTEGER | Open dues at the time of the request |
+| status | String | ENUM | ISSUED, BLOCKED |
+| reason | String | REQUIRED, 5 to 500 chars | Reason for the request |
+| issuedBy, overrideBy | ObjectId | REF: User | Who requested and who overrode the dues block |
+
+**Indexes:** `{ schoolId, tcNo }` (unique), `{ schoolId, studentId }`
+
+### TcCounter
+**File:** `src/modules/onboarding/models/tcCounter.model.js`
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId | ObjectId | REF: School, UNIQUE | School |
+| prefix | String | DEFAULT: TC, MAX: 8 | TC number prefix |
+| counter | Number | DEFAULT: 0 | Advanced with atomic `$inc` |
+| updatedBy | ObjectId | REF: User | Last editor |
 
 ---
 

@@ -1,6 +1,6 @@
 # Backend Module Reference
 
-There are 19 modules. All follow `src/modules/<name>/` with `controllers`, `services`, `validators`, `routes`, `models` and `tests` subfolders (not every module has all of them). Paths below are relative to `/api/v1`.
+There are 26 modules. All follow `src/modules/<name>/` with `controllers`, `services`, `validators`, `routes`, `models` and `tests` subfolders (not every module has all of them). Paths below are relative to `/api/v1`.
 
 ## Auth Module
 
@@ -12,14 +12,16 @@ There are 19 modules. All follow `src/modules/<name>/` with `controllers`, `serv
 | `/authenticate/login` | POST | Rate-limited | `{ userName, password }` → `{ user, tokens }` |
 | `/authenticate/signup` | POST | Rate-limited | `{ userName, email, password, confirmPassword, name, accountType?, referralCode?, acquisition? }` → `{ user, tokens, referral }`. `accountType` is `Student` (default) or `Teacher`; any other value gets `400` (`INVALID_ACCOUNT_TYPE`) |
 | `/authenticate/google` | POST | Rate-limited | `{ idToken, referralCode?, accountType?, acquisition? }` → `{ user, tokens, isNewUser, referral }`. `accountType` (`Student` or `Teacher`) is used only when this login creates the account |
-| `/authenticate/refresh` | POST | - | Token refresh (each refresh token works once) |
+| `/authenticate/refresh` | POST | - | Token refresh (each refresh token works once, with a 2 to 60 second retry grace) |
 | `/authenticate/logout` | POST | - | Revoke refresh token |
 | `/authenticate/changepassword` | POST | auth | Password change |
 | `/authenticate/reset-password-token` | POST | - | Send reset email |
 | `/authenticate/reset-password` | POST | - | Reset with token |
 | `/authenticate/verify-email` | POST | - | OTP verification |
 
-**Token model:** accessToken (2h) + refreshToken (7d). Each refresh token is single-use: `/refresh` claims and revokes it in one atomic step, so two refreshes sent at the same moment cannot both succeed. Max 5 active refresh tokens per user.
+**Token model:** accessToken (2h) + refreshToken (30d, `REFRESH_TOKEN_EXPIRY`). Each refresh token is single-use: `/refresh` claims and revokes it in one atomic step, so two refreshes sent at the same moment cannot both succeed. A retry of an already-rotated token 2 to 60 seconds after rotation gets a fresh pair (`REFRESH_GRACE_COOLDOWN_MS`, `REFRESH_GRACE_MS`), so a lost response does not log the user out. Max 10 active refresh tokens per user (`MAX_REFRESH_TOKENS`); the oldest is revoked first.
+
+**Demo sign-in:** `POST /demo/login` (see Demo School below) is the only passwordless login; it is not under `/authenticate`.
 
 **Signup attribution:** a valid `referralCode` credits the new account to its inviter (see Referral below). A bad or stale code never fails the signup. `acquisition` stores first-touch details (`source`, `ref`, UTM fields, landing path) on the user.
 
@@ -34,7 +36,7 @@ There are 19 modules. All follow `src/modules/<name>/` with `controllers`, `serv
 |----------|--------|------|-------------|
 | `/profile/details` | GET | auth | Own user and profile |
 | `/profile/update` | PUT | auth | Update profile details |
-| `/profile/name` | PUT | auth | `{ name }` (2–100 characters) |
+| `/profile/name` | PUT | auth | `{ name }` (2–100 characters). Demo accounts get `403 DEMO_READ_ONLY` |
 | `/profile/email/request-change` | POST | auth, 10 per 15 min per IP | `{ email }` → emails a 6-digit code to the **new** address. The account is unchanged until the code is entered |
 | `/profile/email/confirm-change` | POST | auth, 10 per 15 min per IP | `{ code }` → switches the login email and tells the old address |
 | `/profile/display-picture` | PUT/DELETE | auth | Set or remove the picture |
@@ -76,6 +78,8 @@ There are 19 modules. All follow `src/modules/<name>/` with `controllers`, `serv
 | `/questions/public-preview/class/:classSlug/subject/:subjectSlug/chapter/:chapterSlug` | GET | none | Public SEO preview by slug (incl. explanations). Matching ignores a leading number ("3. ") and a Social Studies strand prefix ("Geography: "), and pools questions from every chapter that matches the slug |
 | `/questions/generate/chapter/:chapterId` | POST | teacher | Admin fire-and-forget generation trigger |
 | `/questions/counts` | POST | teacher | Batch question counts for admin chapter list |
+| `/questions/coverage` | GET | teacher or SuperAdmin | Per-chapter coverage counts; optional `classId` |
+| `/questions/generate/missing` | POST | SuperAdmin | Bulk fill-gaps: `?classId=&limit=` (1 to 10, default 3). Starts generation for chapters without questions, a few per call; topic-less chapters are reported, not started |
 
 **Batch response statuses:**
 - `generating` — AI job in flight; poll again
@@ -108,6 +112,16 @@ The practice and free-trial batches shuffle both the question order and each que
 | `/quiz/attempt/:attemptId/answer` | POST | auth | Submit answer |
 | `/quiz/attempt/:attemptId/submit` | POST | auth | Submit attempt |
 | `/quiz/attempt/:attemptId/result` | GET | auth | Attempt result, with `attempt.canRetry` |
+
+**Homework (teacher, the quiz's own teacher only; SuperAdmin is not exempt from the owner check):**
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/quiz/:quizId/students` | GET | teacher | Every assigned student as `done`, `in_progress`, `not_done` or `never_logged_in`, with best score, a `tooFast` hint, `remindedAt`, and the parent's phone for students not done. Students are limited to the quiz's sections when it has any |
+| `/quiz/:quizId/remind` | POST | teacher | No body. One `homework_reminder` notification per student not done, once per student per quiz. Demo teachers get the counts and nothing is written |
+| `/quiz/:quizId/deadline` | PATCH | teacher | `{ deadline }` (ISO date). Published quizzes only, later than the current deadline and in the future. `409 CONFLICT` if the quiz changed meanwhile. Late attempts stay blocked |
+
+Quiz sets with `sectionIds` are visible and startable only to students with a `TeacherStudent` row in those sections.
 
 ## Progress Module
 
@@ -188,11 +202,11 @@ The practice and free-trial batches shuffle both the question order and each que
 
 **How it works:** other services call `notificationService.notify()`, which never throws. Events with the same type and target (`groupKey`) on the same IST day fold into one row with a count and the latest first names, so ten plays of one challenge read as one row ("Name and 9 others played your challenge"). One-time events (badges, milestones, gift reminders) are stored once. Text is worded when the list is read.
 
-**Types:** `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `badge_earned`, `class_joined`, `class_milestone`.
+**Types:** `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `badge_earned`, `class_joined`, `class_milestone`, `streak_reminder`, `homework_reminder`.
 
 **Retention:** a row is removed 60 days after its last event (TTL index on `lastAt`).
 
-**Daily job:** at 5 pm IST, `notificationScheduler.js` sends one gift reminder to each invited friend who joined 20 hours to 7 days ago and is still short of 10 answers, and tells teachers once when a class report or the certificate unlocks.
+**Daily job:** at 5 pm IST, `notificationScheduler.js` sends one gift reminder to each invited friend who joined 20 hours to 7 days ago and is still short of 3 answers, tells teachers once when a class report or the certificate unlocks, and sends the evening streak nudge (`streak_reminder`) to students who practised in the last 7 days but not today.
 
 ## Other Modules
 
@@ -241,6 +255,123 @@ All require `auth, isTeacher`:
 - `GET /tasks` — available AI tasks
 - `GET /health` — AI service health
 - `GET /export/:generationId` — download as PDF
+
+### School Operations
+
+The school modules below all sit behind `auth`, `isPrincipal` or `isTeacherOrPrincipal`, and `principalSchoolScope`, so a principal only reaches their own school (SuperAdmin has no limit). Money is stored in paise and returned in rupees.
+
+#### Fees (`src/modules/fees/`, mounted at `/fees`)
+Principal writes; teachers and principals read and record payments. Models: `FeeHeadMaster`, `FeeStructure`, `FeeInvoice`, `FeePayment`, `FeeSettings`, `FeeAudit`.
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/heads` | GET, POST | read: staff, write: principal | Fee heads (price list) |
+| `/heads/:id` | PATCH | principal | Edit a head |
+| `/heads/:id/retire` | POST | principal | Retire a head (kept for history) |
+| `/structures` | GET, POST | read: staff, write: principal | Fee structures with lines, instalments and due dates |
+| `/structures/:id/publish` | POST | principal | Publish a structure |
+| `/structures/:id/advance-discount` | PATCH | principal | Advance-payment discount, 0 to 50%, with a reason |
+| `/invoices/generate` | POST | staff | Generate bills for a structure (`allInstallments` bills the whole year ahead) |
+| `/invoices` | GET | staff | List bills |
+| `/defaulters` | GET | staff | Overdue bills |
+| `/dues/check` | GET | staff | A student's open dues (the TC step checks this) |
+| `/invoices/:id/concession` | PATCH | principal | Lower the amount due, never below what is paid |
+| `/invoices/:id/cancel` | POST | principal | Cancel a bill with a reason |
+| `/students/:studentId/bills` | GET | staff | A student's open bills, oldest due first |
+| `/payments/collect` | POST | staff | One payment for several bills, one receipt (`clientRequestId` makes a resend return the first receipt) |
+| `/payments` | POST | staff | Record a payment on one bill |
+| `/payments/:id/reconcile` | POST | staff | PENDING UPI or online payment to SUCCESS or FAILED |
+| `/payments/:id/refund` | POST | principal | Refund: a new REFUND row; a payment can be refunded once |
+| `/receipts/:receiptNo` | GET | staff | Receipt print data |
+| `/collections` | GET | staff | Day book for an IST date range; teachers see only their own collections |
+| `/settings` | GET, PUT | read: staff, write: principal | Receipt prefix, UPI ID, late fine per day |
+
+Late fines accrue per full IST day past the due date, until the bill is paid, unless a principal waives them with a concession.
+
+#### Attendance (`src/modules/attendance/`, mounted at `/attendance`)
+Models: `AttendanceDay`, `AttendancePeriod`, `StaffAttendance`, `AbsenteeEvent`, `SchoolSettings`.
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/roster` | GET | staff | Students in a section for the register |
+| `/days/mark` | POST | staff | Mark a section's day register (`DRAFT`, `SUBMITTED`, `LOCKED`) |
+| `/days` | GET | staff | One day's register |
+| `/school-day` | GET | staff | Every section's register for a day, optional status filter |
+| `/periods/mark` | POST | staff | Period register (only when period tracking is on) |
+| `/monthly`, `/absentees` | GET | staff | Monthly percentages; absentees for a day |
+| `/audit/bulk-present` | GET | principal | Flags sections whose registers are almost always all-present (a sign of bulk marking) |
+| `/staff/mark`, `/staff/day`, `/staff/:id/regularize` | POST, GET, POST | principal (write), staff (read) | Staff attendance; `PRESENT`, `ABSENT`, `HALFDAY`, `LEAVE`, `HOLIDAY`, with `CL`, `SL`, `EL`, `LWP` leave types |
+| `/settings` | GET, PUT | read: staff, write: principal | Period tracking, working weekdays, holidays |
+
+A teacher can submit a register up to 2 days back; older ones need the principal. Once locked, only the principal can edit, with a reason of at least 5 characters. `AbsenteeEvent` rows are queued as `PENDING` for absence messages; no sender job is wired yet.
+
+#### Timetable (`src/modules/timetable/`, mounted at `/timetable`)
+Models: `TimetableVersion`, `TimetableSlot`, `Substitution`.
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/versions` | GET, POST | read: staff, write: principal | Weekly grid versions (`DRAFT` or `PUBLISHED`) |
+| `/versions/:id/publish` | POST | principal | Publish a version |
+| `/slots` | POST | principal | Set slots on a draft version (teacher and section clashes refused) |
+| `/week` | GET | staff | The grid in force on a date, or by `versionId` |
+| `/teacher-day` | GET | staff | One teacher's periods for a day |
+| `/free-teachers` | GET | staff | Teachers free in a weekday and period; same subject first, then the lightest load that day |
+| `/substitutions` | GET, POST | read: staff, write: principal | Cover an absent teacher's period |
+| `/substitutions/:id/cancel` | POST | principal | Cancel a substitution |
+
+#### Notices (`src/modules/notice/`, mounted at `/notices`)
+Model: `Notice`, `NoticeRead`. A principal posts to `school`, `class` or `section` scope; a teacher to `class` or `section`. Only the author or a principal can edit (the notice is marked edited) or delete; a teacher cannot change another teacher's notice.
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/` | GET | staff | Paged list (`schoolId`, `page`, `limit` up to 50) with `seen` and `parents` counts ("seen by X of Y") |
+| `/` | POST | staff | `{ schoolId, title, body, scope, classId?, sectionId?, lastDate? }` |
+| `/:id` | PATCH | author or principal | Edit title, body or last date |
+| `/:id` | DELETE | author or principal | Delete |
+
+Parents read notices through the School card (see Parent School View below).
+
+#### Gradebook (`src/modules/gradebook/`, mounted at `/gradebook`)
+Models: `ExamPlan`, `MarkSheet`, `ReportCard`.
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/plans` | GET, POST | read: staff, write: principal | Exam plans with weighted exams (`DRAFT` to `PUBLISHED` to `LOCKED`) |
+| `/plans/:id/publish`, `/plans/:id/lock` | POST | principal | Publish, or lock all sheets and cards |
+| `/marks` | GET, POST | read and write: staff | Mark sheet for a section, subject and exam; `absent` students are left out of averages |
+| `/cards/publish` | POST | principal | Publish one student's report card (weighted %, grade, attendance %); republishing needs a reason |
+| `/cards` | GET | staff | Report cards |
+| `/class-totals` | GET | staff | Class totals for a section and plan |
+
+Report cards are immutable snapshots. Weighted % and grade are computed on publish, and no class ranks are published.
+
+#### Onboarding: Import, Transfer Certificates, Parent Logins
+Models: `TcCertificate`, `TcCounter`. The routes mount at `/school/import-students`, `/tc/*` and `/parent-logins`.
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/school/import-students` | POST | principal | Bulk student import, up to 500 rows; admission numbers are unique per school |
+| `/tc/request` | POST | staff | Issue a transfer certificate. Open dues produce a `BLOCKED` record unless a principal overrides with a reason |
+| `/tc/:studentId` | GET | staff | The student's TC |
+| `/parent-logins` | GET, POST | principal | List a section's families; issue logins on a printed password slip (one per family, password shown once) |
+| `/parent-logins/renew` | POST | principal | New slip for one student's family; ends that family's sessions |
+
+#### Demo School (`src/modules/demo/`, mounted at `/demo`)
+A public, read-only-ish school for trying the product. Its accounts and school carry `isDemo: true`. The school is rebuilt every night at 02:00 IST by `demoScheduler.js` and can be rebuilt on demand.
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/demo/login` | POST | none, 20 per hour per IP | `{ role?: 'principal' \| 'teacher' \| 'parent' \| 'student' }` → `{ user, tokens }`, no password |
+| `/demo/status` | GET | SuperAdmin | Whether the demo school is ready, and when it was built |
+| `/demo/rebuild` | POST | SuperAdmin | Rebuild now (`202`, runs in the background) |
+
+Demo accounts are blocked from account and profile changes and from creating teachers or linking parents to children (`403 DEMO_READ_ONLY`). Demo users are excluded from admin metrics, leaderboards, public stats, feedback stats and streak reminders.
+
+#### Parent School View (`/parent-dashboard/child/:childId/school`)
+Read-only, for a parent linked to the child (`isParent`). Optional `?month=YYYY-MM`. Returns the child's school name, section and attendance for the month (with today's status and `schoolToday` respecting working days and holidays), fees (due by today, overdue, next bill, receipts), published report cards, notices from the last 60 days with read flags, and the homework this IST week and the next 7 days. `POST /parent-dashboard/notices/read` (`noticeIds`, 1 to 50) marks notices seen. Receipts and report cards print through `/child/:childId/receipts/:receiptNo` and `/child/:childId/report-cards/:planId`.
+
+#### Principal Today (`/principal/today`)
+Counts only, computed by aggregation: attendance (present %, sections not marked), fees collected today, this month and overdue, pending UPI, staff away and substitutions, and TCs issued this month.
 
 ### Misc
 | Module | Endpoints |

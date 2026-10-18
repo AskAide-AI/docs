@@ -9,6 +9,7 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+  - [Try the Demo School](#try-the-demo-school)
 - [Student Guide](#student-guide)
   - [Login & First Steps](#student-login--first-steps)
   - [Study Sessions](#study-sessions)
@@ -29,12 +30,15 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
   - [Login & Dashboard](#teacher-login--dashboard)
   - [Class Join Links](#class-join-links)
   - [Quiz Management](#quiz-management)
+  - [Homework Status & Reminders](#homework-status--reminders)
   - [Question Paper Generator](#question-paper-generator)
   - [AI Assistant](#ai-assistant)
   - [Student Progress](#student-progress-view)
 - [Parent Guide](#parent-guide)
   - [Login & Dashboard](#parent-login--dashboard)
   - [Child Progress](#child-progress)
+  - [Your Child's School](#your-childs-school)
+  - [Login on a Printed Slip](#login-on-a-printed-slip)
 - [Admin Guide](#admin-guide)
   - [School Management](#school-management)
   - [Teacher Management](#teacher-management)
@@ -44,6 +48,13 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
   - [Chapter Upload](#chapter-upload)
   - [Chapter Management](#chapter-management)
   - [Relation View](#relation-view)
+  - [School Ops](#school-ops)
+    - [Who Can Do What](#who-can-do-what)
+    - [Principal Today](#principal-today)
+    - [Fees & Receipts](#fees--receipts)
+    - [Attendance, Timetable & Gradebook](#attendance-timetable--gradebook)
+    - [Transfer Certificates](#transfer-certificates)
+    - [Parent Logins & Notices](#parent-logins--notices)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -55,9 +66,10 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
 | Role | Description | Access |
 |------|-------------|--------|
 | **Student** | Classes 6–12 learners | Study, quizzes, progress, gamification, challenges, Refer & Earn |
-| **Teacher** | School or independent teachers | Class join links, quiz creation, paper generation, student monitoring |
-| **Parent** | Parents/guardians | View linked children's progress |
-| **Admin** | School administrators | Full school, teacher, student, content management |
+| **Teacher** | School or independent teachers | Class join links, quiz creation, homework status and reminders, paper generation, student monitoring, School Ops (fees, attendance, timetable, gradebook, TC, notices) |
+| **Parent** | Parents/guardians | View linked children's progress and their school details (attendance, fees, report cards, notices, homework) |
+| **Principal** | Your school's principal (set up for you) | Today at my school, School Ops, parent logins on printed slips |
+| **Admin** | AskAide platform administrators | Full school, teacher, student, content management |
 
 ### First-Time Setup
 
@@ -72,6 +84,20 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
 > **Students invited by a friend:** Sign up from your friend's invite link or challenge, and the invite is remembered even if you sign up later on the same device. See [Refer & Earn](#refer--earn).
 
 > **Teachers:** You can create your own free teacher account (see [Teacher Signup](#teacher-signup)). If your school already set you up, use the login details or invite link from your school admin.
+
+> **Who can sign up:** Only **Student** and **Teacher** accounts can be created at sign-up. Parent, principal and admin accounts are set up by your school or by AskAide.
+
+**Passwords:** a new password (at sign-up, when you reset it, or when you change it) needs at least 8 characters, including at least one letter and one number.
+
+---
+
+### Try the Demo School
+
+AskAide runs a public demo school with made-up but realistic data. You can see each role without an account or a password.
+
+1. Open the **For Schools** page and scroll to the demo school
+2. Tap **Open as Principal**, **Open as Class Teacher**, **Open as Parent** or **Open as Student**. You are signed in straight away
+3. Explore freely. The demo resets every night, so nothing you do there affects a real school
 
 ---
 
@@ -259,6 +285,7 @@ AskAide AI keeps you motivated through gamification features.
 - Study every day to build your streak
 - Each consecutive day adds +1 to your streak
 - Missing a day resets the streak (unless you use a **Streak Freeze**)
+- If you practised in the last 7 days but not yet today, you get a streak reminder in the bell each evening at 5 pm (India time). See [Notifications](#notifications)
 
 #### Streak Freezes
 
@@ -322,7 +349,7 @@ Turn any practice session into a quiz your friends can play, then see who scored
 
 ### Refer & Earn
 
-Invite friends to AskAide. When a friend you invited answers **10 questions**, you **both** get a gift:
+Invite friends to AskAide. When a friend you invited answers **3 questions**, you **both** get a gift:
 
 - 🎁 **A free practice paper**: a 20-question practice paper with answer key for any chapter you pick, downloadable as a PDF
 - 🛡️ **A streak shield**: an extra streak freeze that saves your streak if you miss a day
@@ -331,7 +358,7 @@ Invite friends to AskAide. When a friend you invited answers **10 questions**, y
 1. Open **Refer & Earn** (from the invite card on your dashboard or profile, tap **Details →**), or tap **Invite on WhatsApp** on the card
 2. Share your invite link. A friend can also join through a challenge you sent (see [Challenge a Friend](#challenge-a-friend))
 3. Your friend signs up from your link (email or Google)
-4. When your friend has answered 10 questions, you both get the gift. Answers in challenges they played count too
+4. When your friend has answered 3 questions, you both get the gift. Answers in challenges they played count too
 
 **On the Refer & Earn page you can:**
 - Share your invite on WhatsApp or copy the invite message
@@ -339,7 +366,7 @@ Invite friends to AskAide. When a friend you invited answers **10 questions**, y
 - Under **Your gifts**, get your practice paper: pick a chapter and tap **Get my practice paper (PDF)** (if the paper can't be made for that chapter, you keep your credit)
 - See progress towards the **Squad Starter**, **Squad Leader** and **Class Captain** badges
 - See the challenges you've sent and who played them
-- If a friend invited you, see how many of your 10 questions you've done
+- If a friend invited you, see how many of the 3 questions you need you've done
 
 > **Note:** Invites work for new accounts only. If you signed up with a friend's invite, your friend is credited automatically.
 
@@ -349,11 +376,13 @@ Invite friends to AskAide. When a friend you invited answers **10 questions**, y
 
 ### Notifications
 
-The **bell** shows what's new: a friend played your challenge, a friend joined with your invite, your gift unlocked, you're a few questions away from your gift, or you earned a badge. Teachers also see students joining their class links and their class report or certificate becoming ready.
+The **bell** shows what's new: a friend played your challenge, a friend joined with your invite, your gift unlocked, you're a few questions away from your gift, you earned a badge, your streak needs you tonight, or a teacher has sent you a homework reminder. Teachers also see students joining their class links and their class report or certificate becoming ready.
 
 - **Where the bell is:** in the sidebar on desktop, in the top bar on public pages, and next to the greeting on the student dashboard on phones. On phones, the **Menu** tab in the bottom bar also shows the number of unread notifications, and the menu has a **Notifications** row
 - A red number on the bell shows how many are unread. It updates about every minute while AskAide is open
 - Tap the bell to open the list (a sheet from the top on phones, a panel next to the bell on desktop). Opening it marks everything as read. Tap a notification to go to the related page
+- **Streak reminder:** each evening at 5 pm (India time), if you practised in the last 7 days but not today, you get one reminder. It says **Your N-day streak ends tonight** if your streak is still alive, or **Pick up where you left off** if it has lapsed. Tapping it opens Study
+- **Homework reminder:** when a teacher reminds you about a quiz set as homework, you get one reminder for that quiz, with its due day. Tapping it opens your quizzes
 - Similar notifications from the same day are grouped, for example "Kabir and 2 others played your challenge"
 - When something new arrives while you're using the app, a short pop-up appears. Pop-ups stay quiet while you're in a practice session or a quiz
 - Notifications are kept for 60 days
@@ -564,6 +593,20 @@ After students attempt the quiz:
    - Time distribution
    - Student-by-student breakdown
 
+#### Homework Status & Reminders
+
+Once a quiz is published, open its **Analytics** page to see a **Homework status** list: each student in the class, with their status for this quiz:
+
+- **Done**: submitted
+- **In progress**: started, not yet submitted
+- **Not done**: not started
+- **Never logged in**: has not signed in yet
+
+Each row shows when the student was last reminded. If you have the parent's number, a **WhatsApp** button opens a ready message to the parent with the quiz title and deadline.
+
+- **Remind students:** the **Remind** button sends one in-app reminder to each student who has not finished the quiz. A student is reminded once per quiz, so tapping again is safe. The page tells you how many were already reminded. Reminders can't be sent for an unpublished quiz or after its deadline
+- **Give more time:** next to the due date, tap **Give more time** and pick a later deadline. The new deadline must be in the future and later than the current one. Students who were already reminded see the new due day in their bell
+
 #### Cloning a Quiz
 
 - Click the **Clone** icon on any existing quiz
@@ -655,8 +698,10 @@ Monitor how your students are performing.
 ### Parent Login & Dashboard
 
 **Logging In:**
-1. Your child's school creates your parent account with your email and links it to your child. Parents can't sign up or link a child themselves
-2. Sign in with that email. If you weren't given a password, use **Forgot password** on the login page to set one, or use **Continue with Google** with the same email
+1. Your child's school creates your parent account and links it to your child. Parents can't sign up or link a child themselves
+2. Sign in one of two ways (the school tells you which one you have):
+   - **Email:** sign in with the email the school has on file. If you weren't given a password, use **Forgot password** on the login page to set one, or use **Continue with Google** with the same email
+   - **Printed slip:** the school gives you a slip with a **Login ID** and a **Password**. See [Login on a Printed Slip](#login-on-a-printed-slip)
 3. Open **Parent** from the sidebar (on phones, the **Children** tab in the bottom bar)
 
 #### Dashboard Overview
@@ -701,7 +746,34 @@ The same page, below the cards, shows the selected child's progress.
 
 ---
 
+### Your Child's School
+
+If your child is on a school's class list, a **School** card appears under your child's practice dashboard. It is read-only. For any dispute, go to the school office.
+
+- **Attendance:** today's status (present or absent, or "No school today" or "Holiday today" when the school is closed), plus a monthly register you can step back through
+- **Fees:** what is due, overdue, and the next instalment. Tap **Print receipt** on any paid receipt
+- **Report cards:** published report cards, which you can open and print
+- **Notices from school:** messages the school has posted for parents. They show **New** until your next visit
+- **Homework this week:** quizzes your child's teachers set with a deadline this week, and whether your child has done each one (for example "2 of 3 done"). It shows only titles, due days and your child's own result
+
+Notices and homework appear on the current month's view.
+
+---
+
+### Login on a Printed Slip
+
+Some schools give parents a password slip instead of an email login. The school prints one slip per family and sends it home with your child.
+
+1. Open AskAide on your phone or computer (the slip shows the web address and a QR code), then tap **Login**
+2. Type the **Login ID** and **Password** exactly as printed. The Login ID can be typed loosely, for example with or without +91 or spaces
+3. If you have more than one child at the school, one login shows all of them
+4. Lost the slip, or the password doesn't work? Ask the school office for a new slip. A new slip replaces the old password
+
+---
+
 ## Admin Guide
+
+The **Admin Panel** sections below are for AskAide platform administrators. Schools run their day-to-day work in **School Ops**, described at the end of this guide.
 
 ### School Management
 
@@ -940,6 +1012,59 @@ This is useful for:
 
 ---
 
+## School Ops
+
+School Ops runs a school's day-to-day work in one place: fees, the day book, attendance, timetable, gradebook, transfer certificates, notices and parent logins. Open it from the **School Ops** group in the sidebar (on phones, from **Menu**). Each screen has its own tabs across the top.
+
+### Who Can Do What
+
+| Role | Can do |
+|------|--------|
+| **Teacher** | Collect fees and see the day book, mark attendance, enter marks, see your own timetable and cover duties, request transfer certificates, post notices |
+| **Principal** | Everything a teacher can do, plus refunds, fee concessions, the staff register, approving cover, publishing report cards, overriding the dues block on a transfer certificate, and parent logins |
+| **Admin** | Everything, plus setup: fee heads and fee structures, exam plans, timetable setup, and bulk student import |
+
+### Principal Today
+
+The principal's home screen (**Principal** in the sidebar) shows **Today at [school name]**. It has cards for attendance today, fees (day book and defaulters), staff today, and transfer certificates this month. Each card links to the screen where you act on it.
+
+### Fees & Receipts
+
+The Fees screen has **Collect**, **Billing**, **Receipts** and, for admins, **Setup** tabs.
+
+- **Collect:** see who owes fees, then **Record cash payment**. You can record cash, a bank transfer (enter the UTR number), or UPI (confirm later)
+- **Advance and several months:** one payment can cover several months or pay ahead for later months. The school gets one receipt for the whole payment
+- **Billing:** generate invoices for a fee structure
+- **Receipts:** look up any receipt by its number and print it. Principals can refund a payment (a reason of at least 5 characters is required) and apply a concession
+- **Day book:** the day's collections and receipts, on its own screen
+
+### Attendance, Timetable & Gradebook
+
+- **Attendance:** **Mark** the day's register (and period marking where the school uses it). **Day view** shows the day's absentees. The **Staff** register is for principals
+- **Timetable:** the **Cover** tab (principals) shows who is absent and who is free to cover, and lets the principal approve covers. **Setup** (admin) holds the weekly slot grid
+- **Gradebook:** teachers use **Enter marks** for exams. Admins set up **Plans** (exam plans). Principals publish **Report cards**, which then appear on parents' School card
+
+### Transfer Certificates
+
+- A teacher or principal requests a transfer certificate (TC) for a student who is leaving. Each TC gets the next number for the school
+- If the student still has unpaid dues, the request is blocked. A principal can override the block; every override is recorded
+- Print the TC from the **TC** tab
+
+### Parent Logins & Notices
+
+**Parent logins** (principal and admin) give each family a login on a printed slip. No email or SMS is sent.
+
+1. Open **Parent logins**. Each family shows one of three statuses: **No login yet**, **Slip given, not used yet**, or **Using AskAide**
+2. Tap **Make & print** slips for families with no login. Families who haven't logged in yet can be given a new slip too
+3. Slips print eight to an A4 page. Cut along the dashed lines and send them home
+4. Brothers and sisters share one login. Families already using AskAide are left alone
+
+Passwords are shown only once, on the printed slips, so print them straight away. A **New slip** gives a family a new password. The old slip stops working, and anyone signed in with it is signed out.
+
+**Notices** (principal and teachers) post a message for parents. It appears on each child's School card, and the page shows how many parents have seen it ("seen by X of Y").
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |
@@ -948,12 +1073,15 @@ This is useful for:
 | **No quizzes showing** | Ensure your teacher has published the quiz and assigned it to your class |
 | **Chapter not processing** | Check admin panel for error status; re-upload the PDF |
 | **Slow page load** | Clear browser cache, check internet connection |
-| **Parent can't see child** | Verify the invite code was entered correctly; check link status |
+| **Parent can't see child** | Ask your school office to check that your child is on a class list and that your parent login is linked to them |
+| **Parent slip login doesn't work** | Type the Login ID and Password exactly as printed. If the slip is lost or old, ask the school office for a new one |
+| **Can't sign up as a parent or principal** | Only Student and Teacher accounts can be created at sign-up. Ask your school office for your account |
+| **Password rejected** | A new password needs at least 8 characters, including one letter and one number |
 | **AI generates wrong content** | Edit the generated content before publishing; provide more specific prompts |
 | **Quiz results not showing** | Ensure quiz is submitted (not just saved); check analytics tab |
 | **Streak not updating** | Streak requires completing at least one question; login alone doesn't count |
 | **Can't make a challenge** | Answer at least 3 multiple-choice questions in the session first |
-| **Refer & Earn gift not unlocked yet** | The gift unlocks for both of you once your friend has answered 10 questions (practice and challenge answers both count). Open **Refer & Earn** to see the latest progress |
+| **Refer & Earn gift not unlocked yet** | The gift unlocks for both of you once your friend has answered 3 questions (practice and challenge answers both count). Open **Refer & Earn** to see the latest progress |
 | **Can't join a class link** | Only student accounts can join. If the page says the link is turned off, ask your teacher for a new one |
 | **Email change code not arriving** | Check the spam folder of the **new** address; you can ask for a new code after a minute. Codes expire after 10 minutes |
 

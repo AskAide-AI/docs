@@ -30,9 +30,10 @@
 
 ### Refresh Token
 - **Type:** JWT
-- **Expiry:** 7 days
+- **Expiry:** 30 days (`REFRESH_TOKEN_EXPIRY`, default `30d`)
 - **Usage:** Single-use. Each `/refresh` call claims the token and revokes it in one atomic database update, then issues a new pair. A second request with the same token (even one sent at the same moment) gets `401 REFRESH_TOKEN_REVOKED`
-- **Max active:** 5 per user (multi-device support)
+- **Rotation grace:** a retry of an already-rotated token 2 to 60 seconds after it was revoked gets a fresh pair, so a response lost to a network drop does not log the user out. The window is `REFRESH_GRACE_COOLDOWN_MS` (2 s) to `REFRESH_GRACE_MS` (60 s). Under 2 seconds the request is treated as a race and refused; after 60 seconds it is treated as a replay
+- **Max active:** 10 per user (`MAX_REFRESH_TOKENS`, multi-device support). The oldest is revoked when a new one would exceed the limit
 - **Storage:** SHA-256 hashed in MongoDB; a TTL index removes records after `expiresAt`
 
 ---
@@ -52,7 +53,7 @@
            │
            ▼
 3. Generate token pair
-   - accessToken (2h) + refreshToken (7d)
+   - accessToken (2h) + refreshToken (30d)
            │
            ▼
 4. Return tokens to client
@@ -124,6 +125,17 @@ Body: { userName, email, password, confirmPassword, name,
 - A valid referralCode credits the new account to its inviter;
   a bad or stale code is ignored and never fails the signup
 - Returns { user, tokens, referral } (auto-login)
+```
+
+### Demo School Sign-In
+
+```
+POST /api/v1/demo/login
+Body: { role?: 'principal' | 'teacher' | 'parent' | 'student' }   (default 'principal')
+- Public and passwordless: no credentials are needed. Limited to 20 requests per hour per IP
+- Returns the same { user, tokens } shape as login, for an account of the public demo school
+- Demo accounts cannot change their profile, email or password (403 DEMO_READ_ONLY)
+- 503 DEMO_REBUILDING / DEMO_NOT_READY while the nightly rebuild is running
 ```
 
 ### Password Change
@@ -233,7 +245,7 @@ All under `/api/v1/authenticate/`:
 | `/login` | POST | Rate-limited | `{ userName, password }` → `{ user, tokens }` |
 | `/signup` | POST | Rate-limited | `{ userName, email, password, confirmPassword, name, accountType?, referralCode?, acquisition? }` → `{ user, tokens, referral }` |
 | `/google` | POST | Rate-limited | `{ idToken, referralCode?, accountType?, acquisition? }` → `{ user, tokens, isNewUser, referral }` |
-| `/refresh` | POST | None | `{ refreshToken }` → new token pair (each refresh token works once) |
+| `/refresh` | POST | None | `{ refreshToken }` → new token pair (each refresh token works once, with a 2 to 60 second retry grace) |
 | `/logout` | POST | None | `{ refreshToken }` → revoke token |
 | `/changepassword` | POST | auth | Password change (revokes all refresh tokens) |
 | `/reset-password-token` | POST | None | Send reset email |

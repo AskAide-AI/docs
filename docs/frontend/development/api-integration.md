@@ -20,7 +20,7 @@
 
 > There is no `src/services/` layer. All API code lives in `src/api/`: one axios instance, endpoint constants, and one operation module per domain, barrel-exported from `src/api/index.js`.
 
-**Available API modules (19):**
+**Available API modules (20):**
 - `src/api/auth.api.js` — Login, signup (email and Google), logout, password reset, profile picture (Redux thunks)
 - `src/api/study.api.js` — Study config, questions, sessions, answers, progress, streaks, badges
 - `src/api/quiz.api.js` — Quizzes (teacher and student)
@@ -35,6 +35,7 @@
 - `src/api/referral.api.js` — Refer & Earn (invite link, redeem, practice-paper reward)
 - `src/api/challenge.api.js` — Challenge a friend
 - `src/api/notification.api.js` — Notification bell
+- `src/api/schoolOps.api.js` — School Ops (fees, attendance, timetable, gradebook, TC, notices, parent logins, import) and the demo school (SuperAdmin status and rebuild)
 - `src/api/stats.api.js` — Public Stats
 - `src/api/profile.api.js` — Public profile, name edit, email change
 - `src/api/feedback.api.js`, `src/api/suggestion.api.js`, `src/api/behavioral.api.js` — Feedback
@@ -90,7 +91,7 @@ api.interceptors.response.use(
 );
 ```
 
-`clearAuthAndRedirect()` removes the tokens and `user`, stores `auth:sessionExpired` and `auth:returnTo` in sessionStorage, and sends the user to `/login`, which explains why and returns them afterwards.
+`clearAuthAndRedirect()` removes the tokens and `user`, stores `auth:sessionExpired` and `auth:returnTo` in sessionStorage, and sends the user to `/login`, which explains why and returns them afterwards. Before that happens, a refresh rejected with `REFRESH_TOKEN_REVOKED` or `INVALID_REFRESH_TOKEN` re-reads the stored refresh token once: if another tab has already rotated it, the refresh retries with the newer token instead of logging the user out.
 
 ### Raw `fetch` calls: `authorizedFetch()`
 
