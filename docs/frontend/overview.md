@@ -46,7 +46,7 @@ Unified Axios instance at `src/api/axios.js`:
 4. **Teacher Dashboard** — Class analytics, student progress, weak topics
 5. **AI Assistant** — Teacher AI content generation (quizzes, papers, notes)
 6. **Progress Analytics** — Subject/chapter/topic tracking with AI insights
-7. **Question Paper Generator** — Board-style exam generation with PDF preview
+7. **Question Paper Generator** — Board-style exam papers with an editor that looks like the printed page (`/question-paper`), plus the public **Free Paper Generator** (`/free-paper-generator`, no signup); MCQ, fill-in, assertion-reason, 2/3/5-mark and case-based questions, PDF/Word download, answer key
 8. **Gamification** — Badges, streaks, daily challenges, weekly leaderboard, NPS surveys
 9. **Challenges & Referral** — Challenge a friend on WhatsApp, Refer & Earn gifts, invite attribution
 10. **Class Links** — Teachers self-sign-up and bring students in with a link or QR code

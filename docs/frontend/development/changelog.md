@@ -2,7 +2,7 @@
 
 > All notable changes to the AskAideAI frontend will be documented in this file.
 > Format: [Semantic Versioning](https://semver.org/)
-> Last Updated: October 18, 2026
+> Last Updated: October 19, 2026
 
 ---
 
@@ -11,6 +11,8 @@
 ### October 2026
 
 #### Added
+- **Written questions on papers** (2026-10-19) — printed papers can now carry assertion-reason, 2-mark, 3-mark, 5-mark and case-based questions from a separate reviewed store (`paperquestions`; a person sets each draft `live`). The free generator shows how many questions of each type the chosen chapters have ready and lets the teacher count them; with written questions ready, an untouched form makes a 20-mark class test. The paper editor edits assertion-reason options and case-study parts with marks, and the PDF/Word output prints written sections and case parts with an answer key carrying the value points. Sections with a single question no longer say "marks each". Written questions are never shown to students.
+- **Paper editor + Set A/B** (2026-10-18) — the shared editor (`question-paper/paper/`) prints a hand-made school paper: exam header (session, class & section, date, time), CBSE-style auto instructions, sections A/B with continuous numbering, swap / edit / delete / move / add own question, Set A + Set B, a separate answer key, PDF with an embedded DejaVu Serif Condensed subset (jsPDF's built-in fonts printed √ π → θ H₂O ≤ as garbage) and an editable Word file. Free papers keep their draft on the device (resume after reload or signup). Guest drafts are device-only; signed-in teachers autosave via `PUT /question-paper/:id`.
 - **Homework status** — the quiz analytics page (`/teacher/quiz/:quizId/analytics`) lists every student the quiz is for as Done, In progress, Not done or Never logged in, with a one-tap reminder, a WhatsApp message to the parent and a way to give more time. Parents see **Homework this week** on the School card. New `teacher/quiz/QuizStudentsPanel.jsx`.
 - **Pixel Buddy on Login** — a small pixel robot explains a failed sign-in in plain English and offers the next step as a button (Reset password or Create an account). Only `/login` is enabled (`BUDDY_ROUTES` in `src/buddy/config.js`); `VITE_BUDDY_ENABLED=false` turns it off everywhere.
 - **Live demo school** — **See a live demo school** on For Schools signs in without a password as the demo Principal, Class Teacher, Parent or Student (`demoLogin()`, `POST /demo/login`). A banner on every app page says the school resets every night and has a **Leave demo** button. New `common/DemoBanner.jsx` and `school-ops/DemoSchoolCard.jsx` (SuperAdmin rebuild, on the Import screen).

@@ -217,12 +217,12 @@ Nineteen modules live under `src/modules/`. Base paths are relative to `/api/v1`
 
 | Aspect | Detail |
 |---|---|
-| Responsibility | Teacher exam-paper generation from the existing question bank (difficulty mix), history, preview, PDF render, delete; public lead-magnet generator |
+| Responsibility | Teacher exam-paper generation (exact counts per type by `typeCounts`, or a difficulty mix), the teacher's edited paper (`PUT /:paperId`, `items` + printed `header`), history, preview, PDF render, delete; public lead-magnet generator with network rate limits; ready counts per question type; one-question Swap |
 | Base path | `/question-paper` |
-| Key functions | `questionPaper.service.js`: `generatePaper`, `generatePublicPaper` (max 10 questions, stores a `Lead`, calls the WhatsApp mock), `renderPDF` (Chromium), `getPaperPreview`, `getPaperHistory`, `deletePaper` |
-| Models owned | `QuestionPaper`, `Lead` |
-| Collaborators | `Question`, content models, `src/shared/utils/whatsapp.js` (mock that logs and sleeps 1.5 s) |
-| Notes | Does not call the AI Service |
+| Key functions | `questionPaper.service.js`: `generatePaper` (marks follow the question type), `generatePublicPaper` (max 30 questions, `typeCounts` trimmed fill-ins first, stores a `Lead`, returns `questions` + `notes`; the browser builds the PDF), `countByType` (`/public/availability`; written types count `live` rows only), `findReplacement` (Swap), `updatePaper` (server recomputes `totalMarks` and `questionIds` from `items`), `renderPDF` (Chromium), `getPaperPreview`, `getPaperHistory`, `deletePaper` |
+| Models owned | `QuestionPaper`, `PaperQuestion` (the `paperquestions` collection), `Lead` |
+| Collaborators | `Question` (the practice bank; `mcq`/`fillblanks` only), content models, `src/shared/utils/whatsapp.js` (mock that logs and sleeps 1.5 s) |
+| Notes | Written types (`assertion`, `short2`, `short3`, `long5`, `case`) come only from `paperquestions` and only when `status: 'live'`; they are never topped up from another type and never reach students or practice/quizzes/SEO. Does not call the AI Service (the written questions are produced offline by ai-service `scripts/generate_paper_questions.py`) |
 
 ### 5.7 teacher
 
@@ -700,7 +700,7 @@ Conventions:
 | `/challenges` | challenge | `GET /:code` and `POST /:code/attempts` public with `optionalAuth` (120 and 20 per 10 min); create, `mine`, claim and review need `auth` | Challenge-a-friend links |
 | `/notifications` | notification | `auth` | Notification bell: list, unread count, mark read |
 | `/goals` | goal | `auth` | Daily goal |
-| `/question-paper` | question-paper | `auth`; `POST /public/generate` public | Papers and PDFs |
+| `/question-paper` | question-paper | `auth`; `POST /public/generate` public (20 / hour per network), `/public/swap` + `/public/availability` public (150 / hour per network, shared limit) | Papers, PDFs, availability counts |
 | `/ai-assistant` | ai-assistant | `auth` + `isTeacher` | AI agent proxy, SSE, conversations, PDF export |
 | `/inline-feedback` | feedback | `auth` (POST limited to 10 per minute); sentiment reads need `isTeacherOrPrincipal` or `isSuperAdmin` | Feature reactions |
 | `/behavioral-prompt` | feedback | `auth` | Feedback prompt gating |
@@ -1335,7 +1335,7 @@ All three cron jobs start through side-effect imports at the top of `index.js`. 
 | Item | Detail |
 |---|---|
 | Framework | Jest 30 in native ESM mode (`NODE_OPTIONS=--experimental-vm-modules`); no Jest config file at the repo root (defaults) |
-| Layout | `src/modules/<module>/tests/*.test.js`: 25 files covering `auth` (3: service, refresh rotation, activity tracker), `challenge`, `content`, `notification`, `parent` (dashboard routes), `principal` (2), `progress` (2: service, user-data routes), `question-paper`, `questions`, `quiz` (2: service, controller), `referral`, `school`, `supporting` (3: service, LLM service, LLM validator), `teacher` (4: service, class links, dashboard routes, principal school scope routes), `user`; roughly 480 `it`/`test` cases (grep count) |
+| Layout | `src/modules/<module>/tests/*.test.js`: 41 files covering `auth` (3: service, refresh rotation, activity tracker), attendance, fees, gradebook and timetable, challenge, content, demo-school (3: service, users, guards), notices, notifications (2: service, scheduler), onboarding, parent (3: dashboard routes, parent logins, school), principal (3: account, dashboards, school scope), progress (2: service, user-data routes), question-paper, questions, quiz (4: service, controller, homework service, homework routes), referral, school, supporting (5: shared service, amount-in-words, bulk generation, LLM service, LLM validator), teacher (3: service, class links, dashboard routes), user; roughly 710 `it`/`test` cases (grep count) |
 | Route tests | The `*.routes.test.js` files and `userDataRoutes.test.js` mount the real router on a bare Express app listening on a random port, sign test JWTs and call it with `fetch`; controllers or services are mocked |
 | No tests | `ai-assistant`, `campaign`, `feedback`, `goal` |
 | Mocking | `jest.unstable_mockModule` declared before `await import()` of the service; Mongoose models mocked by module path; `logger.js` disables file and Loki transports when `NODE_ENV=test` |

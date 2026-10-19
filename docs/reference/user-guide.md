@@ -460,19 +460,24 @@ Explore the platform without creating an account.
 
 ### Free Paper Generator (No Signup)
 
-Generate practice papers instantly — no account required.
+Generate exam papers instantly — no account required.
 
 1. Click **Free Paper Generator** on the homepage
 2. Select **class** and **subject**
-3. Choose **chapters** to include
-4. Set **difficulty mix** (easy/medium/hard percentages)
-5. Set **total questions** count
-6. Click **Generate**
-7. Download or view the paper as a PDF
+3. Choose **chapters** to include — the generator shows how many questions of each type they have ready: MCQ, fill-in-the-blank, assertion-reason, 2-mark, 3-mark, 5-mark and case-based
+4. Pick **question types and counts** (up to 30 questions in total). With written questions ready for your chapters, the untouched default is a 20-mark class test
+5. Click **Generate**
+
+   > If you ask for more of a type than those chapters have ready, the paper says so in plain words ("Only 1 five-mark question is ready for these chapters."). MCQ and fill-in questions fill each other's place; the written types never.
+
+6. **Edit the paper** on the hand-made school paper view — swap any question for another of the same type, change text, marks or answers, add your own question, or set the header (exam name, session, class & section, date, time); CBSE-style instructions are written for you
+7. **Download** the PDF (or the editable Word file) and print — every paper carries a separate answer key, with the model solution and value points for written questions
+
+> **Note:** Assertion-reason, 2/3/5-mark and case-based questions are written specially for paper printing and are shown only after they have been reviewed; a new chapter starts with just MCQ and fill-in-the-blank. A generator draft is kept on your device, so a reload or a later signup resumes it.
 
 > **PLACEHOLDER: `[Screenshot of free paper generator UI]`**
 
-> **Tip:** To access the full paper generator with more options, create a free account.
+> **Tip:** Signing in (free) keeps your papers in history, autosaves your edits and lets you share the paper as a PDF.
 
 ---
 
@@ -617,25 +622,22 @@ Each row shows when the student was last reminded. If you have the parent's numb
 
 ### Question Paper Generator
 
-Generate exam-ready question papers with a custom difficulty mix.
+Generate exam-ready question papers with a custom difficulty mix, or exact counts per question type.
 
 1. Click **Paper Generator** in the sidebar
 2. Configure:
    - **Class & Subject**
-   - **Chapters** to include
-   - **Total Marks** (e.g., 50, 100)
-   - **Difficulty Distribution:**
-     - Easy: ___%
-     - Medium: ___%
-     - Hard: ___%
-   - **Question Types:** MCQ, Fill-in-blank, or both
+   - **Chapters** to include — see how many questions of each type are ready
+   - **Question Types and Counts** — MCQ, fill-in-the-blank, assertion-reason, 2/3/5-mark and case-based (up to 30 questions; written types are never topped up from another type), or a difficulty distribution (Easy ___% / Medium ___% / Hard ___%)
 3. Click **Generate Paper**
-4. **Preview** the generated paper
-5. Click **Download PDF** to export
+4. **Preview** the generated paper on the hand-made school paper view (sections A/B, continuous numbering, Set A + Set B)
+5. **Edit** right there — swap, edit or move questions, add your own, fix marks and answers — it autosaves
+6. **Download PDF** (the PDF embeds a print-safe font — a DejaVu Serif Condensed subset — so symbols like √, π, ∠ and H₂O print correctly) or the editable **Word** file
+7. **Share** the paper as a PDF; the separate answer key is available for download
 
 > **PLACEHOLDER: `[Screenshot of paper generator configuration]`**
 
-> **Tip:** Generated papers follow standard Indian exam formatting with sections, marks distribution, and instructions.
+> **Tip:** Generated papers follow standard Indian exam formatting with sections, marks distribution, and instructions. Written questions (assertion-reason, 2/3/5-mark, case-based) live in a separate reviewed store — they never end up in student practice, quizzes or public pages. All your papers stay in **Paper History**.
 
 ---
 

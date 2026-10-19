@@ -86,6 +86,8 @@ ai-service/
 ├── tests/                   pytest suite (unit/ + service tests)
 ├── eval/                    offline RAGAS eval, HTTP benchmark, embedding A/B
 ├── sync_missing_topics.py   one-off maintenance script (TopicSyncService)
+├── scripts/
+│   └── generate_paper_questions.py  run-by-hand written paper questions for one chapter (writes to MongoDB paperquestions); not wired to any HTTP endpoint
 └── test_async_upload.py     manual upload smoke script (not collected by pytest tests/)
 ```
 
@@ -98,9 +100,11 @@ ai-service/
 | `document/` | `DocumentLoader`: per-page PDF extraction, repeated header/footer removal, text normalization |
 | `llm/` | One `LLMService` subclass per provider |
 | `models/` | `ConversationModel` over `conversations` / `messages` |
-| `services/` | Feature services and the singleton registry |
+| `services/` | Feature services and the singleton registry; `paper_questions.py` (written paper question shapes, static checks and dedupe — used only by the offline script, no LLM calls of its own) |
 | `services/ai/` | `AIOrchestrator`, `AdaptiveQuestionGenerator`, `ConceptDependencyGraph`, `MultiHopRAG`, `QueryExpander`, `SemanticChunker`, `SocraticQuestionGenerator` — importable, no route in `main.py` |
-| `utils/` | `embedding.py`, `chunker.py`, `thread_pool.py`, `topic_search.py`, `topic_embedder.py`, `mongo_util.py`, `prompt.py`, `response_format.py`, `schema.py`, `common.py`, `metrics.py`, `openapi_tags.py`; unused at runtime: `cache.py`, `validators.py`, `question_utils.py`, `tool.py` (only in a provider `__main__` demo) |
+| `utils/` | `embedding.py`, `chunker.py`, `thread_pool.py`, `topic_search.py`, `topic_embedder.py`, `mongo_util.py`, `prompt.py` (`PAPER_WRITER_*` / `PAPER_CHECKER_*` prompts), `response_format.py`, `schema.py`, `common.py`, `metrics.py`, `openapi_tags.py`; unused at runtime: `cache.py`, `validators.py`, `question_utils.py`, `tool.py` (only in a provider `__main__` demo) |
+
+**Written paper questions — offline, no HTTP endpoint.** `scripts/generate_paper_questions.py` runs by hand, one chapter at a time, over the whole chapter text. A writer model drafts each batch (`assertion` × 10, `short2` × 10, `short3` × 10, `long5` × 6, `case` × 4 per chapter) and a *different* checker model re-solves every question (`services/paper_questions.py` holds the stored shape and the static checks: no LaTeX or figure references, only characters the printed paper font has, marking schemes in half marks that add up, case parts 1 + 1 + 2). `utils/prompt.py` carries the writer/checker prompts. Only questions that pass the static checks and the checker's verdict are inserted into MongoDB `paperquestions` — as `draft`, or `rejected` when the checker fails — for a person to review and set `live`. The insert is fingerprint-based and insert-only, so re-runs never duplicate a question or undo someone's review. The Backend paper generator reads only `live` rows of that collection (see `docs/backend/reference/database-schema.md`).
 
 ## 4. Component design
 
@@ -916,6 +920,7 @@ Most handlers wrap work in `try/except Exception` and re-raise a generic 500. As
 | `tests/unit/test_config.py` | unit | `Settings` defaults, env overrides, `get_settings` caching |
 | `tests/unit/test_document_cleaning.py` | unit | Boilerplate/watermark removal, de-hyphenation, degree repair |
 | `tests/unit/test_rag_filter.py` | unit | A re-implementation of the filter-building logic (does not call `RAGSystem._build_filter`) |
+| `tests/unit/test_paper_questions.py` | unit | `services/paper_questions.py` static checks and dedupe for written paper questions: no LaTeX or figure references, printable characters only, marking schemes in half marks that add up, case parts 1+1+2, assertion-reason labels and options, fingerprint dedupe — no LLM calls |
 | `tests/test_teacher_agent.py` | service | Agent access control with `MagicMock` deps: id validation, scope resolution, gating, expired sessions, `search_scoped` OR-of-ANDs and fail-closed |
 | `tests/test_api_endpoints.py` | smoke | Calls old unversioned `/ai-insights/...` paths with no assertions |
 | `tests/test_progress.py` | manual script | No `test_` functions; needs live Mongo + OpenRouter |

@@ -510,21 +510,68 @@ A pending change of a user's login email. The code goes to the new address; the 
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
+| createdBy | ObjectId | REF: User | Teacher who generated; optional for public papers |
 | title | String | REQUIRED | Paper title |
-| createdBy | ObjectId | REF: User, REQUIRED | Teacher who generated |
-| schoolName | String | | School name for header |
-| examName | String | | Exam name (e.g., "Term 1") |
-| classId | ObjectId | REF: Class | Target class |
-| subjectId | ObjectId | REF: Subject | Target subject |
+| classId | ObjectId | REF: Class, REQUIRED | Target class |
+| subjectId | ObjectId | REF: Subject, REQUIRED | Target subject |
 | chapterIds | [ObjectId] | REF: Chapter | Covered chapters |
-| config | Object | | Difficulty mix, question types, total questions |
-| duration | Number | | Exam duration in minutes |
+| config | Object | | `totalQuestions` (1–100), `difficultyMix` (`easy`/`medium`/`hard`), `questionTypes` (ENUM: mcq, fillblanks, assertion, short2, short3, long5, case), `includeAnswerKey` (DEFAULT: true) |
+| questionIds | [ObjectId] | REF: Question | Practice-bank questions on the paper (kept in sync with `items`; written types are only in `items`) |
+| totalMarks | Number | DEFAULT: 0 | Sum of item marks |
+| duration | Number | DEFAULT: 60 | Exam duration in minutes |
+| schoolName | String | | School name for header |
+| examName | String | DEFAULT: 'Examination' | Exam name (e.g., "Term 1") |
 | instructions | [String] | | Exam instructions |
-| questions | [Object] | | Generated question references with marks |
-| totalMarks | Number | | Total marks |
-| includeAnswerKey | Boolean | DEFAULT: true | Include answer key |
-| status | String | ENUM | draft, generated |
+| header | Object | | Printed header the teacher fills in: `session`, `classSection`, `examDate` (free text), `autoInstructions` (rebuild instructions from the questions when true) |
+| items | [Object] | | The teacher's edited paper, in print order — empty for papers made before editing existed (those are shown from `questionIds`). See below |
+| status | String | ENUM | generated, failed |
 | isDeleted | Boolean | DEFAULT: false | Soft delete flag |
+
+**`items[]` entries** (`_id` is not stored):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| source | String, ENUM, REQUIRED | `bank` (from the question store) or `own` (the teacher wrote it) |
+| questionId | ObjectId, REF: Question (`source: bank`) | For written types it points at `paperquestions` |
+| type | String, ENUM, REQUIRED | mcq, fillblanks, assertion, short2, short3, long5, case |
+| difficulty | String, ENUM | Easy, Medium, Hard — lets Swap keep the level |
+| text | String, REQUIRED | Case-based: the passage |
+| options | [String] | MCQ and assertion-reason options |
+| answer | String, DEFAULT: '' | Written questions: the model solution |
+| markingScheme | [Object] | Value points: `{ point, marks }` (each `_id` not stored) |
+| parts | [Object] | Case-based: `{ text, marks, answer, markingScheme }` (each `_id` not stored) |
+| marks | Number, DEFAULT: 1 | Marks follow the type (mcq/fillblanks/assertion 1, short2 2, short3 3, long5 5, case sum of parts) unless the teacher changed them |
+
+**Indexes:** `{ createdBy: 1, createdAt: -1 }`, `{ classId: 1, subjectId: 1 }`
+
+---
+
+### PaperQuestion
+**File:** `src/modules/question-paper/models/paperQuestion.model.js` · **MongoDB collection:** `paperquestions`
+
+Written questions for printed question papers: assertion-reason, 2/3/5-mark answers, case-based. Kept **apart** from the student practice bank (`questions`) so practice, quizzes, SEO pages and stats never see these types. Written offline by ai-service `scripts/generate_paper_questions.py` (one chapter at a time, checked by a second model) as `draft`; a person reviews them and sets `live`. Paper generation, Swap and `/public/availability` counts only ever read `live` questions.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| classId | ObjectId | REF: Class, REQUIRED | Class |
+| subjectId | ObjectId | REF: Subject, REQUIRED | Subject |
+| chapterId | ObjectId | REF: Chapter, REQUIRED | Chapter it belongs to |
+| type | String | ENUM, REQUIRED | assertion, short2, short3, long5, case |
+| marks | Number | REQUIRED | 1 / 2 / 3 / 5 / 4 by type |
+| difficulty | String | ENUM, DEFAULT: 'Medium' | Easy, Medium, Hard |
+| text | String | REQUIRED | Case-based: the passage; assertion: "Assertion (A): …\nReason (R): …" |
+| options | [String] | | Assertion-reason: the four standard CBSE options |
+| correctOptionIndex | Number | DEFAULT: null | Assertion-reason only |
+| answer | String | DEFAULT: '' | Model solution; assertion: the explanation |
+| markingScheme | [Object] | | Value points: `{ point, marks }` (each `_id` not stored) |
+| parts | [Object] | | Case-based: `{ text, marks, answer, markingScheme }` — 3 parts, 1 + 1 + 2 marks (each `_id` not stored) |
+| status | String | ENUM, DEFAULT: 'draft' | draft, live, rejected |
+| check | Mixed | | The checker model's verdict (`pass`/`fail`, issues, flags) |
+| generator | Mixed | | Which model wrote it |
+| fingerprint | String | REQUIRED | Unique per chapter, so re-runs never duplicate a question or undo a review |
+| createdAt, updatedAt | Date | AUTO | Timestamps |
+
+**Indexes:** `{ chapterId: 1, fingerprint: 1 }` (unique), `{ chapterId: 1, type: 1, status: 1 }`
 
 ---
 

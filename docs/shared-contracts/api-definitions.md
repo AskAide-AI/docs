@@ -331,11 +331,20 @@ Other callers get `403` (`canAccessUser`: own records, or SuperAdmin).
 | Method | Path | Auth |
 |--------|------|------|
 | POST | `/` | auth |
-| POST | `/public/generate` | none (lead magnet) |
+| POST | `/public/generate` | none (lead magnet), 20 / hour per network |
+| POST | `/public/swap` | none, 150 / hour per network |
+| POST | `/swap` | auth, 150 / hour per network |
+| POST | `/public/availability` | none, shares the swap limit |
 | GET | `/history` | auth |
-| GET | `/:paperId/preview` | auth |
-| GET | `/:paperId/pdf` | auth |
+| GET | `/:paperId/preview` | auth, owner or SuperAdmin (404 otherwise) |
+| GET | `/:paperId/pdf` | auth, owner or SuperAdmin (404 otherwise) |
+| PUT | `/:paperId` | auth, owner or SuperAdmin |
 | DELETE | `/:paperId` | auth |
+
+- `/public/generate` accepts `config.typeCounts` (`PublicPaperTypeCounts`, max 30 questions) and returns the paper with `questions` (in paper order) and `notes` (shortfall messages). Old clients may still send `totalQuestions` + `difficultyMix` (capped at 30). The PDF/Word files are built in the browser; the server no longer renders a PDF for free papers.
+- `/swap` and `/public/swap` take a `PaperSwapRequest` and return one question of the same type from the same chapters (same difficulty first), or 404 `NO_MORE_QUESTIONS`. Both types, bank and written, come back in the bank-question shape.
+- `PUT /:paperId` takes a `QuestionPaperUpdateRequest`; the server recomputes `totalMarks` and `questionIds` from `items`.
+- Written question types (`assertion`, `short2`, `short3`, `long5`, `case`, 2026-10-18) come from MongoDB `paperquestions` (`PaperQuestion`), never from the student practice bank, and only once a person has set them `live`. `typeCounts` may ask for them; they are never topped up from another type. `/public/availability` (`{ chapterIds }` → `PaperAvailability`) tells the generator which written types the chosen chapters have. They are written offline per chapter by ai-service `scripts/generate_paper_questions.py` (writer model + a different checker model), not through any HTTP endpoint.
 
 ### 1.22 Teacher (`/api/v1/teacher`)
 

@@ -64,27 +64,31 @@
 
 ## Question Paper Generation & Export
 **Status:** ✅ Completed  
-**Description:** Teachers can auto-generate balanced question papers from chapter question banks, preview papers, download PDFs, and manage generation history.  
+**Description:** Teachers can auto-generate question papers from chapter question banks by exact counts per type (`typeCounts`, including written types) or by difficulty mix, preview papers, edit them on a hand-made school paper view (`PUT /:paperId` autosaves header + `items`), swap any question for another of the same type, download PDFs, and manage generation history. Written types (assertion-reason, 2/3/5-mark, case-based) come from the separate `paperquestions` collection and only when `live`.  
 **Endpoints:**
 - `POST /api/v1/question-paper` - Generate question paper
+- `POST /api/v1/question-paper/swap` and `POST /public/swap` - One replacement question (same difficulty first)
+- `POST /api/v1/question-paper/public/availability` - Ready count per question type for chosen chapters
 - `GET /api/v1/question-paper/history` - Get paper history
-- `GET /api/v1/question-paper/:paperId/preview` - Preview a generated paper
-- `GET /api/v1/question-paper/:paperId/pdf` - Download generated PDF
+- `GET /api/v1/question-paper/:paperId/preview` - Preview a generated paper (owner or SuperAdmin)
+- `GET /api/v1/question-paper/:paperId/pdf` - Download generated PDF (owner or SuperAdmin)
+- `PUT /api/v1/question-paper/:paperId` - Save the teacher's edited paper (owner or SuperAdmin)
 - `DELETE /api/v1/question-paper/:paperId` - Soft delete generated paper
 
 **Dependencies:** MongoDB, Puppeteer  
-**Added:** 2026-02-11
+**Added:** 2026-02-11 · Updated 2026-10-18/19 (paper editor, written questions, swap, availability)
 
 ---
 
 ## Public Question Paper Generation (Lead Magnet)
 **Status:** ✅ Completed  
-**Description:** Prospective users (leads) can generate a free question paper by providing their contact details. The system auto-delivers the PDF via WhatsApp.  
+**Description:** Prospective users (leads) generate a free paper by providing their contact details (20 / hour per network), choosing exact counts per type (up to 30 questions) with plain-English shortfall notes ("Only 1 five-mark question is ready for these chapters."). The browser builds the PDF/Word file. MCQ and fill-in top each other up; the written types never.  
 **Endpoints:**
-- `POST /api/v1/question-paper/public/generate` - Generate free paper and send via WhatsApp
+- `POST /api/v1/question-paper/public/generate` - Generate free paper
+- `POST /api/v1/question-paper/public/swap` - One replacement question (150 / hour per network, shared with availability)
 
-**Dependencies:** MongoDB, Puppeteer, WhatsApp Mock Utility  
-**Added:** 2026-04-18
+**Dependencies:** MongoDB, WhatsApp Mock Utility  
+**Added:** 2026-04-18 · Updated 2026-10-18/19 (typeCounts, swap, availability; server no longer renders the free paper's PDF)
 
 ---
 

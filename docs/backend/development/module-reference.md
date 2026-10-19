@@ -245,7 +245,7 @@ All require `auth, isTeacher`, and `:teacherId` must be the caller's own id (`is
 - `/:teacherId/subject/:subjectId/activity`
 
 ### Question Paper (`src/modules/question-paper/`)
-`POST /`, `POST /public/generate`, `GET /history`, `GET /:paperId/preview`, `GET /:paperId/pdf`, `DELETE /:paperId`
+`POST /`, `POST /public/generate` (20 / hour per network), `POST /public/swap` and `POST /swap` (150 / hour per network, shared), `POST /public/availability` (shares the swap limit), `GET /history`, `GET /:paperId/preview` (owner or SuperAdmin), `GET /:paperId/pdf` (owner or SuperAdmin), `PUT /:paperId` (owner or SuperAdmin), `DELETE /:paperId`
 
 ### AI Assistant (`src/modules/ai-assistant/`)
 All require `auth, isTeacher`:

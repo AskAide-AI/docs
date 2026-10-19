@@ -23,7 +23,8 @@
 | `ChapterTopics` | `content` | Many-to-many: Chapter ↔ Topic relations |
 | `Question` | `questions` | Question bank (MCQ, Fill-in-blanks) |
 | `QuestionGenerationJob` | `questions` | Tracks AI question generation tasks with status, yield, and content-complete flags |
-| `QuestionPaper` | `question-paper` | Generated exam papers with marks, duration, and sections |
+| `PaperQuestion` | `paperquestions` | Written questions for printed papers (assertion-reason, 2/3/5-mark, case-based); draft → live after human review; never shown to students |
+| `QuestionPaper` | `question-paper` | Generated exam papers with marks, duration, sections, and the teacher's edited `items` |
 | `Lead` | `question-paper` | Prospective users from public paper generation |
 | `Session` | `progress` | Practice session tracking |
 | `UserAnswer` | `progress` | Individual answer records with topic linking |

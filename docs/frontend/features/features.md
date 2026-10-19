@@ -471,18 +471,24 @@ Students open the teacher's link and join in one tap. A guest signs up with Goog
 
 ### Teacher Question Paper Generator
 **Status:** ✅ Completed
-**Description:** Teachers and SuperAdmins can generate custom question papers with specific questions, view history, and download PDFs.
-**Pages:** /question-paper, /question-paper/preview/:paperId, /question-paper/history
+**Description:** Teachers and SuperAdmins generate papers from the chapter question banks — exact counts per type (MCQ, fill-in, assertion-reason, 2/3/5-mark, case-based; availability counts shown per type) or a difficulty mix — then edit them in a shared paper editor that looks like a hand-made school paper (exam header, CBSE-style auto instructions, sections A/B with continuous numbering, Set A + Set B, swap / edit / delete / move / add own question, autosave) and download the PDF (print-safe embedded fonts: √, π, ∠, H₂O), the editable Word file and a separate answer key with value points. Written questions come from a separate reviewed store and never reach students.
+**Pages:** /question-paper, /question-paper/preview/:paperId, /question-paper/history, /free-paper-generator (public)
 **Components:** 
+- `PublicPaperGenerator.jsx`
 - `QuestionPaperGenerator.jsx`
-- `QuestionPaperPreview.jsx`
+- `QuestionPaperPreview.jsx` (uses the same editor)
 - `QuestionPaperHistory.jsx`
+- `question-paper/paper/`: `PaperEditor.jsx`, `paperModel.js`, `paperPdf.js`, `paperDocx.js`, `paperStorage.js` (guest drafts kept on the device)
 **API Dependencies:** 
 - POST `/question-paper`
+- POST `/question-paper/public/generate`
+- POST `/question-paper/public/availability`
+- POST `/question-paper/swap` / `/public/swap`
+- PUT `/question-paper/:paperId`
 - GET `/question-paper/history`
 - GET `/question-paper/:paperId/preview`
 - DELETE `/question-paper/:paperId`
-**Added:** April 2026
+**Added:** April 2026 · Updated October 2026 (paper editor, written types, availability, Set A/B)
 
 ---
 

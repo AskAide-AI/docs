@@ -44,7 +44,8 @@ Out of scope: business rules, grading, question generation, persistence (all Bac
 | Google sign-in | `@react-oauth/google` | ^0.13.5 | Only mounted when `VITE_GOOGLE_CLIENT_ID` is set. Buttons go through `auth/FitGoogleLogin.jsx`. |
 | QR codes | `qrcode.react` | ^4.2.0 | Class-link QR in `teacher/TeacherClassLinks.jsx` |
 | Analytics | `@microsoft/clarity` | ^1.0.2 | `src/utils/clarity.js` |
-| PDF | `jspdf` | ^4.2.1 | Dynamic `import('jspdf')` in `PublicPaperGenerator.jsx` only |
+| PDF | `jspdf` | ^4.2.1 | Dynamic `import('jspdf')` in `PublicPaperGenerator.jsx` only; papers embed a DejaVu Serif Condensed subset (`public/fonts/paper/`) so symbols print correctly |
+| Word export | `docx` | 9.8.1 | Lazy; the editable Word question paper | |
 | Build | `vite`, `@vitejs/plugin-react` | ^5.4.18, ^4.4.0 | Bundler and dev server (port 5173) |
 | SEO build | `vite-prerender-plugin` | ^0.5.13 | Static HTML for public routes |
 | PWA | `vite-plugin-pwa` | ^1.2.0 | Workbox service worker |
@@ -126,7 +127,7 @@ src/
 │   ├── profile/           NameEditor, EmailChanger
 │   ├── principal/         Principal analytics screens + shared tabs
 │   ├── progress/          SubjectSummary, ChapterList, ChapterDetailView (AI insights)
-│   ├── question-paper/    generator, preview, history
+│   ├── question-paper/    generator, preview, history + paper/ editor (paperModel, PaperEditor, paperPdf, paperDocx, paperStorage)
 │   ├── seo/               SEOHead + JSON-LD schema components
 │   ├── student/quiz/      quiz list, attempt, result, history
 │   ├── study/             /study practice flow
@@ -489,7 +490,7 @@ The Backend response envelope is `success`, `message`, `data`. Most module funct
 | `auth.api.js` | `signUp`, `login`, `loginWithGoogle`, `logout`, `getPasswordResetToken`, `resetPassword`, `fetchUserDetails`, `updateDisplayPicture`, `removeDisplayPicture`, `updateProfile` | `/authenticate/*`, `/profile/*` | **Only** module that returns Redux thunks, writes localStorage, shows toasts and fires Clarity events. Signup and Google send `acquisition`; every thunk navigates through `postAuthPath()`. `loginWithGoogle` takes `{ accountType }` for teacher sign-up. |
 | `study.api.js` | `studyApi` | `/study/configuration`, `/questions/*`, `/sessions/*`, `/user-answers/*`, `/progress/user/*`, `/topic-progress/*`, `/chapters/*`, `/leaderboard`, `/streaks/*`, `/daily-challenge/*`, `/session-feedback/*`, `/badges/*` | Plain promise functions. Includes admin chapter operations (`createChapter`, `deleteChapters`, `checkRagStatus`, `generateChapterQuestions`, `getChapterQuestionCounts`). `endSessionOnPageExit` is a `keepalive` fetch. `checkNewBadges` maps the Backend's `{ badgeId, title }` objects to IDs. |
 | `quiz.api.js` | `quizApi` | `/quiz/*` | Teacher CRUD, publish, close, clone, analytics, question-bank search. Student `start`, `answer`, `submit`, `result`, `history`. |
-| `questionPaper.api.js` | `questionPaperApi` | `/question-paper/*` | `generatePublicPaper` targets `/question-paper/public/generate` (lead magnet). PDF via blob. |
+| `questionPaper.api.js` | `questionPaperApi` | `/question-paper/*` | `generatePublicPaper` → `/question-paper/public/generate` (lead magnet), `swapQuestion` (`/swap` when signed in, else `/public/swap`), `paperAvailability` → `/public/availability`, `updatePaper` → `PUT /:paperId` (the editor autosaves). Free papers render as PDF (jsPDF, lazy) or editable Word (docx, lazy) in the browser. |
 | `ai-assistant.api.js` | `aiAssistantApi` | `/ai-assistant/*` | Generate, continue, tasks, health, export PDF, conversations CRUD. `streamRequest` uses `authorizedFetch` to `/ai-assistant/stream` (SSE, bypasses axios). |
 | `admin.api.js` | `adminApi` | `/school`, `/teacher`, `/principals`, `/student`, `/teacher-students`, `/classes`, `/subjects/class/*`, `/sections/*`, `/admin/metrics/*`, `/admin/system/llm/*`, `/feedback/admin`, `/campaign/*` | `normalizeListResponse`, `cleanParams`; `getLlmStatus`, `getLlmModels`, `testLlmModel`, `activateLlmModel`, `resetLlmModel` (AI System tab) |
 | `teacher-dashboard.api.js` | `teacherDashboardApi` (re-exports `mockTeacherData`) | `/teacher-dashboard/:teacherId/*` | |
@@ -864,7 +865,7 @@ Clarity events are fired from `auth.api.js` and 13 component files: `Home.jsx` (
 |---|---|
 | Route-level code splitting | `React.lazy` for every route in `App.jsx`, nested lazy routes in `PrincipalDashboard.jsx`, lazy AI widget and onboarding gate |
 | Vendor chunking | `manualChunks` in `vite.config.ts` |
-| Dynamic import of heavy libs | `jspdf` loaded on demand in `PublicPaperGenerator.jsx` |
+| Dynamic import of heavy libs | `jspdf` and `docx` loaded on demand in the question paper editor |
 | Memoisation | `React.memo` on `QuestionHistoryItem` only. `useMemo`/`useCallback` in 33 files. |
 | Polling hygiene | One timer in flight, paused on hidden tabs, bounded counts, no retry storms on timeouts (`useQuestionPolling.js`) |
 | Answer saving | One small request per answer, sent as it is given (`BATCH_SIZE` in `QuestionPractice.jsx` now only numbers the answers) |

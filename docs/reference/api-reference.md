@@ -3276,7 +3276,11 @@ Base: `/api/v1/parent-dashboard/child/:childId/...` — `auth` + `isParent`, rea
 
 Base: `/api/v1/question-paper/`
 
-**Auth:** signed in, except `POST /public/generate`. (The app shows the generator to teachers.)
+**Auth:** signed in, except the `POST /public/*` paths (the free generator is a lead magnet). (The app shows the generator to teachers.)
+
+**Question types.** A paper item's `type` is one of `mcq`, `fillblanks`, `assertion`, `short2`, `short3`, `long5`, `case` (`PaperQuestionType`). `mcq` and `fillblanks` come from the student practice bank (`questions`); the other five are **written paper questions** from the separate `paperquestions` collection — assertion-reason with the four standard CBSE options, 2/3/5-mark answers, and case-based passages with parts (1 + 1 + 2 marks). Written questions are never shown to students and never used by practice, quizzes or SEO pages; only ones a person has reviewed and set `live` are picked. **Marks follow the type** (`mcq`/`fillblanks`/`assertion` = 1, `short2` = 2, `short3` = 3, `long5` = 5, `case` = sum of its parts' marks), like a real paper — not the difficulty.
+
+**Rate limits:** `POST /public/generate` 20 / hour per network; `/swap` and `/public/availability` share one limit of 150 / hour per network.
 
 ---
 
@@ -3306,7 +3310,8 @@ Builds a paper from the question bank of the chosen chapters.
 
 - `difficultyMix` must add up to `totalQuestions`
 - Questions are picked at random per difficulty; if a difficulty runs short, the paper is topped up from any difficulty
-- Marks: Easy 1, Medium 2, Hard 3
+- Marks follow the question type (an MCQ or fill-in is 1 mark however hard it is)
+- `config` may instead send `typeCounts` (exact counts per type, including written types). Written types are picked only from `live` questions in `paperquestions` and are **never** topped up from another type; only `mcq` and `fillblanks` top each other up
 - `duration` (minutes) defaults to 60, `examName` to "Examination", `questionTypes` to `["mcq"]`. With no `instructions`, four standard instructions are added
 
 **Response (201):**
@@ -3338,7 +3343,7 @@ Builds a paper from the question bank of the chosen chapters.
 
 #### POST `/public/generate` — Public Generation
 
-Free sample paper for visitors (no sign-in). The name, school and contact are saved with the paper. At most 10 questions: a larger request is cut to 10 with a 4/4/2 easy/medium/hard mix.
+Free paper for visitors (no sign-in). The name, school and contact are saved with the paper (a `Lead`). The browser builds the PDF/Word file — the server returns only the paper data.
 
 **Request:**
 ```json
@@ -3353,14 +3358,57 @@ Free sample paper for visitors (no sign-in). The name, school and contact are sa
     "classId": "64f1a2b3c4d5e6f7a8b9c0d2",
     "subjectId": "64f3a2b3c4d5e6f7a8b9c0d3",
     "chapterIds": ["64c1a2b3c4d5e6f7a8b9c0d4"],
-    "config": { "totalQuestions": 5, "difficultyMix": { "easy": 2, "medium": 2, "hard": 1 } }
+    "config": {
+      "typeCounts": { "mcq": 10, "fillblanks": 5, "long5": 2 }
+    }
   }
 }
 ```
 
-**Response (201):** `message` "Your free question paper is generated successfully!", `data` is the paper (as above) plus `questions`, the full question objects, so the page can build the PDF.
+- `config.typeCounts` asks for exact counts per type (up to **30 questions** in total). Over the cap, questions are trimmed in the order fill-ins, MCQ, assertion, short2, short3, case, long5. Old clients may still send `totalQuestions` + `difficultyMix` (capped at 30)
+- Written types are picked only from `live` questions in `paperquestions` and are never topped up from another type
 
-**Errors:** 400 (missing `name`, `schoolName` or `contactInfo`; `INVALID_MIX`), 404 (`NO_QUESTIONS`)
+**Response (201):** the shortfall notes — plain-English messages such as *"Only 1 five-mark question is ready for these chapters."* — are joined into the response `message` (or *"Your free question paper is ready!"* when there were no shortfalls). `data` is the paper, which carries `questions` (the full question objects, in paper order, in the bank-question shape so the page can build the PDF; written questions carry `markingScheme` and, for case-based, `parts`) and the same `notes`. The exam name defaults to "Class Test" on free papers.
+
+**Errors:** 400 (missing `name`, `schoolName` or `contactInfo`; `INVALID_MIX`), 404 (`NO_QUESTIONS`), 429 (over the network limit)
+
+---
+
+#### POST `/public/availability` — Ready Counts per Type
+
+No sign-in. Tells the free generator how many questions of each type the chosen chapters have, so the teacher picks realistic counts.
+
+**Request:** `{ "chapterIds": ["64c1a2b3c4d5e6f7a8b9c0d4"] }` — 1–50 chapters
+
+**Response (200):** `data` is `PaperAvailability` — counts for all seven types (0 when none):
+
+```json
+{ "mcq": 42, "fillblanks": 18, "assertion": 6, "short2": 8, "short3": 5, "long5": 2, "case": 1 }
+```
+
+Written types count only `live` questions. **Shares the swap rate limit** (150 / hour per network).
+
+**Errors:** 400 (empty or too many chapters), 429
+
+---
+
+#### POST `/swap` and `POST /public/swap` — One Replacement Question
+
+`/swap` needs auth; `/public/swap` doesn't (both share the 150 / hour per network limit). Takes a `PaperSwapRequest` and returns one question of the same type from the same chapters, at the same difficulty first, or `404` with code `NO_MORE_QUESTIONS`.
+
+**Request:**
+```json
+{
+  "chapterIds": ["64c1a2b3c4d5e6f7a8b9c0d4"],
+  "questionType": "short2",
+  "difficulty": "Easy",
+  "excludeIds": ["64q1a2b3c4d5e6f7a8b9c0d1"]
+}
+```
+
+`excludeIds` (up to 150) are the questions already on the paper, so the same question is never returned twice.
+
+**Response (200):** `{ "success": true, "data": <one question in the bank-question shape> }` — for a written type it is a `live` question from `paperquestions` in the same shape, carrying `markingScheme` and `parts`.
 
 ---
 
@@ -3395,9 +3443,9 @@ The signed-in user's papers, newest first. Deleted papers are left out.
 
 #### GET `/:paperId/preview`
 
-The paper with its class, subject and chapters populated, plus `questions` (the full question objects).
+The paper with its class, subject and chapters populated, plus `questions` (the full question objects). Papers made with the paper editor also return `items` (the teacher's edited paper, in print order) and `header`.
 
-**Params:** `paperId`
+**Params:** `paperId` · **Access:** the paper's owner or a SuperAdmin — another teacher's paper is a `404`
 
 **Response (200):** `{ "success": true, "data": { "_id": "64qp1...", "title": "Unit Test 1", "questions": [ { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": "Easy", "...": "..." } ], "...": "..." } }`
 
@@ -3407,13 +3455,56 @@ The paper with its class, subject and chapters populated, plus `questions` (the 
 
 #### GET `/:paperId/pdf`
 
-Download the paper as an A4 PDF (with the answer key when `includeAnswerKey` is on).
+Download the paper as an A4 PDF (with the answer key when `includeAnswerKey` is on; written questions carry their model solution and value points in the key).
 
-**Params:** `paperId`
+**Params:** `paperId` · **Access:** the paper's owner or a SuperAdmin
 
 **Response:** PDF binary (`application/pdf`), `Content-Disposition: attachment; filename="question-paper-<paperId>.pdf"`
 
 **Errors:** 404 (`NOT_FOUND`), 500 (`PDF_GENERATION_FAILED`)
+
+---
+
+#### PUT `/:paperId` — Save the Teacher's Edited Paper
+
+Owner or SuperAdmin. The paper editor autosaves here. The body replaces the paper's header and question list; the server recomputes `totalMarks` and `questionIds` from `items` (always omitting a `questionId` whose `source` is `own`, and keeping only practice-bank questions in `questionIds`).
+
+**Request:**
+```json
+{
+  "title": "Unit Test 1",
+  "examName": "Half-Yearly",
+  "duration": 90,
+  "instructions": ["All questions are compulsory."],
+  "header": { "session": "2026-27", "classSection": "10-B", "examDate": "19 Oct 2026", "autoInstructions": true },
+  "items": [
+    {
+      "source": "bank",
+      "questionId": "64q1a2b3c4d5e6f7a8b9c0d1",
+      "type": "mcq",
+      "text": "The SI unit of force is",
+      "options": ["newton", "joule", "watt", "pascal"],
+      "answer": "newton",
+      "marks": 1
+    },
+    {
+      "source": "bank",
+      "questionId": "64q2a2b3c4d5e6f7a8b9c0d2",
+      "type": "long5",
+      "text": "Explain the working of an electric motor.",
+      "answer": "The working principle ... (model solution)",
+      "markingScheme": [{ "point": "Diagram of the motor", "marks": 1 }, { "point": "Explanation of the split ring", "marks": 2 }],
+      "marks": 5
+    }
+  ]
+}
+```
+
+Item rules: `questionId` is required for `source: "bank"` items (for written types it points at `paperquestions`) and must not be sent for `source: "own"`; `text` up to 3000 chars; `options` 2–6 for `mcq` and `assertion`, **exactly none** for other types; `answer` up to 3000 chars; `markingScheme` up to 12 rows (`{ point, marks }`, marks 0.5–10 in half-mark steps); `parts` (case-based only) 1–5 rows (`{ text, marks, answer, markingScheme }`); `marks` 1–10; 1–100 items.
+
+**Response (200):** `"message": "Paper saved"`, `data` is the saved paper.
+
+**Errors:** 404 (`NOT_FOUND`: no such paper, or not yours), 400 (validation)
 
 ---
 
