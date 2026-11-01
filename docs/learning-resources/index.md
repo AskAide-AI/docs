@@ -1,3 +1,9 @@
+---
+title: "AskAide AI Learning Resources"
+description: "Newcomer guides for AskAide AI: what each learning guide covers, how to use them, and how the pieces fit together across the stack."
+sidebar_position: 640
+---
+
 # AskAide AI Learning Resources
 
 Welcome! These guides help anyone learn the technologies, concepts, and architecture behind each of our three core services. Whether you are onboarding as a new developer, switching stacks, or just want to understand how something works, these docs are for you.

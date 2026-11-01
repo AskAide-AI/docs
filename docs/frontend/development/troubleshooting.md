@@ -1,3 +1,9 @@
+---
+title: "Frontend Troubleshooting Guide"
+description: "Fixes for common frontend problems: build and dev server failures, API and data issues, routing, state management, and styling glitches."
+sidebar_position: 240
+---
+
 # Frontend Troubleshooting Guide
 
 Common issues and solutions when working with the AskAideAI frontend.

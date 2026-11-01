@@ -1,3 +1,9 @@
+---
+title: "AI Service Learning Guide"
+description: "Learn the AI stack as used by AskAide AI: FastAPI, Qdrant vector search, embeddings, RAG concepts, and the service project structure."
+sidebar_position: 670
+---
+
 # AI Service Learning Guide
 
 A comprehensive guide to understanding the **AskAide AI Service** -- its tech stack, core AI/RAG concepts, architecture, and the key technologies used. Whether you are a beginner getting started or a developer ramping up on this project, this guide points you to what you need to know.

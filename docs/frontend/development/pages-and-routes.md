@@ -1,3 +1,9 @@
+---
+title: "Pages and Routes"
+description: "Every route in the SPA: public, protected, and role-protected paths, route guards, and how lazy loading maps pages to URLs."
+sidebar_position: 120
+---
+
 # Pages and Routes
 
 > Complete reference of all pages and routing in the AskAideAI frontend.

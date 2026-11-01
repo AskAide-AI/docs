@@ -1,3 +1,9 @@
+---
+title: "Quiz Mode - Implementation Plan"
+description: "How quiz mode is implemented: design decisions, database models, backend routes, response structures, and the implementation order."
+sidebar_position: 330
+---
+
 # Quiz Mode - Implementation Plan
 
 > **Target:** K-12 Teachers | **Priority:** Async-first (Live mode Phase 2) | **Student Access:** Mobile-first

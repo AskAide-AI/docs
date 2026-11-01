@@ -1,3 +1,9 @@
+---
+title: "AI Service Testing Strategy"
+description: "The AI service testing strategy: current coverage, how to run the pytest suite, coverage gaps, and the patterns new tests should follow."
+sidebar_position: 550
+---
+
 # AI Service Testing Strategy
 
 Current status and recommended approach for testing the AskAideAI AI Service.

@@ -1,3 +1,9 @@
+---
+title: "Testing Documentation"
+description: "How the frontend is tested: the testing stack, test structure and commands, the priority matrix, and what is covered today."
+sidebar_position: 210
+---
+
 # Testing Documentation
 
 > Testing strategy and how to run tests for the AskAideAI frontend.

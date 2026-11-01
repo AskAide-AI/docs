@@ -1,3 +1,9 @@
+---
+title: "Backend Architecture"
+description: "How the Express backend is organized: request lifecycle, middleware chain, the module pattern, the shared layer, and background jobs."
+sidebar_position: 300
+---
+
 # Backend Architecture
 
 ## Request Lifecycle

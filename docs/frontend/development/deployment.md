@@ -1,3 +1,9 @@
+---
+title: "Deployment Guide"
+description: "How the frontend ships: the production build, environment variables, hosting, the GitHub Actions pipeline, and release checklists."
+sidebar_position: 230
+---
+
 # Deployment Guide
 
 > How to build and deploy the AskAideAI frontend application.

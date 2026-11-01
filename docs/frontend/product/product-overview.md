@@ -1,3 +1,9 @@
+---
+title: "Product Context: AskAide AI"
+description: "Product context for AskAide AI: who it serves, the core user journeys, design principles, and the anti-patterns to avoid when contributing."
+sidebar_position: 80
+---
+
 # Product Context: AskAide AI
 
 ## Core Identity

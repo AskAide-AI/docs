@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Testing"
+description: "How the backend is tested: the Jest stack, test structure, running tests with ESM support, the mocking pattern, and coverage by module."
+sidebar_position: 390
+---
+
 # AskAide AI - Testing
 
 **Last Updated:** 2026-10-10

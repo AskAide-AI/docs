@@ -1,3 +1,9 @@
+---
+title: "Styling Guide"
+description: "How styling works in the SPA: theme configuration, color palette, typography, responsive breakpoints, and the common patterns to reuse."
+sidebar_position: 160
+---
+
 # Styling Guide
 
 > Styling approach and guidelines for the AskAideAI frontend.

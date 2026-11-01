@@ -1,3 +1,9 @@
+---
+title: "Backend Module Reference"
+description: "Reference for every backend module: what each module owns, its routes and services, and the business rules it enforces for every role."
+sidebar_position: 360
+---
+
 # Backend Module Reference
 
 There are 26 modules. All follow `src/modules/<name>/` with `controllers`, `services`, `validators`, `routes`, `models` and `tests` subfolders (not every module has all of them). Paths below are relative to `/api/v1`.

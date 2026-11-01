@@ -1,3 +1,9 @@
+---
+title: "State Management"
+description: "Redux Toolkit in the frontend: store structure, slices, provider setup, and the guidelines for when state goes in the store or stays local."
+sidebar_position: 140
+---
+
 # State Management
 
 > How global state is managed in the AskAideAI frontend application.

@@ -1,3 +1,9 @@
+---
+title: "Frontend"
+description: "Landing page for the AskAide AI frontend — tech stack, architecture at a glance, key feature areas, and how it calls the AI service."
+sidebar_position: 20
+---
+
 # Frontend
 
 **React 18 + Vite SPA** — the student, teacher, and admin user interface.

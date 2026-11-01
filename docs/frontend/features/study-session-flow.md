@@ -1,3 +1,9 @@
+---
+title: "Frontend Study Session Flow - Automation Testing Guide"
+description: "How a study session runs in the UI: selectors, the question polling state machine, batch responses, and the mastered state — for test automation."
+sidebar_position: 60
+---
+
 # Frontend Study Session Flow - Automation Testing Guide
 
 This document provides **CSS selectors** and flow information for automating the study session on the AskAideAI frontend platform.

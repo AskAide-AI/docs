@@ -1,3 +1,9 @@
+---
+title: "Frontend — Low-Level Design"
+description: "Low-level design of the frontend: scope, code structure, routing, component and state design, and how each screen talks to the backend."
+sidebar_position: 40
+---
+
 # Frontend — Low-Level Design
 
 > **Verified against:** `frontend` @ `75ce259` (main), 2026-09-26; routing, shell, API layer, token refresh, study session, SEO, hooks, storage and testing re-checked at `c2aa6a2`, 2026-10-10. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md).

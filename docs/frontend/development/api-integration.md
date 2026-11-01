@@ -1,3 +1,9 @@
+---
+title: "API Integration"
+description: "How the frontend talks to the backend: the axios client, endpoint tables, service files, response normalization, and usage examples."
+sidebar_position: 170
+---
+
 # API Integration
 
 > How the frontend connects to backend APIs.

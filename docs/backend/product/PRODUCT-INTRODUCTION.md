@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — Product Introduction"
+description: "A plain-language introduction to AskAide AI: what the product is, who uses it, how it works, and the content structure behind it."
+sidebar_position: 460
+---
+
 # AskAide AI — Product Introduction
 
 > **Your AI-Powered Learning Companion for Students, Teachers, and Schools**

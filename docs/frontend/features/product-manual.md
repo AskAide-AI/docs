@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Product Manual"
+description: "User-level manual for AskAide AI: platform capabilities, each role and its workflows, and the technical context AI assistants need."
+sidebar_position: 50
+---
+
 # AskAide AI - Product Manual
 
 :::info Canonical end-user guide

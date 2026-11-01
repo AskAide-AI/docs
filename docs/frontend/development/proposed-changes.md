@@ -1,3 +1,9 @@
+---
+title: "Proposed Changes & Product Roadmap"
+description: "Status of proposed frontend changes: what shipped from the earlier list, what is still proposed, the technical backlog, and architecture decisions."
+sidebar_position: 250
+---
+
 # Proposed Changes & Product Roadmap
 
 > **AskAideAI EdTech Platform**

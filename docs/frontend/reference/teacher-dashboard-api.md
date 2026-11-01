@@ -1,3 +1,9 @@
+---
+title: "Teacher Dashboard - Frontend API Documentation"
+description: "Per-feature API reference for the teacher dashboard: assignments, subject dashboards, student lists, chapter analytics, and progress endpoints."
+sidebar_position: 280
+---
+
 # Teacher Dashboard - Frontend API Documentation
 
 > **Base URL:** `http://localhost:4000/api/v1/teacher-dashboard`

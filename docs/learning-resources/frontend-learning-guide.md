@@ -1,3 +1,9 @@
+---
+title: "Frontend Learning Guide"
+description: "Learn the frontend stack as used by AskAide AI: React, Redux Toolkit, Vite, styling, and the project structure that puts them together."
+sidebar_position: 650
+---
+
 # Frontend Learning Guide
 
 A comprehensive guide to understanding the **AskAide AI Frontend** -- its tech stack, concepts, architecture, and the key technologies used. Whether you are a beginner getting started or a developer ramping up on this project, this guide points you to what you need to know.

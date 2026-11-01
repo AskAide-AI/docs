@@ -1,3 +1,9 @@
+---
+title: "Backend"
+description: "Landing page for the AskAide AI backend — tech stack, architecture at a glance, the response format, its modules, and AI integration."
+sidebar_position: 290
+---
+
 # Backend
 
 **Express.js + MongoDB** — API server for the AskAide AI learning platform. Handles authentication, content management, question generation, quiz lifecycle, progress tracking, teacher tools, invites and challenges, and in-app notifications.

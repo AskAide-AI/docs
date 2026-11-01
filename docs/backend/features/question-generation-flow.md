@@ -1,3 +1,9 @@
+---
+title: "Question Generation & Endless-Practice Flow"
+description: "The cross-service contract for serving and generating practice questions: polling, the backend state machine, and yield-based mastery."
+sidebar_position: 320
+---
+
 # Question Generation & Endless-Practice Flow
 
 Cross-service reference for how study-session questions are served, generated,

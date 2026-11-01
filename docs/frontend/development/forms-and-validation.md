@@ -1,3 +1,9 @@
+---
+title: "Forms and Validation"
+description: "How forms are built and validated: the React Hook Form pattern, field errors, surviving server rejection, and the sign-up walkthrough."
+sidebar_position: 150
+---
+
 # Forms and Validation
 
 > How forms are handled and validated in the AskAideAI frontend.

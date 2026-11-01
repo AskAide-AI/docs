@@ -1,3 +1,9 @@
+---
+title: "Frontend Conventions"
+description: "The coding conventions every frontend change follows: API calls, styling, forms and controls, state, routing, and tests."
+sidebar_position: 110
+---
+
 # Frontend Conventions
 
 The rules the frontend code follows today. When in doubt, copy an existing file that already does it.

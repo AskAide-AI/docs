@@ -1,3 +1,9 @@
+---
+title: "AI Service — Low-Level Design"
+description: "Low-level design of the AI service: scope, tech stack, package structure, component and data design, API surface, and operations."
+sidebar_position: 490
+---
+
 # AI Service — Low-Level Design
 
 > **Verified against:** `ai-service` @ `e6043c7` (main), 2026-09-26. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md).

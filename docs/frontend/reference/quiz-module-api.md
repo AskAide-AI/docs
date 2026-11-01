@@ -1,3 +1,9 @@
+---
+title: "Quiz Module - Frontend API Documentation"
+description: "Per-feature API reference for the quiz module: data models, endpoints, workflow diagrams, and error codes as the frontend consumes them."
+sidebar_position: 270
+---
+
 # Quiz Module - Frontend API Documentation
 
 This document provides comprehensive documentation for the Quiz Module APIs, including all endpoints, request/response formats, data models, and workflow diagrams to help frontend developers integrate the quiz functionality.

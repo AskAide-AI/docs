@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Dependencies"
+description: "What the backend depends on: core packages, validation and schema libraries, file handling, logging, email, and API documentation."
+sidebar_position: 400
+---
+
 # AskAide AI - Dependencies
 
 **Last Updated:** 2026-06-26

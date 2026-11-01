@@ -1,3 +1,9 @@
+---
+title: "Component Library"
+description: "Tour of the reusable component library: UI primitives, notification, profile, and layout components, and how to share and compose them."
+sidebar_position: 130
+---
+
 # Component Library
 
 > Complete reference of all reusable components in the AskAideAI frontend.

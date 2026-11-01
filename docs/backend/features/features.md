@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Features"
+description: "Catalog of shipped backend capabilities: authentication, content management, question paper generation, referrals, and the demo school."
+sidebar_position: 340
+---
+
 # AskAide AI - Features
 
 **Last Updated:** 2026-10-18

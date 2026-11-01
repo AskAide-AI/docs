@@ -1,3 +1,9 @@
+---
+title: "AI Service Troubleshooting Guide"
+description: "Fixes for common AI service problems: server startup, LLM provider issues, embedding failures, document upload, search, and memory limits."
+sidebar_position: 540
+---
+
 # AI Service Troubleshooting Guide
 
 Common issues and solutions when working with the AskAideAI AI Service.

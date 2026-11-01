@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Authentication"
+description: "How backend authentication works: JWT token structure, login and refresh flows, protected routes, RBAC role guards, and password security."
+sidebar_position: 370
+---
+
 # AskAide AI - Authentication
 
 **Last Updated:** 2026-10-10

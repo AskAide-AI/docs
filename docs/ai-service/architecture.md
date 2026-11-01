@@ -1,3 +1,9 @@
+---
+title: "AI Service Architecture"
+description: "How the FastAPI RAG service is layered: entry point, service layer, Qdrant database layer, LLM and embedding layers, and pipelines."
+sidebar_position: 480
+---
+
 # AI Service Architecture
 
 ## Entry Point

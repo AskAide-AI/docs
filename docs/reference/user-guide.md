@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — End-User Guide"
+description: "How to use AskAide AI day to day, role by role: getting started plus guides for students, teachers, parents, and administrators."
+sidebar_position: 600
+---
+
 # AskAide AI — End-User Guide
 
 Welcome to **AskAide AI**, the AI-powered education platform designed for Indian students in classes 6–12. This guide walks you through every feature based on your role.

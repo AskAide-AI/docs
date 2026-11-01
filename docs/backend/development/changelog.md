@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Changelog"
+description: "Chronological changelog for the backend: what changed in each release, from the first version to the latest unreleased work."
+sidebar_position: 430
+---
+
 # AskAide AI - Changelog
 
 All notable changes to this project are documented in this file.

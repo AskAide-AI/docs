@@ -1,3 +1,9 @@
+---
+title: "AI Service"
+description: "Landing page for the AI service — tech stack, architecture, core services, the processing pipeline, design rules, and its endpoints."
+sidebar_position: 470
+---
+
 # AI Service
 
 **FastAPI + Python** — the AI backend powering RAG (Retrieval-Augmented Generation), semantic search, question generation, and learning insights for AskAide AI.

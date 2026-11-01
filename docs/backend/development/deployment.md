@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Deployment"
+description: "How the backend ships: the build process, environment configuration, hosting on Render, pre- and post-deployment checklists, and monitoring."
+sidebar_position: 410
+---
+
 # AskAide AI - Deployment
 
 **Last Updated:** 2026-05-04

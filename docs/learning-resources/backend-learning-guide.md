@@ -1,3 +1,9 @@
+---
+title: "Backend Learning Guide"
+description: "Learn the backend stack as used by AskAide AI: Node.js, Express, MongoDB and Mongoose, JWT auth, and the project API conventions."
+sidebar_position: 660
+---
+
 # Backend Learning Guide
 
 A comprehensive guide to understanding the **AskAide AI Backend** -- its tech stack, concepts, architecture, and the key technologies used. Whether you are a beginner getting started or a developer ramping up on this project, this guide points you to what you need to know.

@@ -1,3 +1,9 @@
+---
+title: "Backend Troubleshooting Guide"
+description: "Fixes for common backend problems: server startup, API errors, database connectivity, AI integration, testing, and environment issues."
+sidebar_position: 420
+---
+
 # Backend Troubleshooting Guide
 
 Common issues and solutions when working with the AskAideAI backend.

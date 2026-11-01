@@ -1,3 +1,9 @@
+---
+title: "Accessibility Guidelines"
+description: "Accessibility standards for the UI: keyboard navigation, semantic HTML, ARIA usage, color contrast, and accessible confirmation dialogs."
+sidebar_position: 190
+---
+
 # Accessibility Guidelines
 
 > Accessibility standards and guidelines for the AskAideAI frontend.

@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — Cross-Repository Map"
+description: "Map of how the three repos connect: repository locations, integration points, shared data flows, and the environment variables on each side."
+sidebar_position: 510
+---
+
 # AskAide AI — Cross-Repository Map
 
 This document maps all three AskAide AI repositories, their locations, architecture, and integration points.

@@ -1,3 +1,9 @@
+---
+title: "AskAideAI - Project Overview"
+description: "Project overview of the frontend: technology stack, architecture, key features, API integration patterns, and the current state."
+sidebar_position: 90
+---
+
 # AskAideAI - Project Overview
 
 > **EdTech Platform for AI-Powered Adaptive Learning**

@@ -1,3 +1,9 @@
+---
+title: "Shared Contracts"
+description: "Why shared contracts exist: the files that define cross-service request and response shapes, the response envelope, and the workflow."
+sidebar_position: 560
+---
+
 # Shared Contracts
 
 TypeScript type definitions, JSON Schema mirrors, and API endpoint documentation shared across the Frontend, Backend, and AI Service repositories.

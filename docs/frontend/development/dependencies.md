@@ -1,3 +1,9 @@
+---
+title: "Dependencies"
+description: "What the frontend depends on: core and dev dependencies, bundle-size impact, and the rules for adding a new dependency safely."
+sidebar_position: 220
+---
+
 # Dependencies
 
 > Track all external dependencies in the AskAideAI frontend.

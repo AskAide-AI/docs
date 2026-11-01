@@ -21,11 +21,15 @@
 //   3. Fenced code blocks (``` / ~~~) pass through untouched.
 import { createHash } from 'node:crypto';
 
+// sidebar_position 560 = the mirror's index in the hand-maintained sidebars.js
+// order (position = index+1, gaps of 10) — same convention as the frontmatter
+// pass in scripts/apply-frontmatter.mjs. If the sidebars order changes, update
+// this constant and re-run npm run sync:contracts.
 export const MIRROR_FRONTMATTER = [
   '---',
   'title: AskAide AI Platform — API Contracts',
   'description: Canonical API contracts for the Backend and AI Service — endpoint catalog, auth model, token rules, and the shared response envelope.',
-  'sidebar_position: 20',
+  'sidebar_position: 560',
   '---',
   '',
   '',

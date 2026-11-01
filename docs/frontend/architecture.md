@@ -1,3 +1,9 @@
+---
+title: "Frontend Architecture"
+description: "How the React SPA is put together: routing in App.jsx, the API layer, Redux state management, and the conventions that hold it together."
+sidebar_position: 30
+---
+
 # Frontend Architecture
 
 ## Routing (`src/App.jsx`)

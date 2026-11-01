@@ -1,3 +1,9 @@
+---
+title: "SEO & GEO Checklist - AskAideAI"
+description: "The SEO and GEO checklist for the public site: infrastructure in place, page-level status, technical SEO, and India-focused geographic SEO."
+sidebar_position: 200
+---
+
 # SEO & GEO Checklist - AskAideAI
 
 > Tracking SEO (Search Engine Optimization) and GEO (Generative Engine Optimization) implementation status.

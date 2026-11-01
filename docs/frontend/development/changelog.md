@@ -1,3 +1,9 @@
+---
+title: "Changelog"
+description: "Chronological changelog for the frontend: what changed in each release, from the first version to the latest unreleased work."
+sidebar_position: 260
+---
+
 # Changelog
 
 > All notable changes to the AskAideAI frontend will be documented in this file.

@@ -1,7 +1,7 @@
 ---
 title: AskAide AI Platform — API Contracts
 description: Canonical API contracts for the Backend and AI Service — endpoint catalog, auth model, token rules, and the shared response envelope.
-sidebar_position: 20
+sidebar_position: 560
 ---
 
 # AskAide AI Platform — API Contracts

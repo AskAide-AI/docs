@@ -1,3 +1,9 @@
+---
+title: "Performance Optimization"
+description: "Frontend performance work: current targets, Vite optimizations, code splitting, memoization, image handling, and layout stability."
+sidebar_position: 180
+---
+
 # Performance Optimization
 
 > Performance optimization strategies for the AskAideAI frontend.

@@ -1,3 +1,9 @@
+---
+title: "AskAide AI Documentation"
+description: "Start here: what AskAide AI is, how its three services fit together, and where to find setup guides, feature docs, and API reference."
+sidebar_position: 10
+---
+
 # AskAide AI Documentation
 
 Welcome to the AskAide AI knowledge base. This site contains documentation for all services in the monorepo.

@@ -1,3 +1,9 @@
+---
+title: "Features"
+description: "Catalog of shipped frontend features: authentication, the AI study experience, progress analytics, sharing and referrals, and dashboards."
+sidebar_position: 70
+---
+
 # Features
 
 > Complete list of all user-facing features in the AskAideAI frontend application.

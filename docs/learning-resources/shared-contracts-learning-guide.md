@@ -1,3 +1,9 @@
+---
+title: "Shared Contracts Learning Guide"
+description: "Learn what shared contracts are and how the services stay in sync: the files, the schema mirror, and how changes flow between repos."
+sidebar_position: 680
+---
+
 # Shared Contracts Learning Guide
 
 A guide to understanding the **AskAide AI Shared Contracts** -- the contract-first API layer that keeps our three services in sync.

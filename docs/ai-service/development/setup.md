@@ -1,3 +1,9 @@
+---
+title: "RAG System API"
+description: "Set up the AI service locally: prerequisites, environment variables, Qdrant setup, running the FastAPI server, and configuration options."
+sidebar_position: 520
+---
+
 # RAG System API
 
 :::info Full-stack setup lives in Getting Started

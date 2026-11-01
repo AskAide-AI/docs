@@ -1,3 +1,9 @@
+---
+title: "API Reference — AskAide AI"
+description: "The full API reference for both services: authentication, every backend and AI service endpoint with request and response examples, and errors."
+sidebar_position: 620
+---
+
 # API Reference — AskAide AI
 
 > Comprehensive reference for all Backend and AI Service endpoints.

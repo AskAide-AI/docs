@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Database Schema"
+description: "The Mongoose schema reference: core models, question and answer models, progress tracking, relationships, and supporting models."
+sidebar_position: 450
+---
+
 # AskAide AI - Database Schema
 
 **Last Updated:** 2026-10-18  

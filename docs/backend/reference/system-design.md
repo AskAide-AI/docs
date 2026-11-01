@@ -1,3 +1,9 @@
+---
+title: "System Design Overview: AskAide Backend"
+description: "System design of the backend: database design, code architecture, API design, the progress tracking system, and external integrations."
+sidebar_position: 440
+---
+
 # System Design Overview: AskAide Backend
 
 ## 1. Database Design

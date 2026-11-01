@@ -1,3 +1,9 @@
+---
+title: "Cross-Service Integration Guide — AskAide AI"
+description: "How the services integrate: architecture, every cross-service integration point, data flows, request formats, timeouts, and error handling."
+sidebar_position: 630
+---
+
 # Cross-Service Integration Guide — AskAide AI
 
 This document covers how the three services (Frontend, Backend, AI Service) integrate, communicate, and maintain consistency across the AskAide AI platform.

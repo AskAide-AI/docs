@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — EdTech Frontend"
+description: "Set up the AskAide AI frontend locally: prerequisites, install, environment variables, and the commands to run and build the React app."
+sidebar_position: 100
+---
+
 # AskAide AI — EdTech Frontend
 
 :::info Full-stack setup lives in Getting Started

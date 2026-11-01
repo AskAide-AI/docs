@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — Developer Contribution Guide"
+description: "How to contribute across the three repos: repository layout, coding standards, and end-to-end recipes for features, endpoints, and components."
+sidebar_position: 610
+---
+
 # AskAide AI — Developer Contribution Guide
 
 Welcome to the AskAide AI monorepo. This guide covers everything you need to know to contribute effectively.

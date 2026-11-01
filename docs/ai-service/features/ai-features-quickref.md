@@ -1,3 +1,9 @@
+---
+title: "AI Service Quick Reference"
+description: "Quick reference for the AI service Python API: enhanced search, learning paths, adaptive practice, Socratic discussion, concept extraction."
+sidebar_position: 500
+---
+
 # AI Service Quick Reference
 
 > **⚠️ IMPORTANT — Internal Python API Only**

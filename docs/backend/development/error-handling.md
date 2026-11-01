@@ -1,3 +1,9 @@
+---
+title: "AskAide AI - Error Handling"
+description: "The backend error-handling contract: response format, HTTP status codes, common error scenarios, Mongoose errors, and logging."
+sidebar_position: 380
+---
+
 # AskAide AI - Error Handling
 
 **Last Updated:** 2026-10-10

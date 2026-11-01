@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — EdTech Backend"
+description: "Set up the AskAide AI backend locally: prerequisites, MongoDB and environment setup, database initialization, and the commands to run it."
+sidebar_position: 350
+---
+
 # AskAide AI — EdTech Backend
 
 :::info Full-stack setup lives in Getting Started

@@ -1,3 +1,9 @@
+---
+title: "Backend — Low-Level Design"
+description: "Low-level design of the backend: scope, code structure, request pipeline, module and data design, and cross-cutting auth and error handling."
+sidebar_position: 310
+---
+
 # Backend — Low-Level Design
 
 > **Verified against:** `Backend` @ `bf8e7df` (main), 2026-09-26; updated for changes through `9934c80`, 2026-10-10. See also: [System HLD](../reference/hld.md), [Architecture](./architecture.md), [Database Schema](./reference/database-schema.md).

@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — RAG Evaluation & Benchmarking"
+description: "How the RAG evaluation and benchmarking suite works: quality eval with RAGAS, performance benchmarks, and the embedding A/B experiment."
+sidebar_position: 530
+---
+
 # AskAide AI — RAG Evaluation & Benchmarking
 
 Two offline tools for measuring the RAG pipeline. **Neither is imported by the

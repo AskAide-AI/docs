@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — Getting Started"
+description: "Get the whole platform running on one machine: prerequisites, infrastructure services, and setup for backend, AI service, and frontend."
+sidebar_position: 590
+---
+
 # AskAide AI — Getting Started
 
 This guide walks you through setting up the full AskAide AI stack locally: a React frontend, an Express.js backend, and a FastAPI AI service, backed by MongoDB, Qdrant, and Redis.

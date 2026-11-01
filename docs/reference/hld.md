@@ -1,3 +1,9 @@
+---
+title: "AskAide AI — System High-Level Design"
+description: "The cross-service high-level design: system context, container and deployment views, data architecture, and the interfaces between services."
+sidebar_position: 580
+---
+
 # AskAide AI — System High-Level Design
 
 > **Verified against:** `frontend` @ `75ce259`, `Backend` @ `bf8e7df`, `ai-service` @ `e6043c7` (all `main`), 2026-09-26. Updated for the Backend and frontend changes through `Backend` @ `3b4489a` and `frontend` @ `ee0b6db` (2026-10-10): referrals, challenge a friend, teacher class links, in-app notifications, profile name and email change, single-use refresh tokens, per-answer saving.
