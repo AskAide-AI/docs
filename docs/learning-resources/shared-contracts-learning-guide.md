@@ -76,9 +76,9 @@ shared-contracts/
 ### AskAide AI Specific
 | Resource | Location |
 |----------|----------|
-| API Definitions (all endpoints) | `shared-contracts/api-definitions.md` |
-| Data Models (TypeScript) | `shared-contracts/data-models.ts` |
-| Data Models (JSON Schema) | `shared-contracts/data-models.schema.json` |
+| API Definitions (all endpoints) | [API Contracts](/docs/shared-contracts/api-definitions) — auto-synced from the shared-contracts repository |
+| Data Models (TypeScript) | In the shared-contracts repository — `data-models.ts` |
+| Data Models (JSON Schema) | In the shared-contracts repository — `data-models.schema.json` |
 
 ### External
 | Topic | Resource |
