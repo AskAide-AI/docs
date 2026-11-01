@@ -50,7 +50,7 @@ Each guide provides:
 ### If you are ramping up on the project
 1. Skim the Tech Stack and Core Concepts sections
 2. Study the Architecture & Project Structure to understand how files are organized
-3. Refer to the AskAide-specific resources in the Reference Material table to find internal docs
+3. Refer to the AskAide-specific resources in the Reference Material table — each link opens the page on this site
 
 ### If you need a quick reference
 - Use the **Reference Material** section at the end of each guide for quick links to docs
@@ -70,7 +70,7 @@ Browser -> Frontend (:5173) -> Backend (:4000) -> AI Service (:8000)
 - All AI requests proxy through the **Backend**
 - The **AI Service** requires an `x-api-key` header for authentication
 - The **Backend** and **AI Service** both talk to **MongoDB**
-- The **AI Service** also uses **Qdrant** (vector DB) and **Redis** (cache)
+- The **AI Service** also uses **Qdrant** (vector DB) and **Redis** (pub/sub and key–value storage)
 
 Understanding this flow is critical when debugging issues or adding new AI features.
 

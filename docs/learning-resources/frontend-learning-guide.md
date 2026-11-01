@@ -200,13 +200,12 @@ Implemented by toggling a `dark` class on a parent element. Tailwind then applie
 ### AskAide AI Specific
 | Resource | Location |
 |----------|----------|
-| Project README | `/README.md` |
-| Frontend Architecture | AskAide Docs: `docs/frontend/architecture.md` |
-| Getting Started | AskAide Docs: `docs/reference/getting-started.md` |
-| API Integration | AskAide Docs: `docs/frontend/development/api-integration.md` |
-| Styling Guide | AskAide Docs: `docs/frontend/development/styling-guide.md` |
-| Component Library | AskAide Docs: `docs/frontend/development/component-library.md` |
-| Backend API Docs | AskAide Docs: `docs/shared-contracts/api-definitions.md` |
+| Frontend Architecture | [Frontend Architecture](/docs/frontend/architecture) |
+| Getting Started | [Getting Started](/docs/reference/getting-started) |
+| API Integration | [API Integration](/docs/frontend/development/api-integration) |
+| Styling Guide | [Styling Guide](/docs/frontend/development/styling-guide) |
+| Component Library | [Component Library](/docs/frontend/development/component-library) |
+| Backend API Docs | [API Contracts](/docs/shared-contracts/api-definitions) |
 
 ### Recommended Learning Path
 1. **Learn React fundamentals** (JSX, hooks, props, state)

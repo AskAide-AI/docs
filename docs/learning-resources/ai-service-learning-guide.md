@@ -210,12 +210,11 @@ All endpoints (except `/ping`, `/health`) are rate-limited to 200 requests per 6
 ### AskAide AI Specific
 | Resource | Location |
 |----------|----------|
-| AI Service README | `ai-service/README.md` |
-| AI Service Architecture | AskAide Docs: `docs/ai-service/architecture.md` |
-| AI Service Overview | AskAide Docs: `docs/ai-service/overview.md` |
-| AI Service Setup | AskAide Docs: `docs/ai-service/development/setup.md` |
-| AI Features Quick Ref | AskAide Docs: `docs/ai-service/features/ai-features-quickref.md` |
-| Cross-Repo Map | AskAide Docs: `docs/ai-service/features/cross-repo-map.md` |
+| AI Service Architecture | [AI Service Architecture](/docs/ai-service/architecture) |
+| AI Service Overview | [AI Service Overview](/docs/ai-service/overview) |
+| AI Service Setup | [AI Service Setup](/docs/ai-service/development/setup) |
+| AI Features Quick Ref | [AI Features Quick Reference](/docs/ai-service/features/ai-features-quickref) |
+| Cross-Repo Map | [Cross-Repo Map](/docs/ai-service/features/cross-repo-map) |
 
 ### Recommended Learning Path
 1. **Learn Python basics** (syntax, functions, async/await)

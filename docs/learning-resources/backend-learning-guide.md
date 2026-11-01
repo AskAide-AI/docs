@@ -231,20 +231,19 @@ Uses ESLint 9 with the new flat config format (`eslint.config.js`). It ensures c
 | **Puppeteer** | [pptr.dev](https://pptr.dev/) -- Headless browser for PDFs |
 | **Jest** | [jestjs.io](https://jestjs.io) -- Testing framework |
 | **ESLint** | [eslint.org](https://eslint.org) -- Linter |
-| **Shared API Contracts** | AskAide Docs: `docs/shared-contracts/api-definitions.md` |
+| **Shared API Contracts** | [API Contracts](/docs/shared-contracts/api-definitions) |
 
 ### AskAide AI Specific
 | Resource | Location |
 |----------|----------|
-| Backend README | `Backend/readme.md` |
-| Backend Architecture | AskAide Docs: `docs/backend/architecture.md` |
-| Backend Setup | AskAide Docs: `docs/backend/development/setup.md` |
-| Backend Dependencies | AskAide Docs: `docs/backend/development/dependencies.md` |
-| Authentication Guide | AskAide Docs: `docs/backend/development/authentication.md` |
-| API Reference (Shared) | AskAide Docs: `docs/shared-contracts/api-definitions.md` |
-| Backend Testing Strategy | AskAide Docs: `docs/backend/development/testing.md` |
-| Error Handling | AskAide Docs: `docs/backend/development/error-handling.md` |
-| Security | AskAide Docs: `docs/backend/development/authentication.md` |
+| Backend Architecture | [Backend Architecture](/docs/backend/architecture) |
+| Backend Setup | [Backend Setup](/docs/backend/development/setup) |
+| Backend Dependencies | [Backend Dependencies](/docs/backend/development/dependencies) |
+| Authentication Guide | [Authentication](/docs/backend/development/authentication) |
+| API Reference (Shared) | [API Contracts](/docs/shared-contracts/api-definitions) |
+| Backend Testing Strategy | [Backend Testing](/docs/backend/development/testing) |
+| Error Handling | [Error Handling](/docs/backend/development/error-handling) |
+| Security | [Authentication](/docs/backend/development/authentication) |
 
 ### Recommended Learning Path
 1. **Learn Node.js + Express** (GET/POST, middleware, routing)
