@@ -15,7 +15,7 @@
     "sync:contracts": "node scripts/sync-contracts.mjs",
     "check:contracts": "node scripts/check-contracts-sync.mjs",
     "prebuild": "node scripts/check-contracts-sync.mjs && node scripts/check-docs-consistency.mjs && node scripts/check-docs-meta.mjs",
-    "prestart": "node scripts/check-contracts-sync.mjs && node scripts/check-docs-consistency.mjs",
+    "prestart": "node scripts/check-contracts-sync.mjs && node scripts/check-docs-consistency.mjs && node scripts/check-docs-meta.mjs",
     "postbuild": "node scripts/check-redirects.mjs"
   },
   "dependencies": {
