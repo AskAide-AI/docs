@@ -7,7 +7,7 @@ sidebar_position: 450
 # AskAide AI - Database Schema
 
 **Last Updated:** 2026-10-18  
-**Database:** MongoDB with Mongoose ODM (42 models)
+**Database:** MongoDB with Mongoose ODM (65 registered models)
 
 ---
 
@@ -153,6 +153,8 @@ School ──→ (N) FeeStructure, FeeInvoice, FeePayment, AttendanceDay, Timeta
 | order | Number | REQUIRED | Display order |
 | pdfUrl | String | | Uploaded PDF URL |
 | isActive | Boolean | DEFAULT: true | Soft delete flag |
+| hidden | Boolean | DEFAULT: false | Test/internal content — filtered out everywhere with `hidden: { $ne: true }` |
+| ragIndexed | Boolean | DEFAULT: false | Whether the chapter PDF has been ingested into the AI service's vector store |
 
 ---
 

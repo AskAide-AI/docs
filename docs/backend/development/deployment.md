@@ -6,7 +6,7 @@ sidebar_position: 410
 
 # AskAide AI - Deployment
 
-**Last Updated:** 2026-05-04
+**Last Updated:** 2026-11-01 (Redis caching removed — it is not a dependency of the backend)
 
 ---
 
@@ -23,103 +23,8 @@ Ensure all environment variables are set (see [SETUP.md](./setup)):
 - `NODE_ENV=production`
 - `DATABASE_URL` (production database)
 - `JWT_SECRET` (strong, unique secret)
-- `REDIS_URL` (optional, for caching)
 
----
-
-## Redis Setup (Optional but Recommended)
-
-### Why Redis?
-Redis caching provides significant performance improvements:
-- 95% faster for cached requests (~500ms → ~25ms)
-- 60% reduction in database load
-- Better scalability under high traffic
-
-### Installation
-
-#### Option 1: Docker (Recommended)
-```bash
-# Run Redis container
-docker run -d -p 6379:6379 --name redis redis:alpine
-
-# Verify Redis is running
-docker ps | grep redis
-```
-
-#### Option 2: Local Installation
-
-**Windows:**
-```bash
-# Download Redis for Windows
-# https://github.com/microsoftarchive/redis/releases
-
-# Or use Chocolatey
-choco install redis-64
-```
-
-**Mac:**
-```bash
-brew install redis
-brew services start redis
-```
-
-**Linux:**
-```bash
-sudo apt-get install redis-server
-sudo systemctl start redis
-```
-
-#### Option 3: Managed Redis Service
-
-**AWS ElastiCache:**
-- Create Redis cluster in AWS Console
-- Get endpoint URL
-- Add to environment variables
-
-**Azure Cache:**
-- Create Azure Cache for Redis
-- Get connection string
-- Add to environment variables
-
-**Render:**
-- Add Redis instance in Render dashboard
-- Get connection URL
-- Add to environment variables
-
-### Configuration
-
-Add to `.env` file:
-```bash
-# Redis Configuration (Optional)
-REDIS_URL=redis://localhost:6379
-
-# Cache TTL Configuration (Optional - defaults provided)
-CACHE_TTL_PROGRESS=300
-CACHE_TTL_QUIZ=60
-CACHE_TTL_QUESTIONS=1800
-CACHE_TTL_HIERARCHY=3600
-```
-
-### Verification
-
-Test Redis connection:
-```bash
-# Using redis-cli
-redis-cli ping
-# Should return: PONG
-
-# Or test with Node.js
-node -e "const Redis = require('ioredis'); const redis = new Redis('redis://localhost:6379'); redis.ping().then(console.log).catch(console.error);"
-```
-
-### Graceful Degradation
-
-If Redis is not available:
-- Application continues to work normally
-- Cache operations return `null` for `get()`
-- Cache operations do nothing for `set()` and `del()`
-- No errors or crashes
-- Performance degrades to non-cached speed
+Token lifetimes also come from env: `ACCESS_TOKEN_EXPIRY` (default `2h`), `REFRESH_TOKEN_EXPIRY` (default `30d`) and `MAX_REFRESH_TOKENS` (default 10). A deployment may override all three — the API contract documents the code defaults.
 
 ---
 
@@ -130,7 +35,7 @@ If Redis is not available:
 ```bash
 # 1. Clone repository
 git clone <repo-url>
-cd Backend
+cd backend
 
 # 2. Install dependencies
 npm ci --production
@@ -179,26 +84,16 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
-      - REDIS_URL=redis://redis:6379
     depends_on:
       - mongo
-      - redis
   
   mongo:
     image: mongo:7
     volumes:
       - mongo_data:/data/db
-  
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
 
 volumes:
   mongo_data:
-  redis_data:
 ```
 
 **Commands:**
@@ -227,8 +122,6 @@ docker-compose logs -f api
 - [ ] QUESTION_PREFETCH_AHEAD, QUESTION_MIN_NEW_PER_RUN, QUESTION_LOW_YIELD_LIMIT, QUESTION_HARD_CAP configured for question generation
 - [ ] Rate limiting configured appropriately
 - [ ] CORS origins updated for production domains
-- [ ] Redis server configured (optional but recommended)
-- [ ] Cache configuration verified (if using Redis)
 
 ---
 
@@ -241,19 +134,9 @@ The server builds all schema indexes itself after it connects to MongoDB (`ensur
 pm2 logs askaide-api | grep -i "indexes"
 ```
 
-### Verify Cache Connection (if using Redis)
-```bash
-# Test Redis connection
-redis-cli ping
-
-# Or check application logs for Redis connection status
-pm2 logs askaide-api | grep -i redis
-```
-
 ### Monitor Performance Metrics
 - API response time (P95 should be < 1s)
 - Error rate (should be < 0.1%)
-- Cache hit rate (should be > 60% if using Redis)
 - Database query time (average should be < 50ms)
 
 ---
@@ -324,14 +207,8 @@ npx migrate-mongo up
 
 ## Security Hardening
 
-### Production Settings
-```javascript
-// index.js additions for production
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);  // If behind load balancer
-  app.use(helmet());          // Security headers
-}
-```
+### Already in place
+`index.js` sets `trust proxy 1`, applies `helmet()` and turns `X-Powered-By` off unconditionally — no per-environment wiring needed. Rate limiting and the explicit CORS allowlist are configured in the app; check them when adding a new deployment domain.
 
 ### SSL/TLS
 - Use reverse proxy (nginx) with SSL certificates

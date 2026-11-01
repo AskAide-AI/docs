@@ -82,7 +82,7 @@ const STUDY_CONFIG_SELECTORS = {
   // ============================================
   difficultyDropdown: {
     container: 'div:has(> label:text("Difficulty"))',
-    trigger: 'button:has-text("Medium")',  // Default selected
+    trigger: 'button:has-text("Easy")',  // Default selected
     optionsList: '[role="listbox"]',
     option: '[role="option"]',
     options: {
@@ -273,7 +273,7 @@ await selectDropdownOption(page, 'Chapter', 'Light');
 ┌─────────────────────────────────────────────────────────────────┐
 │  4. QUESTION TYPE      5. DIFFICULTY       6. START BUTTON      │
 │  (optional, default    (optional, default  (enabled when        │
-│   = mcq)                = Medium)           1,2,3 selected)     │
+│   = mcq)                = Easy)             1,2,3 selected)     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -289,7 +289,7 @@ The config can arrive already filled in. Automation should check the trigger tex
 | Source | How it arrives |
 |--------|----------------|
 | Progress page "Start Learning" | `location.state.preselectConfig` |
-| Onboarding wizard | `location.state.preselectConfig` (`mcq` / `Medium` defaults) |
+| Onboarding wizard | `location.state.preselectConfig` (`mcq` / `Easy` defaults) |
 | Joined class (`/join/:code`) or challenge results | `location.state.preselectConfig` |
 | Chapter tried on `/try` before signup | `localStorage` key `askaide:tryChoice` (kept 24 h, read once by `Home.jsx` or the onboarding wizard, then cleared) |
 
@@ -374,7 +374,7 @@ async function startStudySession(page, config) {
   }
   
   // 5. (Optional) Change Difficulty
-  if (difficulty && difficulty !== 'Medium') {
+  if (difficulty && difficulty !== 'Easy') {
     await page.click('div:has(label:text-is("Difficulty")) button');
     await page.waitForSelector('[role="listbox"]');
     await page.click(`[role="option"]:has-text("${difficulty}")`);

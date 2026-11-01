@@ -12,7 +12,7 @@ sidebar_position: 390
 
 ## Current Status
 
-> ✅ **Tests are implemented.** 25 test files exist across 15 of the 19 modules, covering auth, user, content, questions, progress, quiz, teacher, school, principal, parent, question-paper, supporting, referral, challenge and notification. Most test a service with mocked models; a few test a controller or mount a real router (see [Route Tests](#route-tests)).
+> ✅ **Tests are implemented.** 52 test files exist across 22 of the 26 modules, covering attendance, auth, challenge, content, demo, fees, gradebook, notice, notification, onboarding, parent, principal, progress, question-paper, questions, quiz, referral, school, supporting, teacher, timetable and user. Most test a service with mocked models; a few test a controller or mount a real router (see [Route Tests](#route-tests)).
 
 ---
 
@@ -152,7 +152,7 @@ describe('Quiz Service', () => {
 | Supporting | `supporting.service.test.js` | Achievements, API logs |
 | Supporting | `llmSystem.service.test.js`, `llmSystem.validator.test.js` | AI System proxy and input validation |
 | Question Paper | `questionPaper.service.test.js` | Paper generation, PDF export |
-| Referral | `referral.service.test.js` | Signup attribution, activation at 10 answers, monthly cap, practice-paper credits |
+| Referral | `referral.service.test.js` | Signup attribution, activation at 3 answers, monthly cap, practice-paper credits |
 | Challenge | `challenge.service.test.js` | Create from session, server-side scoring, claim tokens, referral credit |
 | Notification | `notification.service.test.js` | Grouping per day, one-time events, list, unread count, mark read |
 

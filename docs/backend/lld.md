@@ -744,7 +744,7 @@ sequenceDiagram
     BE-->>FE: 201 tokens, user and referral
     FE->>BE: POST /authenticate/login (loginLimiter, userName or email)
     BE->>DB: find user with password, bcrypt.compare
-    BE->>DB: revoke oldest token if 5 active, store new refresh token
+    BE->>DB: revoke oldest token if 10 active, store new refresh token
     BE->>DB: set lastLoginAt, increment loginCount
     BE-->>FE: 200 accessToken, refreshToken, expiresIn
 ```
@@ -782,9 +782,9 @@ sequenceDiagram
 | Item | Value | Source |
 |---|---|---|
 | Access token lifetime | `ACCESS_TOKEN_EXPIRY`, default `2h` | `auth.service.js` |
-| Refresh token lifetime | `REFRESH_TOKEN_EXPIRY`, default `7d` (parsed for `expiresAt` from `Nd`, `Nh`, `Nm`, `Ns`) | `auth.service.js` |
+| Refresh token lifetime | `REFRESH_TOKEN_EXPIRY`, default `30d` (parsed for `expiresAt` from `Nd`, `Nh`, `Nm`, `Ns`) | `auth.service.js` |
 | Claims | `id`, `email`, `accountType` (both tokens signed with `JWT_SECRET`) | `auth.service.js` |
-| Active refresh tokens per user | `MAX_REFRESH_TOKENS`, default 5; oldest revoked when exceeded | `storeRefreshToken` |
+| Active refresh tokens per user | `MAX_REFRESH_TOKENS`, default 10; oldest revoked when exceeded | `storeRefreshToken` |
 | Revoke all | On password change and on password reset | `revokeAllUserTokens` |
 | Password reset token | 20 random bytes (hex), SHA-256 stored in `User.token`, expires after 5 min, link `FRONTEND_URL/update-password/<token>` | `generateResetToken` |
 | Refresh reuse | Each refresh token works once: the claim and the revoke are one atomic update, so two refreshes sent in the same millisecond cannot both succeed | `rotateTokens` |
@@ -1199,7 +1199,7 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | `DATABASE_URL` | MongoDB connection string (exported as `ATLAS_DB_URL`) | `config/server.config.js` |
 | `NODE_ENV` | Environment; `development` enables the route-count log and debug log level, `test` disables file and Loki transports | `index.js`, `logger.js` |
 | `JWT_SECRET` | Signs access and refresh JWTs and unsubscribe HMACs | `auth.js`, `auth.service.js`, `unsubscribeToken.js` |
-| `ACCESS_TOKEN_EXPIRY`, `REFRESH_TOKEN_EXPIRY`, `MAX_REFRESH_TOKENS` | Token lifetimes (2h, 7d) and active refresh-token cap (5) | `auth.service.js` |
+| `ACCESS_TOKEN_EXPIRY`, `REFRESH_TOKEN_EXPIRY`, `MAX_REFRESH_TOKENS` | Token lifetimes (2h, 30d) and active refresh-token cap (10); a deployment may override all three via env | `auth.service.js` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_IOS` | Accepted Google ID-token audiences | `auth.service.js` |
 | `AI_ENDPOINT` | AI Service base URL (no path) | content, questions, progress, ai-assistant, supporting (`llmSystem.service.js`), `index.js` |
 | `AI_SERVICE_API_KEY` | Sent as `x-api-key` | `requestContext.js` |
@@ -1341,7 +1341,7 @@ All three cron jobs start through side-effect imports at the top of `index.js`. 
 | Item | Detail |
 |---|---|
 | Framework | Jest 30 in native ESM mode (`NODE_OPTIONS=--experimental-vm-modules`); no Jest config file at the repo root (defaults) |
-| Layout | `src/modules/<module>/tests/*.test.js`: 41 files covering `auth` (3: service, refresh rotation, activity tracker), attendance, fees, gradebook and timetable, challenge, content, demo-school (3: service, users, guards), notices, notifications (2: service, scheduler), onboarding, parent (3: dashboard routes, parent logins, school), principal (3: account, dashboards, school scope), progress (2: service, user-data routes), question-paper, questions, quiz (4: service, controller, homework service, homework routes), referral, school, supporting (5: shared service, amount-in-words, bulk generation, LLM service, LLM validator), teacher (3: service, class links, dashboard routes), user; roughly 710 `it`/`test` cases (grep count) |
+| Layout | `src/modules/<module>/tests/*.test.js`: 52 files across 22 modules covering `auth` (3: service, refresh rotation, activity tracker), attendance, fees, gradebook and timetable, challenge, content (2: service, school-only classes), demo-school (2: service, users), notices, notifications (2: service, scheduler), onboarding (8), parent (4: dashboard routes, dashboard service, parent logins, student links), principal (2: account, dashboards), progress (2: service, user-data routes), question-paper, questions (3: service, bulk generation, demo guard), quiz (4: service, controller, homework service, homework routes), referral, school (2: service, document context), supporting (3: shared service, LLM service, LLM validator), teacher (5: service, class links, dashboard routes, cross-school routes, principal scope), user; roughly 830 `it`/`test` cases (grep count) |
 | Route tests | The `*.routes.test.js` files and `userDataRoutes.test.js` mount the real router on a bare Express app listening on a random port, sign test JWTs and call it with `fetch`; controllers or services are mocked |
 | No tests | `ai-assistant`, `campaign`, `feedback`, `goal` |
 | Mocking | `jest.unstable_mockModule` declared before `await import()` of the service; Mongoose models mocked by module path; `logger.js` disables file and Loki transports when `NODE_ENV=test` |

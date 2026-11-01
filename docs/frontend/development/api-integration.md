@@ -389,59 +389,69 @@ export const quizApi = {
 ### Question Paper Service
 **File:** `/src/api/questionPaper.api.js`
 
+The file reuses the shared axios instance from `./axios.js` (auth is handled by its central interceptors — no per-file token code, no local URL fallback):
+
 ```javascript
-import axios from 'axios';
+import api from './axios';
+import { ENDPOINTS } from './endpoints';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-
-const api = axios.create({
-    baseURL: `${BASE_URL}/question-paper`,
-    withCredentials: true
-});
-
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 export const questionPaperApi = {
     // Generate paper (Teacher)
     generatePaper: async (data) => {
-        const response = await api.post('/', data);
+        const response = await api.post('/question-paper', data);
         return response.data;
     },
 
     // Public Generation endpoint (Lead Magnet)
     generatePublicPaper: async (payload) => {
-        const response = await api.post('/public/generate', payload);
+        const response = await api.post('/question-paper/public/generate', payload);
+        return response.data;
+    },
+
+    // One replacement question: { chapterIds, questionType, difficulty?, excludeIds }
+    swapQuestion: async (payload, { signedIn = false } = {}) => {
+        const url = signedIn ? ENDPOINTS.QUESTION_PAPER.SWAP : ENDPOINTS.QUESTION_PAPER.PUBLIC_SWAP;
+        const response = await api.post(url, payload);
+        return response.data;
+    },
+
+    // How many questions of each type the chapters have
+    paperAvailability: async (chapterIds) => {
+        const response = await api.post(ENDPOINTS.QUESTION_PAPER.PUBLIC_AVAILABILITY, { chapterIds });
+        return response.data;
+    },
+
+    // Save the teacher's edited paper (header + question list)
+    updatePaper: async (paperId, data) => {
+        const response = await api.put(`/question-paper/${paperId}`, data);
         return response.data;
     },
 
     // Get Generation History
     getHistory: async (params) => {
-        const response = await api.get('/history', { params });
+        const response = await api.get('/question-paper/history', { params });
         return response.data;
     },
 
     // Get paper preview
     getPreview: async (paperId) => {
-        const response = await api.get(`/${paperId}/preview`);
+        const response = await api.get(`/question-paper/${paperId}/preview`);
         return response.data;
     },
 
     // Delete Paper
     deletePaper: async (paperId) => {
-        const response = await api.delete(`/${paperId}`);
+        const response = await api.delete(`/question-paper/${paperId}`);
         return response.data;
     },
 
-    // PDF Download URL configuration
-    getPdfDownloadUrl: (paperId) => {
-        return `${BASE_URL}/question-paper/${paperId}/pdf`;
-    }
+    // Download PDF as a blob (auth via the shared instance)
+    downloadPaperPDF: async (paperId) => {
+        const response = await api.get(`/question-paper/${paperId}/pdf`, { responseType: 'blob' });
+        return response.data;
+    },
 };
 ```
 

@@ -61,7 +61,7 @@ A teacher shares one link with the class. Students who join show up in the teach
 After practice, a student sends the same questions to friends as a challenge link. Friends can play without an account, and everyone sees the scoreboard.
 
 ### 🎁 Invite Friends
-When a friend joins with your invite and answers 10 questions, you both get a free practice paper and a streak shield.
+When a friend joins with your invite and answers 3 questions, you both get a free practice paper and a streak shield.
 
 ### 🔔 Notifications
 A bell in the app shows when friends play your challenge or join with your invite, when you earn a badge, and, for teachers, when students join a class.

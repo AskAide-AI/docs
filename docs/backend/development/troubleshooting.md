@@ -45,10 +45,9 @@ Common issues and solutions when working with the AskAideAI backend.
 ### JWT authentication fails
 **Symptoms:** 401 Unauthorized on protected routes
 **Solutions:**
-1. Verify `JWT_SECRET` matches between frontend and backend
-2. Check token expiration
-3. Ensure `Authorization: Bearer <token>` header is set
-4. Verify the token was signed with the same secret
+1. Check token expiration — access tokens are short-lived by design; refresh to get a new one
+2. Ensure the token is being sent: `Authorization: Bearer <token>` header, the `token` cookie, or a `{ token }` body are all accepted
+3. `JWT_SECRET` is backend-only — the frontend never holds it. If you run more than one backend instance, they must share the same `JWT_SECRET`, and it must not change between restarts or every issued token stops verifying
 
 ### Token refresh returns 401 `REFRESH_TOKEN_REVOKED`
 **Symptoms:** `/authenticate/refresh` fails although the refresh token has not expired

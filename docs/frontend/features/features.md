@@ -366,7 +366,7 @@ sidebar_position: 70
 ## Role-Based Dashboards
 
 ### Student Dashboard
-**Status:** 🚧 In Progress (Mock Data)
+**Status:** ✅ Shipped (live data)
 **Description:** Personalized dashboard with streaks, badges, and activity. DailyGoalCard includes `minHeight: 104px` on skeleton and loaded states to prevent CLS (layout shift). Onboarding overlay has a persistent escape hatch (X button + Escape key) so it never traps the user.
 **Pages:** /dashboard
 **Components:** 
@@ -375,9 +375,9 @@ sidebar_position: 70
 - `OnboardingOverlay.jsx`
 - `FirstRunGate.jsx`
 **API Dependencies:** 
-- Currently uses mock data
+- GET `/progress/user/:userId` (dashboard stats), GET `/streaks/:userId` (streak), sessions by user, badges (all live)
 **Added:** Initial release
-**Notes:** Gamification elements pending backend implementation
+**Notes:** Streaks and badges are served by the backend; the dashboard loads real data with loading, error and retry states
 
 #### First-Run Onboarding (`FirstRunGate`)
 The welcome wizard decision is owned by `FirstRunGate.jsx`, mounted **app-level** in `App.jsx` for any authenticated, non-public route — not by the dashboard. This fires the wizard wherever a new student first lands (signup drops students on `/study`, not `/dashboard`). Behavior:

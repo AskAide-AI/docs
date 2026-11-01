@@ -1,7 +1,7 @@
 {
   "generator": "scripts/sync-contracts.mjs",
   "source": "../../../shared-contracts/api-definitions.md",
-  "sourceHash": "f84144f1229d424ccb25c959b83e077732adb0d122228defbc74721d2e72700f",
-  "sourceBytes": 62680,
-  "syncedAt": "2026-11-01T11:53:47.441Z"
+  "sourceHash": "05e33471189a4628ef6faf93611eab4b2f5a1b80e2a6fb526c3b9737d2cc01db",
+  "sourceBytes": 62755,
+  "syncedAt": "2026-11-01T12:08:53.402Z"
 }

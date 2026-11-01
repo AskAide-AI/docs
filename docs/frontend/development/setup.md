@@ -34,7 +34,7 @@ A modern, high-performance EdTech platform built with React, JavaScript, and Tai
 - **Routing**: React Router DOM (Lazy-loaded routes)
 - **API Client**: Axios (with centralized interceptors)
 - **Analytics**: Microsoft Clarity
-- **Tests**: Vitest + React Testing Library (23 files in `src/__tests__/`)
+- **Tests**: Vitest + React Testing Library (52 files in `src/__tests__/`)
 - **Fonts**: Fraunces, Inter Tight, JetBrains Mono, self-hosted in `public/fonts/`
 
 ## 📁 Project Structure

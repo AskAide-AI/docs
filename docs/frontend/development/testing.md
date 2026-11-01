@@ -13,7 +13,7 @@ sidebar_position: 210
 
 ## Current Status
 
-Vitest and React Testing Library are set up, and the frontend has **23 test files**, all in `src/__tests__/` (no co-located tests). Coverage is still thin: the files guard specific flows and past bugs rather than whole areas. There is no coverage report, no end-to-end suite, and no CI, so tests only run when someone runs them.
+Vitest and React Testing Library are set up, and the frontend has **52 test files**, all in `src/__tests__/` (no co-located tests). Coverage is still thin: the files guard specific flows and past bugs rather than whole areas. There is no coverage report, no end-to-end suite, and no CI, so tests only run when someone runs them.
 
 ---
 

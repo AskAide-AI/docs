@@ -115,8 +115,8 @@ src/
 ├── seo.config.js          site-wide SEO defaults, generatePageSEO()
 ├── index.css              Tailwind layers + theme CSS variables
 ├── setupTests.js          jest-dom for Vitest
-├── __tests__/             23 Vitest files (flat)
-├── api/                   axios instance, endpoints, 19 *.api.js modules, barrel
+├── __tests__/             52 Vitest files (flat)
+├── api/                   axios instance, endpoints, 20 *.api.js modules, barrel
 ├── components/
 │   ├── admin/             SuperAdmin tabs (CRUD, upload, feedback, campaigns, system/ AI System)
 │   │   └── overview/      metrics panels, NewUsersPanel, UserDetailDrawer, DatePicker

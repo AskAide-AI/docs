@@ -6,7 +6,7 @@ sidebar_position: 10
 
 # AskAide AI Documentation
 
-Welcome to the AskAide AI knowledge base. This site contains documentation for all services in the monorepo.
+Welcome to the AskAide AI knowledge base. This site documents the services that make up AskAide AI.
 
 ## Architecture Overview
 
@@ -40,7 +40,7 @@ Each section covers:
 
 - **Students:** chapter-wise AI-generated practice (Classes 6–12) with explanations, topic mastery tracking, quizzes, streaks, badges and a weekly leaderboard
 - **Challenge a friend:** turn a finished practice session into a link friends can play without an account
-- **Refer & Earn:** invite friends; when a friend answers 10 questions, both get a free practice paper and a streak shield
+- **Refer & Earn:** invite friends; when a friend answers 3 questions, both get a free practice paper and a streak shield
 - **Notifications:** an in-app bell for challenge plays, friends joining, gifts, badges and class activity
 - **Teachers:** free self-signup (email or Google), class join links, class dashboards, quizzes, question papers and an AI assistant
 - **Principals, parents and admins:** school-level dashboards, linked children's progress, curriculum and chapter PDF management
@@ -55,7 +55,7 @@ For the details, see the [End-User Guide](/docs/reference/user-guide) and the [A
 cd frontend && npm install && npm run dev
 
 # Backend
-cd Backend && npm install && npm run dev
+cd backend && npm install && npm run dev
 
 # AI Service
 cd ai-service && pip install -r requirements.txt && uvicorn main:app --reload --port 8000

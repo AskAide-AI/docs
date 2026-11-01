@@ -11,7 +11,7 @@ sidebar_position: 560
 | Environment | Backend (Express) | AI Service (FastAPI) |
 |-------------|------------------|----------------------|
 | **Local Development** | `http://localhost:4000/api/v1` | `http://localhost:8000/v1` |
-| **Production** | `https://askaideaibackend.onrender.com/api/v1` | `https://ai-service.askaide.ai/v1` |
+| **Production** | `https://backend-6752.onrender.com/api/v1` (the frontend's `vite.config.ts` fallback; confirm the live URL with the team) | `https://ai-service.askaide.ai/v1` |
 
 AI Service health/ops probes (`/ping`, `/health*`, `/metrics`) sit at the host root, outside `/v1`.
 

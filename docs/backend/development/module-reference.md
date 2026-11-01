@@ -154,7 +154,7 @@ Quiz sets with `sectionIds` are visible and startable only to students with a `T
 
 **Own data only:** every route above with `:userId` in the path, plus `/user-answers/user/:userId`, serves only the signed-in user or a SuperAdmin (`isSelfOrSuperAdmin`); anyone else gets `403` with `code: "NOT_YOUR_DATA"`. `/sessions/user/:userId` and `/sessions/last-incomplete/:userId` apply the same rule through `canAccessUser` (`403`). Teachers, parents and principals see a student's progress through their own dashboards.
 
-**After each saved answer batch** (`POST /user-answers/batch`), the service updates the session totals, applies the new answers to topic progress, records today's practice for the streak, and checks whether a referred friend has now reached 10 answers (see Referral).
+**After each saved answer batch** (`POST /user-answers/batch`), the service updates the session totals, applies the new answers to topic progress, records today's practice for the streak, and checks whether a referred friend has now reached 3 answers (see Referral).
 
 **Streak freezes:** one free freeze per week (`streakFreezes.total` / `used`, reset on Monday) plus earned bonus freezes (`streakFreezes.bonus`, from referral rewards). Bonus freezes never reset and are spent after the weekly one.
 
@@ -174,7 +174,7 @@ Quiz sets with `sectionIds` are visible and startable only to students with a `T
 **Rules:**
 - Codes are 6 random characters without look-alikes (no 0/O/1/I).
 - A new account is credited to an inviter at signup (email or Google) through an invite link (`?ref=`) or a challenge it played. Only accounts less than 24 hours old can be credited, a user cannot refer themselves, and each user has one referrer (the first one wins).
-- No reward at signup. When the friend has answered **10 questions** (practice answers plus answered questions in challenges played on their account), both sides get one practice-paper credit and one bonus streak freeze, exactly once.
+- No reward at signup. When the friend has answered **3 questions** (practice answers plus answered questions in challenges played on their account), both sides get one practice-paper credit and one bonus streak freeze, exactly once.
 - The check runs after every saved answer batch, when a challenge is played or claimed while signed in, and when the referral screen loads (it re-checks the user and up to 5 friends who joined in the last 14 days).
 - A referrer is rewarded for at most 10 friends per calendar month. Over the cap, the friend still gets their gift.
 - The referrer gets an email and a bell notification when a friend activates. Both sides see a bell notification for the gift.
@@ -373,11 +373,60 @@ A public, read-only-ish school for trying the product. Its accounts and school c
 
 Demo accounts are blocked from account and profile changes and from creating teachers or linking parents to children (`403 DEMO_READ_ONLY`). Demo users are excluded from admin metrics, leaderboards, public stats, feedback stats and streak reminders.
 
-#### Parent School View (`/parent-dashboard/child/:childId/school`)
-Read-only, for a parent linked to the child (`isParent`). Optional `?month=YYYY-MM`. Returns the child's school name, section and attendance for the month (with today's status and `schoolToday` respecting working days and holidays), fees (due by today, overdue, next bill, receipts), published report cards, notices from the last 60 days with read flags, and the homework this IST week and the next 7 days. `POST /parent-dashboard/notices/read` (`noticeIds`, 1 to 50) marks notices seen. Receipts and report cards print through `/child/:childId/receipts/:receiptNo` and `/child/:childId/report-cards/:planId`.
+#### Parent Dashboard (`/parent-dashboard`)
+All routes sit behind `auth, isParent`; every `:childId` must be a linked child:
 
-#### Principal Today (`/principal/today`)
-Counts only, computed by aggregation: attendance (present %, sections not marked), fees collected today, this month and overdue, pending UPI, staff away and substitutions, and TCs issued this month.
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/children` | GET | The signed-in parent's linked children |
+| `/child/:childId/overview` | GET | One child's overview (progress, streaks, recent activity) |
+| `/child/:childId/subject/:subjectId/progress` | GET | Subject-level progress for the child |
+| `/child/:childId/subject/:subjectId/weak-topics` | GET | The child's weak topics in the subject |
+| `/child/:childId/activity` | GET | The child's activity feed |
+| `/child/:childId/school` | GET | School view (see below). Optional `?month=YYYY-MM` |
+| `/child/:childId/receipts/:receiptNo` | GET | A fee receipt for printing |
+| `/child/:childId/report-cards/:planId` | GET | A published report card for printing |
+| `/child/:childId/fees/upi-claim` | POST | Parent's "I've paid" claim for a pending UPI payment |
+| `/notices/read` | POST | Mark notices seen (`noticeIds`, 1 to 50) |
+
+**School view** (`/child/:childId/school`) returns the child's school name, section and attendance for the month (with today's status and `schoolToday` respecting working days and holidays), fees (due by today, overdue, next bill, receipts), published report cards, notices from the last 60 days with read flags, and the homework this IST week and the next 7 days.
+
+#### Parent–Student Links (`/parent-students`)
+Staff manage who counts as a child's parent; a parent can unlink themselves:
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/bulk` | POST | teacher or principal (own school) | Link parents to students; `parentEmails` auto-creates parent accounts. Demo schools are blocked |
+| `/` | GET | teacher or principal (own school) | List links with filters |
+| `/unlink/:studentId` | DELETE | parent | The signed-in parent unlinks themselves from a student |
+
+#### Principal Dashboards (`/principal`)
+All routes sit behind `auth, isPrincipal`; the school is resolved from the signed-in user inside the service, so a principal only ever sees their own school:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/today` | GET | Counts only, computed by aggregation: attendance (present %, sections not marked), fees collected today, this month and overdue, pending UPI, staff away and substitutions, and TCs issued this month |
+| `/overview` | GET | School-wide overview numbers |
+| `/classes` | GET | Class-level performance |
+| `/subjects` | GET | Subject-level performance |
+| `/teachers` | GET | Teacher-level performance |
+| `/students` | GET | Filterable student list |
+| `/student/:studentId` | GET | One student's detail view |
+
+#### Principal Accounts (`/principals`)
+SuperAdmin-only CRUD for principal accounts (admin panel): `POST /` (create, with school), `GET /get-all`, `PUT /:id`, `DELETE /:id`.
+
+#### Campaigns (`/campaign`, SuperAdmin)
+Email campaign management (SendGrid; sends are batched 300 ms apart to stay under the API rate limit):
+
+| Endpoint | Method | Who | Description |
+|----------|--------|-----|-------------|
+| `/unsubscribe` | GET, POST | none (public) | RFC 8058 one-click unsubscribe — registered before the auth guard, because it is opened from an email client with no session |
+| `/` | POST, GET | SuperAdmin | Create a campaign draft; list campaigns (paginated) |
+| `/:id` | GET, PUT, DELETE | SuperAdmin | Read, edit, delete a draft |
+| `/:id/send` | POST | SuperAdmin | Send the campaign |
+
+The `unsubscribe` list is honoured by every campaign and transactional send.
 
 ### Misc
 | Module | Endpoints |

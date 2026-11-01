@@ -64,7 +64,7 @@ src/
 │   ├── referral.api.js    # Refer & Earn
 │   ├── teacherClass.api.js # Teacher class links
 │   ├── notification.api.js # Notification bell
-│   ├── ...                # 19 *.api.js modules in all
+│   ├── ...                # 20 *.api.js modules in all
 │   └── index.js           # Barrel export
 │
 ├── components/
@@ -142,7 +142,7 @@ src/
 ├── contexts/              # React contexts (Theme, Sound)
 ├── constants/             # App constants (badges, fonts)
 ├── utils/                 # Helpers (analytics, attribution, tryChoice, ...)
-└── __tests__/             # Vitest files (23)
+└── __tests__/             # Vitest files (52)
 ```
 
 ---
@@ -296,9 +296,9 @@ All API calls now flow through a centralized axios instance with:
 7. Unified API layer with proper error handling
 
 ### ⚠️ Needs Improvement
-1. Student/Parent/Teacher dashboards (currently mock data)
+1. SuperAdmin preview of teacher analytics still renders mock data (`src/mocks/teacherData.js`)
 2. TypeScript migration (files are .jsx, not .tsx)
-3. More comprehensive test coverage (23 Vitest files today)
+3. More comprehensive test coverage (52 Vitest files today)
 
 ### 📊 Technical Debt Addressed
 - ✅ Env vars now use `import.meta.env` (Vite compatible)

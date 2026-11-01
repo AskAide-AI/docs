@@ -42,7 +42,7 @@ dist/
 └── sitemap.xml / robots.txt / _redirects
 ```
 
-> **Prerendering:** `vite-prerender-plugin` runs after the JS build and outputs real HTML for each public route: 501 routes (23 static and blog pages plus 478 class, subject and chapter pages). Googlebot and other crawlers receive fully rendered HTML on first byte without needing to execute JavaScript.
+> **Prerendering:** `vite-prerender-plugin` runs after the JS build and outputs real HTML for each public route: 502 routes (24 static and blog pages plus 478 class, subject and chapter pages). Googlebot and other crawlers receive fully rendered HTML on first byte without needing to execute JavaScript.
 
 ---
 
@@ -50,13 +50,15 @@ dist/
 
 ### Development (.env or .env.local)
 ```env
-VITE_API_URL=http://localhost:3000/api/v1
+VITE_API_URL=http://localhost:4000/api/v1
 ```
 
 ### Production
 ```env
-VITE_API_URL=https://askaideaibackend.onrender.com/api/v1
+VITE_API_URL=https://backend-6752.onrender.com/api/v1
 ```
+
+> **Where this URL comes from:** `backend-6752.onrender.com` is the fallback in `vite.config.ts` (`VITE_API_URL || 'https://backend-6752.onrender.com/api/v1'`). Confirm the live production URL with the team before relying on it — a deployment can override it via env.
 
 > **Note:** Set environment variables in your deployment platform's settings, not in committed files.
 
@@ -132,50 +134,9 @@ npm run build
 
 ---
 
-## CI/CD Pipeline (GitHub Actions)
+## CI/CD
 
-**File:** `.github/workflows/deploy.yml`
-
-```yaml
-name: Deploy to Production
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Run linting
-        run: npm run lint
-      
-      - name: Build
-        run: npm run build
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-      
-      # Deploy step depends on your hosting provider
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.ORG_ID }}
-          vercel-project-id: ${{ secrets.PROJECT_ID }}
-          vercel-args: '--prod'
-```
+The frontend repo has **no GitHub Actions workflow** — there is no `.github/workflows/` directory. Deployment is manual or platform-driven: if the repo is connected to Vercel or Netlify, pushing to `main` triggers their auto-deploy with the build settings configured in that platform's dashboard. There is no pre-merge CI; run `npm run lint` and `npm test` locally before pushing.
 
 ---
 

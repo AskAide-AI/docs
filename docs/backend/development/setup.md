@@ -12,21 +12,15 @@ For the end-to-end local setup (infrastructure + Backend + AI Service + Frontend
 
 Welcome to the AskAide AI Backend repository! This project provides a comprehensive EdTech platform for students, teachers, and schools, featuring AI-powered question generation, mastery-based progress tracking, automated quiz management, and teacher analytics.
 
-## Engineering Standards (Skills)
+## Engineering Standards
 
-This project strictly adheres to codified engineering standards for backend development. Please refer to the `.agent/skills/` directory for detailed guidelines before contributing:
+The backend is built against codified engineering standards — module scaffolding, security, testing conventions, database patterns and deployment ops — kept in the team's own repositories. Every module follows the same `controllers / services / validators / routes / models / tests` layout described below.
 
-- **api-module-scaffold**: Structure for new modules, services, controllers, and routes
-- **api-security**: Authentication, role-based access, and password handling
-- **backend-testing**: Jest/ESM setup and mocking conventions for services
-- **database-patterns**: Mongoose schema design, query optimization, and performance
-- **deployment-ops**: Server startup, environment config, Winston logging, and Render deployment
+## Question API Reference
 
-# Question API Documentation
+This section outlines the Question and Session API endpoints available in the application.
 
-This document outlines the Question and Session API endpoints available in the application.
-
-## Models
+### Models
 
 ### Question Model
 ```javascript
@@ -87,7 +81,7 @@ This document outlines the Question and Session API endpoints available in the a
 }
 ```
 
-## API Endpoints
+### API Endpoints
 
 ### Study Configuration API
 
@@ -737,7 +731,7 @@ This document outlines the Question and Session API endpoints available in the a
 - **URL**: `/api/v1/notifications/unread-count` (GET), `/api/v1/notifications/read` (POST)
 - **Request Body** (mark read): `{ "ids": ["..."] }` or `{ "all": true }`
 
-## New Models (Added)
+### New Models (Added)
 
 ### StudentTopicProgress Model
 ```javascript
@@ -885,25 +879,9 @@ Run the server in production mode:
 npm start
 ```
 
-## Database Initialization Scripts
+## Curriculum Data
 
-### Initialize Classes
-```bash
-node scripts/initClasses.js
-```
-Initializes all classes (6th to 12th)
-
-### Initialize Subjects
-```bash
-node scripts/initSubjects.js
-```
-Initializes subjects for each class
-
-### Initialize Chapters
-```bash
-node scripts/initChapters.js
-```
-Initializes chapters for specific class and subject combinations
+Classes 6–12, subjects and chapters are seeded into the database by local seed scripts under `scripts/`. That directory is **not tracked in git** (gitignored), so a fresh checkout may not contain the scripts; ask the team for the current seed set if you need to rebuild a local database from scratch. The deployed environment already has the full curriculum.
 
 ## Notes
 

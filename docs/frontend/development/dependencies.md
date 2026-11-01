@@ -32,12 +32,11 @@ sidebar_position: 220
 | tailwindcss | ^3.4.1 | Utility-first CSS framework |
 | @headlessui/react | ^1.7.18 | Unstyled accessible components |
 | lucide-react | ^0.344.0 | Icon library |
-| react-icons | ^5.5.0 | Additional icons |
 | qrcode.react | ^4.2.0 | QR code for teacher class links (`TeacherClassLinks.jsx`) |
 
 > **Fonts** are not npm packages: Fraunces, Inter Tight and JetBrains Mono are self-hosted `woff2` files in `public/fonts/` (Fontsource builds, OFL; licences in `public/fonts/LICENSES.txt`).
 
-> **Note:** `@mui/material`, `@emotion/react`, and `@emotion/styled` have been removed from active use. The last three admin components that used MUI (`ChapterTopicView`, `ChapterUpload`, `ChapterManagement`) were migrated to pure Tailwind CSS. MUI packages remain in `package.json` but are no longer imported anywhere in `src/`.
+> **Note:** `@mui/material`, `@emotion/react`, and `@emotion/styled` were fully removed from `package.json`. The last three admin components that used MUI (`ChapterTopicView`, `ChapterUpload`, `ChapterManagement`) were migrated to pure Tailwind CSS.
 
 ### Forms & Validation
 | Package | Version | Purpose |
@@ -91,24 +90,36 @@ sidebar_position: 220
 ### Dev Server
 | Package | Version | Purpose |
 |---------|---------|---------|
-| nodemon | ^3.1.0 | Auto-restart for server |
+| nodemon | ^3.1.0 | Auto-restart for the local Express server in `server/` |
+
+### Testing
+| Package | Version | Purpose |
+|---------|---------|---------|
+| vitest | ^4.1.9 | Test runner (52 test files in `src/__tests__/`) |
+| jsdom | ^29.1.1 | DOM environment for tests |
+| @testing-library/react | ^16.3.2 | React testing utilities |
+| @testing-library/jest-dom | ^6.9.1 | DOM matchers |
+| @testing-library/user-event | ^14.6.1 | Interaction simulation |
+| playwright | 1.63.0 | Manual, CLI-driven browser checks (not a test suite) |
 
 ---
 
-## Backend-Related (In Frontend package.json)
+## Other Runtime Dependencies
 
-> **Note:** These are backend dependencies that exist in the frontend package.json due to project structure.
+> There are **no backend packages in the frontend `package.json`** — the backend is a separate repo. These are the remaining runtime dependencies not listed above:
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| express | ^4.18.3 | Backend API server |
-| mongoose | ^8.2.0 | MongoDB ODM |
-| bcryptjs | ^2.4.3 | Password hashing |
-| jsonwebtoken | ^9.0.2 | JWT authentication |
-| @sendgrid/mail | ^8.x | Email sending (SendGrid HTTPS API) |
-| cors | ^2.8.5 | CORS middleware |
+| @microsoft/clarity | ^1.0.2 | Product analytics |
+| @react-oauth/google | ^0.13.5 | Google Sign-In |
+| clsx | 2.1.1 | Conditional class names |
+| docx | 9.8.1 | DOCX generation (question paper export) |
+| jspdf | ^4.2.1 | PDF generation |
 | dotenv | ^16.4.5 | Environment variables |
-| express-list-endpoints | ^7.1.1 | List API endpoints |
+| read-excel-file | ^9.3.14 | Read Excel imports |
+| recharts | ^3.8.1 | Charts (progress and dashboards) |
+| react-helmet-async | ^2.0.5 | Per-page `<head>` tags (SEO) |
+| react-joyride | ^3.1.0 | Product tours (onboarding, dashboard tour) |
 
 ---
 
@@ -124,7 +135,7 @@ sidebar_position: 220
 | react-hook-form | ~9 KB | Forms |
 | zod | ~13 KB | Validation |
 
-> **MUI removed:** Eliminating `@mui/material` saved ~100 KB gzipped from the `mui-vendor` chunk. The `vite.config.ts` `manualChunks` entry for `mui-vendor` has also been removed.
+> **MUI removed:** Eliminating `@mui/material` removed its vendor chunk entirely; the `vite.config.ts` `manualChunks` entry for `mui-vendor` is gone too.
 
 ---
 
@@ -188,9 +199,16 @@ Before adding a dependency, consider:
 {
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run sitemap && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node server/index.js",
+    "dev:server": "nodemon server/index.js",
+    "sitemap": "node scripts/generate-sitemap.mjs",
+    "content": "node scripts/generate-chapter-content.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke:theme": "node scripts/theme-smoke.mjs"
   }
 }
 ```

@@ -54,14 +54,17 @@ sidebar_position: 120
 | `/teacher/*` | TeacherDashboard | Protected | SuperAdmin, Teacher | Teacher analytics, class links, AI generator, quizzes, homework status |
 | `/principal/*` | PrincipalDashboard | Protected | SuperAdmin, Principal | Today at my school (index), then school-scoped analytics |
 | `/school-ops/fees`, `/school-ops/collections`, `/school-ops/attendance`, `/school-ops/timetable`, `/school-ops/gradebook`, `/school-ops/tc`, `/school-ops/notices` | School Ops screens | Protected | SuperAdmin, Principal, Teacher | One job per tabbed screen; tabs depend on role |
-| `/school-ops/parents` | ParentLoginsPanel | Protected | SuperAdmin, Principal | Parent logins and password slips |
+| `/school-ops/logins` | LoginsLayout | Protected | SuperAdmin, Principal | Printed login slips: parent logins (index) and student logins (`students`) |
+| `/school-ops/parents` | (redirect) | — | — | Redirects to `/school-ops/logins` (kept for old links) |
 | `/school-ops/import` | ImportPanel | Protected | SuperAdmin | Bulk student import (CSV) and demo school rebuild |
 | `/print/receipt/:receiptNo`, `/print/report-card/:planId/:studentId`, `/print/tc/:studentId`, `/print/day-book` | Print pages (A4, no app chrome) | Protected | SuperAdmin, Principal, Teacher (receipt and report card also Parent) | Printable school documents |
-| `/print/parent-slips` | ParentSlipsPrint | Protected | SuperAdmin, Principal | Printable parent login slips |
+| `/print/parent-slips`, `/print/student-slips` | ParentSlipsPrint, StudentSlipsPrint | Protected | SuperAdmin, Principal | Printable parent and student login slips |
 | `/admin` | AdminDashboard | Protected | SuperAdmin | Admin panel |
 | `/feedback` | FeedbackForm | Public | All | User feedback form |
 | `/privacy-policy` | LegalPolicy | Public | All | Privacy policy |
 | `/terms-of-service` | TermsOfService | Public | All | Terms of service |
+| `/trust` | TrustPage | Public | All | Trust page: data safety and school assurances |
+| `/ui-kit` | UiKit | DEV: public / prod: SuperAdmin | Component gallery — open on the dev server, SuperAdmin-only in production |
 | `*` | NotFound | Public | All | 404 catch-all — compass icon + contextual links |
 
 Public marketing URLs end in a trailing slash (`/about/`, `/blog/<slug>/`, `/class/.../`). A small script in `index.html` sends the slash-less form to the slash form before the app loads, so it doesn't index as a copy of the home page. App routes (`/study`, `/dashboard`, …) are left alone.
@@ -369,19 +372,19 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Component:** `src/components/school-ops/` (one screen per job, with tabs)
 **Description:** School operations: fees and receipts, day book, attendance, timetable, gradebook, transfer certificates, notices, parent logins and bulk import
 **Authentication:** Protected (RoleProtectedRoute)
-**Allowed Roles:** SuperAdmin, Principal, Teacher (`/school-ops/parents`: SuperAdmin, Principal; `/school-ops/import`: SuperAdmin)
+**Allowed Roles:** SuperAdmin, Principal, Teacher (`/school-ops/logins`: SuperAdmin, Principal; `/school-ops/import`: SuperAdmin; `/school-ops/parents` is a redirect to `/school-ops/logins`)
 **Nested routes:**
 
 | Path | Tabs (index first) |
 |------|--------------------|
-| `/school-ops/fees` | Collect (index), `billing`, `setup` (SuperAdmin), `receipts` |
+| `/school-ops/fees` | Collect (index), `billing`, `setup` (SuperAdmin), `receipts`, `settings` (Principal+) |
 | `/school-ops/attendance` | Mark (index), `day`, `staff` |
 | `/school-ops/timetable` | Today (index), `cover` (Principal), `setup` (SuperAdmin) |
 | `/school-ops/gradebook` | Enter marks (index), `plans` (SuperAdmin), `cards` (Principal) |
 | `/school-ops/collections` | Day book |
 | `/school-ops/tc` | Transfer certificates |
 | `/school-ops/notices` | Notices |
-| `/school-ops/parents` | Parent logins |
+| `/school-ops/logins` | Parent logins (index), `students` |
 | `/school-ops/import` | Bulk import (SuperAdmin) |
 
 **Features:**
@@ -397,7 +400,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 **Component:** `src/components/school-ops/print/` (A4 pages, opened in their own tab)
 **Description:** Printable school documents. App chrome is not rendered on `/print/*` (`isPrintRoute` in `App.jsx`)
 **Authentication:** Protected (RoleProtectedRoute)
-**Routes:** `/print/receipt/:receiptNo`, `/print/report-card/:planId/:studentId` (also Parent), `/print/tc/:studentId`, `/print/day-book` (SuperAdmin, Principal, Teacher), `/print/parent-slips` (SuperAdmin, Principal)
+**Routes:** `/print/receipt/:receiptNo`, `/print/report-card/:planId/:studentId` (also Parent), `/print/tc/:studentId`, `/print/day-book` (SuperAdmin, Principal, Teacher), `/print/parent-slips` and `/print/student-slips` (SuperAdmin, Principal)
 
 ---
 
