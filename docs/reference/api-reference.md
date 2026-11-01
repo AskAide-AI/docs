@@ -1936,7 +1936,7 @@ The signed-in user's invite code, link, rewards and friends. Opening it also set
 }
 ```
 
-`referredBy` is `null` unless someone invited this user; `answered` is capped at `activationAnswers`. Each `referrals[].source` is `link` (invite link/code) or `challenge` (joined by playing a challenge); `status` is `joined` until that friend answers 10 questions, then `active`. Names are first names only. Shape: `ReferralSummary` in shared contracts.
+`referredBy` is `null` unless someone invited this user; `answered` is capped at `activationAnswers`. Each `referrals[].source` is `link` (invite link/code) or `challenge` (joined by playing a challenge); `status` is `joined` until that friend answers 3 questions, then `active`. Names are first names only. Shape: `ReferralSummary` in shared contracts.
 
 ---
 

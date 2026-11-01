@@ -156,9 +156,6 @@ JWT_SECRET=your-secure-random-string-here
 AI_ENDPOINT=http://localhost:8000
 AI_SERVICE_API_KEY=your_shared_ai_key
 
-# Redis
-REDIS_URL=redis://localhost:6379
-
 # Cloudinary (file uploads)
 CLOUD_NAME=your_cloud_name
 API_KEY=your_api_key
@@ -304,7 +301,6 @@ The app opens at **http://localhost:5173**.
 | `JWT_SECRET` | Yes | — | Secret for signing JWTs |
 | `AI_ENDPOINT` | Yes | — | Base URL of the AI service |
 | `AI_SERVICE_API_KEY` | Yes | — | Shared secret sent as `x-api-key` on every AI call; must match the AI service |
-| `REDIS_URL` | No | — | Redis connection string |
 | `CLOUD_NAME` | No | — | Cloudinary cloud name |
 | `API_KEY` | No | — | Cloudinary API key |
 | `API_SECRET` | No | — | Cloudinary API secret |
@@ -406,10 +402,12 @@ curl http://localhost:8000/health  # AI Service health
 6. **Test an AI endpoint directly** (optional):
 
 ```bash
-# Generate questions
+# Generate questions (the body needs class_id, subject_id, chapter_id and topics;
+# every AI request must carry the shared key as an x-api-key header)
 curl -X POST http://localhost:8000/v1/generate-questions \
   -H "Content-Type: application/json" \
-  -d '{"chapterId": "test", "count": 5}'
+  -H "x-api-key: $AI_SERVICE_API_KEY" \
+  -d '{"class_id": "24hex-objectid", "subject_id": "24hex-objectid", "chapter_id": "24hex-objectid", "topics": ["Photosynthesis"], "n": 5}'
 ```
 
 7. **Check MongoDB** — connect and verify data:
@@ -425,7 +423,7 @@ mongosh --eval "use askaideai; db.users.find().limit(5).pretty()"
 ### "Cannot find module" errors (Backend)
 
 ```bash
-cd Backend
+cd backend
 rm -rf node_modules
 npm install
 ```
@@ -452,7 +450,7 @@ npm install
 
 - Confirm `VITE_API_URL` in `frontend/.env` points to the backend: `http://localhost:4000/api/v1`
 - Restart the Vite dev server after changing `.env` — Vite does not hot-reload env files
-- Check the browser console for CORS errors — the backend allows all origins in development by default
+- Check the browser console for CORS errors — the backend only answers origins on its explicit allowlist (`index.js`); `http://localhost:5173` is on it for development
 
 ### Port already in use
 
@@ -534,4 +532,4 @@ The frontend never talks to the AI service directly. All AI calls are proxied th
 
 ---
 
-For questions or issues, check the existing `CLAUDE.md` files in each service directory, or open an issue at the repository.
+For questions or issues, check the `AGENTS.md` file at each repository's root — it carries that repo's working instructions — or open an issue at the repository.

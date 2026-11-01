@@ -26,7 +26,7 @@ A comprehensive guide to understanding the **AskAide AI Backend** -- its tech st
 
 | Layer | Technology | What it does |
 |-------|-----------|-------------|
-| **Runtime** | Node.js 23 | JavaScript engine/server runtime |
+| **Runtime** | Node.js 22 (the version used in development; the repo pins no version) | JavaScript engine/server runtime |
 | **Framework** | Express 4 | Web framework for REST APIs |
 | **Database** | MongoDB | NoSQL document database |
 | **ODM** | Mongoose 8 | Object-Document Mapper for MongoDB |
@@ -87,7 +87,7 @@ The project uses native ES module syntax (`import` / `export`) instead of Common
 Backend/
 - index.js                          # Entry point: sets up Express, middleware, routes
 - config/
-  - server.config.js              # Environment variables: PORT, ATLAS_DB_URL, NODE_ENV
+  - server.config.js              # Environment variables: PORT, DATABASE_URL (exported as ATLAS_DB_URL), NODE_ENV
   - swagger.config.js             # Swagger docs configuration
 - routes/
   - v1/
@@ -99,7 +99,7 @@ Backend/
     - progress/
     - quiz/
     - teacher/
-    - ... (14 total modules)
+    - ... (26 total modules)
   - shared/                       # Shared utilities, middleware, models
     - middleware/
       - auth.js                 # JWT auth, role guards
@@ -113,7 +113,7 @@ Backend/
 
 ### Key Files to Know
 - `index.js` -- Creates the Express app, applies global middleware (helmet, rate limit, CORS, compression), mounts routes, connects to MongoDB, and starts the server.
-- `config/server.config.js` -- Loads `.env` variables (PORT, JWT_SECRET, MONGO_URI, etc.).
+- `config/server.config.js` -- Loads `.env` variables (PORT, JWT_SECRET, DATABASE_URL, etc.).
 - `routes/v1/index.js` -- Imports all module routes and mounts them under `/api/v1`.
 - `src/modules/<name>/` -- Each module is self-contained with its own controller, service, model, route, etc.
 

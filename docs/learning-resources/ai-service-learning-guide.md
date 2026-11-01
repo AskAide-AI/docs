@@ -49,7 +49,7 @@ The core of the AI service. RAG is a technique that improves LLM responses with 
 
 **How it works:**
 1. **Documents are ingested** -- Text is extracted from PDFs/DOCX files.
-2. **Text is chunked** -- The document is broken into smaller sections (e.g., 512 characters with 50 overlap).
+2. **Text is chunked** -- The document is broken into smaller sections (about 512 words with 50 words of overlap by default).
 3. **Chunks are embedded** -- Each chunk is converted into a vector (a list of numbers) that represents its semantic meaning.
 4. **Vectors are stored** -- These vectors are saved in a vector database (Qdrant).
 5. **Query is embedded** -- When a user asks a question, it is also converted into a vector.
@@ -65,7 +65,7 @@ The core of the AI service. RAG is a technique that improves LLM responses with 
 ### Document Chunking
 - Documents are too large to send to an LLM as-is.
 - Chunking breaks them into smaller, manageable pieces.
-- The project uses configurable chunk sizes (default: 512 chars, 50 overlap), plus larger chunks for summarization (1000 chars).
+- Chunk sizes are configurable via `QDRANT_CHUNK_SIZE` (512) and `QDRANT_CHUNK_OVERLAP` (50), with a larger `QDRANT_SUMMARY_CHUNK_SIZE` (1000) for summarization.
 
 ---
 

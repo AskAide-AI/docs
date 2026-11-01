@@ -86,11 +86,11 @@ Implemented but not yet exposed via HTTP endpoints:
 | `POST /v1/upload-document` | Ingest chapter PDF (async, returns task_id) |
 | `POST /v1/delete-document` | Delete chapter vectors |
 | `POST /v1/search-document` | RAG status check |
-| `POST /search-documents/batch` | Batch check multiple chapters |
+| `POST /v1/search-documents/batch` | Batch check multiple chapters |
 | `POST /v1/regenerate-topics` | Regenerate topics from Qdrant (async) |
 | `POST /v1/generate-questions` | Question generation |
 | `POST /v1/sync-chapter-topics` | Sync Qdrant→MongoDB topics |
-| `POST /query` | RAG semantic search |
+| `POST /v1/query` | RAG semantic search |
 
 ### AI Insights
 | Endpoint | Purpose |
@@ -115,11 +115,11 @@ Implemented but not yet exposed via HTTP endpoints:
 ### Conversations
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /conversations` | Create conversation |
-| `GET /conversations` | List conversations |
-| `GET /conversations/{id}/messages` | Get messages |
-| `POST /conversations/{id}/messages` | Add message |
-| `DELETE /conversations/{id}` | Delete conversation |
+| `POST /v1/conversations` | Create conversation |
+| `GET /v1/conversations` | List conversations |
+| `GET /v1/conversations/{id}/messages` | Get messages |
+| `POST /v1/conversations/{id}/messages` | Add message |
+| `DELETE /v1/conversations/{id}` | Delete conversation |
 
 ### Admin: live LLM switching
 SuperAdmin-only, proxied by the Backend's `/api/v1/admin/system/llm/*` (the /admin **AI System** tab).

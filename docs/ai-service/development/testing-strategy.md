@@ -10,13 +10,23 @@ Current status and recommended approach for testing the AskAideAI AI Service.
 
 ## Current Status
 
-**5 test files exist:**
+**12 test files exist:**
+
+Integration tests (`tests/`):
 - `tests/test_api_endpoints.py` — API endpoint integration tests
 - `tests/test_progress.py` — Progress tracking tests
+- `tests/test_feature_llm.py` — Per-feature LLM selection tests
+- `tests/test_active_llm.py` — Live LLM switching tests
+- `tests/test_llm_admin.py` — Admin LLM management tests
 - `tests/test_teacher_agent.py` — Teacher AI agent tests
+
+Unit tests (`tests/unit/`):
 - `tests/unit/test_chunker.py` — Text chunker unit tests
 - `tests/unit/test_config.py` — Configuration tests
 - `tests/unit/test_rag_filter.py` — RAG filter tests
+- `tests/unit/test_generate_question_robustness.py` — Question generation robustness
+- `tests/unit/test_document_cleaning.py` — Document cleaning tests
+- `tests/unit/test_paper_questions.py` — Written paper question tests
 
 All tests use pytest.
 

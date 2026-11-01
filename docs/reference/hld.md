@@ -157,7 +157,7 @@ There are no cross-store transactions. The system relies on ordering and idempot
 | Chapter deletion | The Backend asks the AI Service to delete vectors (failures only logged), then deletes Mongo rows regardless; a failed AI delete can leave orphan vectors |
 | Concurrent question generation | One `QuestionGenerationJob` per chapter, question type and difficulty, claimed atomically; unique normalised-text index de-duplicates questions |
 | Mastery | `StudentTopicProgress` is updated incrementally when a session ends, from that session's answers |
-| Referral rewards | A referred friend becomes active (10 answers, practice plus challenge) through one conditional update on the referral entry, so both sides are rewarded exactly once. The check runs after saved answers and challenge plays or claims; opening the referral screen and the daily notification job settle any activation that was missed |
+| Referral rewards | A referred friend becomes active (3 answers, practice plus challenge) through one conditional update on the referral entry, so both sides are rewarded exactly once. The check runs after saved answers and challenge plays or claims; opening the referral screen and the daily notification job settle any activation that was missed |
 | Refresh-token rotation | The old refresh token is claimed with one atomic `findOneAndUpdate` on `revoked: false`, so concurrent refreshes with the same token cannot both succeed |
 | Notifications | Unique index on user, type, group key and IST day: repeated events fold into one row with a `count`; one-time events are inserted only once |
 | Schema coupling | The AI Service reads Backend-owned collections directly, so Backend model changes to those collections are cross-repo changes |
@@ -321,7 +321,7 @@ sequenceDiagram
     participant DB as MongoDB
     FE->>BE: POST /authenticate/login (or Google ID token)
     BE->>DB: verify user, store hashed refresh token
-    BE-->>FE: access token (2h) and refresh token (7d)
+    BE-->>FE: access token (2h) and refresh token (30d)
     FE->>BE: API calls with Bearer access token
     BE-->>FE: 401 tokenExpired
     FE->>FE: take cross-tab lock, reuse tokens if another tab just refreshed
@@ -359,7 +359,7 @@ sequenceDiagram
     FE->>BE: POST /challenges/attempts/:id/claim (claimToken)
     BE->>DB: link attempt, credit owner as inviter (new accounts only)
     BE-->>FE: claimed, referral, gift progress
-    Note over BE,DB: After 10 answers (practice plus challenge) both get a practice-paper credit and a streak shield, plus a notification
+    Note over BE,DB: After 3 answers (practice plus challenge) both get a practice-paper credit and a streak shield, plus a notification
 ```
 
 Invite links (`/signup?ref=CODE`) follow the same reward rule without the challenge step.
@@ -374,7 +374,7 @@ A teacher creates a link for a class + subject (+ section) with `POST /teacher-c
 
 | Layer | Mechanism |
 |---|---|
-| User authentication | Backend-issued JWTs: access token (default 2h) and refresh token (default 7d). Refresh tokens are stored as SHA-256 hashes, single-use (each refresh claims the old token atomically and issues a new one), capped at 5 active per user and revoked on password change or reset. Google Sign-In verifies the Google ID token server-side. Email OTP for verification and password reset; a login-email change takes effect only after a 6-digit code sent to the new address is confirmed, and the old address is told |
+| User authentication | Backend-issued JWTs: access token (default 2h) and refresh token (default 30d). Refresh tokens are stored as SHA-256 hashes, single-use (each refresh claims the old token atomically and issues a new one), capped at 10 active per user and revoked on password change or reset. Google Sign-In verifies the Google ID token server-side. Email OTP for verification and password reset; a login-email change takes effect only after a 6-digit code sent to the new address is confirmed, and the old address is told |
 | Public growth links | Challenge play and class join pages work without login but are rate-limited per IP; challenge questions are served without answers and scored on the server; a guest's play can only be claimed with its single-use claim token; only brand-new accounts can be credited to an inviter |
 | Authorization | Enforced in the Backend by role guards and per-resource checks. Frontend route guards only shape the UX |
 | Service-to-service | Shared API key on every Backend → AI Service call. The AI Service has no end-user identity and treats the Backend as its only trusted caller; teacher content scope is enforced in retrieval filters |
@@ -418,7 +418,7 @@ All Backend jobs are `node-cron` schedules started when `index.js` imports them,
 |---|---|---|
 | Keep-alive (`src/shared/jobs/keepAlive.js`) | Every 14 min | Pings the Backend's own `/ping` so the free-tier instance does not sleep |
 | Achievement sweep (`supporting/jobs/achievementScheduler.js`) | Daily 11:35 (server time) | Re-checks every user's badges as a safety net for the real-time badge check |
-| Daily notifications (`notification/jobs/notificationScheduler.js`) | Daily 17:00 IST (`Asia/Kolkata`) | Sends one gift reminder to each referred friend who joined 1–7 days ago and is still short of 10 answers (settling the gift instead if they already reached it), and one-time class report / certificate notifications to teachers whose class links reached them |
+| Daily notifications (`notification/jobs/notificationScheduler.js`) | Daily 17:00 IST (`Asia/Kolkata`) | Sends one gift reminder to each referred friend who joined 1–7 days ago and is still short of 3 answers (settling the gift instead if they already reached it), and one-time class report / certificate notifications to teachers whose class links reached them |
 
 Notifications from user actions (challenge plays, friends joining, gifts, badges, class joins) are written immediately, not by a job. Notifications appear in the in-app bell, which polls for the unread count.
 

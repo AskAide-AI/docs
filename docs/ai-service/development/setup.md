@@ -51,7 +51,7 @@ Then visit http://localhost:8000/docs for the API documentation.
 ```python
 import httpx
 
-response = httpx.post("http://localhost:8000/query", json={
+response = httpx.post("http://localhost:8000/v1/query", json={
     "query": "What is photosynthesis?",
     "limit": 5
 })
@@ -95,7 +95,7 @@ quiz = orchestrator.generate_practice(
 ### Core RAG
 - `POST /v1/upload-document` - Upload document (PDF, DOCX, TXT)
 - `POST /v1/upload-status/{task_id}` - Poll document ingestion status
-- `POST /query` - Search documents with RAG
+- `POST /v1/query` - Search documents with RAG
 - `POST /v1/search-document` - Check if document exists in vector store
 - `POST /v1/generate-questions` - Generate AI-powered questions from chapter content
 - `POST /v1/delete-document` - Delete document and its embeddings
@@ -114,10 +114,10 @@ quiz = orchestrator.generate_practice(
 - `GET /v1/ai-agent/generation/{generation_id}` - Get specific generation details
 
 ### Conversations
-- `POST /conversations` - Create a new conversation
-- `GET /conversations` - List conversations
+- `POST /v1/conversations` - Create a new conversation
+- `GET /v1/conversations` - List conversations
 - `GET /conversations/{conversation_id}/messages` - Get conversation messages
-- `POST /conversations/{conversation_id}/messages` - Add message to conversation
+- `POST /v1/conversations/{conversation_id}/messages` - Add message to conversation
 - `DELETE /conversations/{conversation_id}` - Delete a conversation
 
 ### AI Insights
@@ -225,7 +225,8 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 # Processing
 QDRANT_CHUNK_SIZE=512
-QDRANT_BATCH_SIZE=32
+QDRANT_CHUNK_OVERLAP=50
+BATCH_SIZE=16            # Qdrant upsert batch size
 
 # Question Generation — Context Rotation
 QG_CANDIDATE_POOL=200    # Chapter chunks to consider per generation
@@ -240,7 +241,6 @@ QG_CANDIDATE_SAMPLE=12   # Chunks randomly sampled and fed to the LLM
 ai-service/
 ├── main.py                    # FastAPI app
 ├── config.py                  # Settings (Pydantic)
-├── config.yaml                # Configuration
 │
 ├── services/
 │   ├── rag.py                 # Core RAG system
@@ -270,11 +270,9 @@ ai-service/
 │   ├── metrics.py            # Monitoring
 │   └── validators.py         # Input validation
 │
-├── tests/
-│   └── unit/                 # Unit tests
+├── eval/                      # RAG evaluation & benchmarking suite
 │
-└── docs/
-    └── AI_FEATURES_QUICKREF.md
+└── tests/                     # pytest suite
 ```
 
 ---
@@ -324,5 +322,5 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ## Documentation
 
 - [AI Features Guide](../features/ai-features-quickref) - Detailed AI usage
-- Improvement Guide (internal `.agent/skills/ai-service-improvement/SKILL.md`) - Best practices
+- An internal improvement guide with best practices lives in the team's own repositories
 - [Cross-repo Integration](../features/cross-repo-map) - Backend integration

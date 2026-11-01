@@ -15,10 +15,10 @@ Use this file to understand how changes in one repo affect the others.
 
 | Repo | Language | Path | Port |
 |------|----------|------|------|
-| **Frontend** | React 18 + Vite + Redux | `D:\AskAide AI\Frontend` | 5173 (Vite dev) |
-| **Backend** | Express.js + MongoDB (Mongoose) | `D:\AskAide AI\Backend` | 4000 |
-| **AI Service** | Python FastAPI + Qdrant + MongoDB | `D:\AskAide AI\ai-service` | 8000 |
-| **Shared Contracts** | TypeScript + JSON Schema | `D:\AskAide AI\shared-contracts` | — |
+| **Frontend** | React 18 + Vite + Redux | `frontend/` repo | 5173 (Vite dev) |
+| **Backend** | Express.js + MongoDB (Mongoose) | `backend/` repo | 4000 |
+| **AI Service** | Python FastAPI + Qdrant + MongoDB | `ai-service/` repo | 8000 |
+| **Shared Contracts** | TypeScript + JSON Schema | `shared-contracts/` repo | — |
 
 ---
 
@@ -31,7 +31,7 @@ User's Browser
 ┌─────────────────────────────────────────────────────────────┐
 │  Frontend (React 18 + Vite)                                 │
 │  Port: 5173 (dev) / 3000 (prod preview)                     │
-│  Path: D:\AskAide AI\Frontend                               │
+│  Repo: frontend/                                            │
 │                                                              │
 │  Key files:                                                 │
 │    src/api/axios.js          — Axios instance               │
@@ -47,7 +47,7 @@ User's Browser
 ┌─────────────────────────────────────────────────────────────┐
 │  Backend (Express.js + MongoDB)                              │
 │  Port: 4000                                                  │
-│  Path: D:\AskAide AI\Backend                                 │
+│  Repo: backend/                                              │
 │                                                              │
 │  Key files:                                                 │
 │    index.js                  — Entry point                  │
@@ -67,7 +67,7 @@ User's Browser
 ┌──────────────────────────────┐          ┌──────────────────┐
 │  AI Service (FastAPI)        │          │  MongoDB Atlas   │
 │  Port: 8000                  │          │                  │
-│  Path: D:\AskAide AI\ai-service          │  Database:       │
+│  Repo: ai-service/                       │  Database:       │
 │                              │          │  study_platform  │
 │  Key files:                  │          │  ai_service      │
 │    main.py                   │          └──────────────────┘
@@ -109,7 +109,7 @@ User's Browser
 | `DELETE /chapters` | `POST /v1/delete-document` | JSON `{ class_id, subject_id, chapter_id }` | Delete from RAG |
 | `POST /chapters/check-rag-status` | `POST /v1/search-document` | JSON | Check RAG existence |
 | `POST /questions/batch/:chapterId/...` | — | Calls AI when DB has insufficient questions | Internal _callAIService() |
-| `GET /topic-progress/ai-insights/:userId/subject/:subjectId` | `GET /v1/ai-insights/subject` | Query params | AI learning insights |
+| `GET /topic-progress/ai-insights/subject/:subjectId` (user from the JWT) | `GET /v1/ai-insights/subject` | Query params | AI learning insights |
 | `GET /topic-progress/ai-insights/:userId/chapter/:chapterId` | `GET /v1/ai-insights/chapter` | Query params | AI learning insights |
 | `POST /api/v1/ai-assistant` | `POST /v1/ai-agent` | JSON | AI content generation — returns `generation_id` |
 | `POST /api/v1/ai-assistant/continue` | `POST /v1/ai-agent` | JSON (with `session_id`) | Continue clarification session |
@@ -216,8 +216,8 @@ Frontend requests insights
 
 ## When Making Changes
 
-1. **Frontend changes** → Check if `src/api/endpoints.js` and `src/api/*.api.js` match backend routes in `D:\AskAide AI\Backend\routes\v1\`
-2. **Backend changes** → Update `D:\AskAide AI\shared-contracts\api-definitions.md` AND the corresponding frontend API wrapper
-3. **AI Service changes** → Update `D:\AskAide AI\shared-contracts\data-models.ts` (AI schemas section) AND verify backend calls match. If adding a MongoDB collection, add it to both `DOCUMENTATION.md` (MongoDB collections table) and `CROSS_REPO_MAP.md`
+1. **Frontend changes** → Check if `src/api/endpoints.js` and `src/api/*.api.js` match backend routes in `backend/routes/v1/`
+2. **Backend changes** → Update `shared-contracts/api-definitions.md` AND the corresponding frontend API wrapper
+3. **AI Service changes** → Update `shared-contracts/data-models.ts` (AI schemas section) AND verify backend calls match. If adding a MongoDB collection, add it to both `DOCUMENTATION.md` (MongoDB collections table) and `CROSS_REPO_MAP.md`
 4. **Shared Contracts changes** → Must update JSON Schema AND all three repos' implementations
 5. **Adding AI Agent endpoint** → Must add to `education_ai_agent.py` method, `main.py` route, `shared-contracts/api-definitions.md`, `DOCUMENTATION.md`, and the Backend's ai-assistant module

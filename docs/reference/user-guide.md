@@ -8,8 +8,6 @@ sidebar_position: 600
 
 Welcome to **AskAide AI**, the AI-powered education platform designed for Indian students in classes 6–12. This guide walks you through every feature based on your role.
 
-> **Tip:** Replace `PLACEHOLDER: [description]` image tags with actual screenshots once captured.
-
 ---
 
 ## Table of Contents
@@ -123,8 +121,6 @@ AskAide runs a public demo school with made-up but realistic data. You can see e
 4. Set a **daily study goal** (recommended: 30 minutes)
 5. You'll be redirected to your student dashboard
 
-> **PLACEHOLDER: `[Screenshot of onboarding flow — class/subject selection]`**
-
 ---
 
 ### Study Sessions
@@ -142,8 +138,6 @@ Study sessions are the core learning experience. You practice MCQ and fill-in-th
    - **Medium** — Application-level questions
    - **Hard** — Advanced and competitive exam-level questions
 6. Click **Start Session**
-
-> **PLACEHOLDER: `[Screenshot of study session setup — class → subject → chapter → difficulty]`**
 
 #### During a Study Session
 
@@ -169,8 +163,6 @@ At the end of each session:
 
 Every answer is saved the moment you give it, so closing the tab mid-session doesn't lose your progress.
 
-> **PLACEHOLDER: `[Screenshot of session summary screen]`**
-
 ---
 
 ### Student Dashboard
@@ -188,8 +180,6 @@ Your dashboard is the home screen after login. It gives you an at-a-glance view 
 | **Activity Chart** | Weekly study time visualization (bar/line chart) |
 | **Mastery Overview** | Topic mastery distribution (Weak → Mastered) |
 | **Quick Actions** | Start study session, take quiz, view progress |
-
-> **PLACEHOLDER: `[Screenshot of student dashboard with all widgets]`**
 
 #### Daily Challenges
 
@@ -218,8 +208,6 @@ Quizzes assigned by your teachers appear here.
    - **Expired** — The deadline passed before you attempted it
 3. A quiz due within a day shows **Due today!** or **Due tomorrow** instead
 4. The counters at the top show how many quizzes are Available, In Progress and Completed. You can search by title and filter by status
-
-> **PLACEHOLDER: `[Screenshot of quiz list with status badges]`**
 
 #### Taking a Quiz
 
@@ -270,8 +258,6 @@ Track your mastery level for every topic across subjects.
    - Sessions attempted
    - Accuracy trend over time
    - Suggested next steps
-
-> **PLACEHOLDER: `[Screenshot of progress page showing mastery levels]`**
 
 #### Subject-Level Summary
 
@@ -349,8 +335,6 @@ Turn any practice session into a quiz your friends can play, then see who scored
 - A friend who signs up after playing your challenge counts as a friend you invited, and their challenge answers count towards your [Refer & Earn](#refer--earn) gift
 - Badges: **Challenger** when a friend plays your challenge, **Challenge Champion** when you beat a friend's score
 
-> **PLACEHOLDER: `[Screenshot of the session result card with the Challenge on WhatsApp button]`**
-
 ---
 
 ### Refer & Earn
@@ -375,8 +359,6 @@ Invite friends to AskAide. When a friend you invited answers **3 questions**, yo
 - If a friend invited you, see how many of the 3 questions you need you've done
 
 > **Note:** Invites work for new accounts only. If you signed up with a friend's invite, your friend is credited automatically.
-
-> **PLACEHOLDER: `[Screenshot of the Refer & Earn page]`**
 
 ---
 
@@ -446,8 +428,6 @@ Open **Settings** from the **Account** section of the sidebar (on phones, from t
 
 Theme and sound choices are saved on the device you set them on.
 
-> **PLACEHOLDER: `[Screenshot of settings page]`**
-
 ---
 
 ### Try Now (No Signup)
@@ -480,8 +460,6 @@ Generate exam papers instantly — no account required.
 7. **Download** the PDF (or the editable Word file) and print — every paper carries a separate answer key, with the model solution and value points for written questions
 
 > **Note:** Assertion-reason, 2/3/5-mark and case-based questions are written specially for paper printing and are shown only after they have been reviewed; a new chapter starts with just MCQ and fill-in-the-blank. A generator draft is kept on your device, so a reload or a later signup resumes it.
-
-> **PLACEHOLDER: `[Screenshot of free paper generator UI]`**
 
 > **Tip:** Signing in (free) keeps your papers in history, autosaves your edits and lets you share the paper as a PDF.
 
@@ -528,8 +506,6 @@ Teachers can create their own free account; you don't need your school to set yo
 | **Activity Feed** | Recent student activity in your classes |
 | **Quick Actions** | Create quiz, generate paper, view progress |
 
-> **PLACEHOLDER: `[Screenshot of teacher dashboard]`**
-
 ---
 
 ### Class Join Links
@@ -553,8 +529,6 @@ Only student accounts can join a class link.
 **Tracking your class:** the Class links page shows, for each link, how many students joined, how many have practised since joining, and how many were active this week. A printable **class progress report** and an **AskAide Champion Teacher certificate** unlock as more of your students practise; the page shows your progress towards each, and you get a notification when one is ready.
 
 **Closing a link:** turn a link off on the Class links page when you no longer want new students to join. Students who already joined stay in your class. You can turn it back on later.
-
-> **PLACEHOLDER: `[Screenshot of the Class links page with a link and QR code]`**
 
 ---
 
@@ -585,8 +559,6 @@ Only student accounts can join a class link.
 
 4. **Reorder questions** by dragging (optional)
 5. Click **Save as Draft** or **Publish**
-
-> **PLACEHOLDER: `[Screenshot of quiz creation form]`**
 
 #### Publishing a Quiz
 
@@ -641,8 +613,6 @@ Generate exam-ready question papers with a custom difficulty mix, or exact count
 6. **Download PDF** (the PDF embeds a print-safe font — a DejaVu Serif Condensed subset — so symbols like √, π, ∠ and H₂O print correctly) or the editable **Word** file
 7. **Share** the paper as a PDF; the separate answer key is available for download
 
-> **PLACEHOLDER: `[Screenshot of paper generator configuration]`**
-
 > **Tip:** Generated papers follow standard Indian exam formatting with sections, marks distribution, and instructions. Written questions (assertion-reason, 2/3/5-mark, case-based) live in a separate reviewed store — they never end up in student practice, quizzes or public pages. All your papers stay in **Paper History**.
 
 ---
@@ -661,8 +631,6 @@ Use natural language to generate educational content.
 3. The AI generates content
 4. **Review** and **edit** as needed
 5. **Save** to your question bank or **publish** directly
-
-> **PLACEHOLDER: `[Screenshot of AI Assistant chat interface]`**
 
 #### Supported Content Types
 
@@ -697,8 +665,6 @@ Monitor how your students are performing.
    - Recent sessions and quiz scores
    - Weak areas requiring attention
 
-> **PLACEHOLDER: `[Screenshot of student progress view]`**
-
 ---
 
 ## Parent Guide
@@ -728,8 +694,6 @@ For the selected child, the dashboard shows:
 
 If no child is linked yet, the page says so and asks you to contact your school administrator. Use **Refresh** after the school has linked your account.
 
-> **PLACEHOLDER: `[Screenshot of parent dashboard with child cards]`**
-
 ---
 
 ### Child Progress
@@ -749,8 +713,6 @@ The same page, below the cards, shows the selected child's progress.
 #### Recent Activity
 
 - Your child's last 5 practice sessions: chapter, date and time, and score (with accuracy)
-
-> **PLACEHOLDER: `[Screenshot of child progress detail page]`**
 
 ---
 
@@ -810,8 +772,6 @@ Admins manage the entire school's data on the platform.
 2. Confirm the deletion
 3. All linked teachers, students, and sections are unlinked (not deleted)
 
-> **PLACEHOLDER: `[Screenshot of school management list]`**
-
 ---
 
 ### Teacher Management
@@ -836,8 +796,6 @@ Admins manage the entire school's data on the platform.
 5. Review the preview table
 6. Click **Confirm Import**
 7. All teachers are created and invite emails are sent
-
-> **PLACEHOLDER: `[Screenshot of bulk import UI]`**
 
 #### Managing Teachers
 
@@ -869,8 +827,6 @@ Admins manage the entire school's data on the platform.
 4. Upload the CSV
 5. Review the preview
 6. Click **Confirm Import**
-
-> **PLACEHOLDER: `[Screenshot of student bulk import]`**
 
 #### Managing Students
 
@@ -923,8 +879,6 @@ Manage teacher–student assignments.
 2. Click **Unlink**
 3. The teacher loses access to that student's data (student data is preserved)
 
-> **PLACEHOLDER: `[Screenshot of link management table]`**
-
 ---
 
 ### Chapter Upload
@@ -948,8 +902,6 @@ Upload PDF textbooks for AI processing (RAG, embeddings, question generation).
    - 🟡 **Processing** — Being analyzed by AI
    - 🟢 **Ready** — Available for quizzes and paper generation
    - 🔴 **Failed** — Check error message and retry
-
-> **PLACEHOLDER: `[Screenshot of chapter upload page]`**
 
 #### Bulk Upload
 
@@ -995,8 +947,6 @@ Manage chapters and their topics after upload.
 - Confirm deletion
 - The associated vector embeddings are removed from the AI service
 
-> **PLACEHOLDER: `[Screenshot of chapter management list]`**
-
 ---
 
 ### Relation View
@@ -1010,8 +960,6 @@ Visualize the complete school hierarchy.
 3. Click any node to expand/collapse
 4. Click a student to see their assigned teachers
 5. Click a teacher to see their assigned students and classes
-
-> **PLACEHOLDER: `[Screenshot of relation view tree]`**
 
 This is useful for:
 - Auditing assignments
@@ -1096,7 +1044,7 @@ Passwords are shown only once, on the printed slips, so print them straight away
 ### Getting Help
 
 - **In-app help:** Click the **?** icon on any page
-- **Email support:** support@askaide.ai
+- **Email:** contact@askaide.in
 - **Report a bug:** Use the feedback form in Settings
 
 ---

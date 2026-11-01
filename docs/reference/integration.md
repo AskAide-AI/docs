@@ -295,8 +295,8 @@ Backend (questions.service.js)
 ```
 Frontend (Progress pages)
   │
-  ├─ GET /api/v1/topic-progress/ai-insights/chapter/:userId/:chapterId
-  ├─ GET /api/v1/topic-progress/ai-insights/subject/:userId/:subjectId
+  ├─ GET /api/v1/topic-progress/ai-insights/chapter/:chapterId     (user from the JWT)
+  ├─ GET /api/v1/topic-progress/ai-insights/subject/:subjectId     (user from the JWT)
   ├─ GET /api/v1/topic-progress/ai-insights/teacher/class?subjectId=...
   │
   ▼
@@ -687,7 +687,7 @@ export interface NewAIResponse {
 6. **Update environment variables** if needed
    - Backend: add to `.env` if new env var introduced
    - AI Service: add to `.env` if new env var introduced
-   - Document in all relevant `CLAUDE.md` files
+   - Document in each relevant repo's `AGENTS.md`
 
 7. **Cross-check**
    - Verify request/response shapes match between Backend and AI Service

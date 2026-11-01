@@ -56,7 +56,7 @@ Provider factory in `services/llm_service.py` (`get_llm_service_class()`). Imple
 `utils/embedding.py` supports fallback chain via `EMBEDDING_PROVIDERS` env var:
 `ollama, external, openai, google` — tried left to right.
 
-All embeddings auto-normalize to `QDRANT_VECTOR_SIZE` (default 1024, deployed 384).
+All embeddings auto-normalize to `QDRANT_VECTOR_SIZE` (default 384).
 
 ## Processing Pipelines
 

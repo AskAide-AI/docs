@@ -17,7 +17,7 @@ AskAideAI/
 ├── frontend/              React 18 + Vite SPA
 │   └── src/
 │       ├── api/           axios.js (shared instance + token refresh), endpoints.js,
-│       │                  and 19 *.api.js modules (one per domain, e.g. referral,
+│       │                  and 20 *.api.js modules (one per domain, e.g. referral,
 │       │                  challenge, teacherClass, notification)
 │       ├── components/    20 component directories
 │       │   ├── admin/
@@ -47,7 +47,7 @@ AskAideAI/
 │       └── utils/         incl. acquisition.js (first-touch ?ref= / UTMs),
 │                          pendingChallenge.js (guest challenge claim, pending class join)
 │
-├── Backend/               Express.js + MongoDB API server
+├── backend/               Express.js + MongoDB API server
 │   ├── index.js           Entry point (also imports the cron jobs)
 │   ├── routes/v1/index.js Mounts every module router under /api/v1
 │   └── src/
@@ -404,7 +404,7 @@ export default MyWidget;
 
 ### Step 4: Add tests
 
-Place test files adjacent to components: `MyWidget.test.jsx`.
+Frontend tests live flat in `src/__tests__/` (Vitest + Testing Library): `MyWidget.test.jsx` in that folder, not next to the component.
 
 ---
 
@@ -414,7 +414,7 @@ Place test files adjacent to components: `MyWidget.test.jsx`.
 
 1. **Create the model file** — `src/modules/<module>/models/<module>.model.js` or `src/shared/models/`
    ```js
-   const mongoose = require('mongoose');
+   import mongoose from 'mongoose';
 
    const mySchema = new mongoose.Schema(
      {
@@ -430,7 +430,7 @@ Place test files adjacent to components: `MyWidget.test.jsx`.
 
    mySchema.index({ email: 1 }, { unique: true });
 
-   module.exports = mongoose.model('MyModel', mySchema);
+   export default mongoose.model('MyModel', mySchema);
    ```
 
 2. **Guidelines**:
@@ -449,8 +449,8 @@ Place test files adjacent to components: `MyWidget.test.jsx`.
 
 ### Backend
 
-- **Framework**: Jest (check `package.json` for config).
-- **Location**: `tests/` directory or co-located `*.test.js` files.
+- **Framework**: Jest 30 in native ESM mode — run with `NODE_OPTIONS=--experimental-vm-modules` (see the module's scripts).
+- **Location**: `src/modules/<module>/tests/*.test.js` (52 test files across 22 modules).
 - **What to test**:
   - Service layer (business logic) — unit tests with mocked DB.
   - Controller layer — integration tests with mocked services.
