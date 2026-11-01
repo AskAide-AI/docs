@@ -34,8 +34,6 @@ const sidebars = {
             'frontend/development/forms-and-validation',
             'frontend/development/styling-guide',
             'frontend/development/api-integration',
-            'frontend/development/quiz-module-api',
-            'frontend/development/teacher-dashboard-api',
             'frontend/development/performance',
             'frontend/development/accessibility',
             'frontend/development/seo-checklist',
@@ -45,6 +43,14 @@ const sidebars = {
             'frontend/development/troubleshooting',
             'frontend/development/proposed-changes',
             'frontend/development/changelog',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Reference',
+          items: [
+            'frontend/reference/quiz-module-api',
+            'frontend/reference/teacher-dashboard-api',
           ],
         },
       ],
@@ -62,7 +68,6 @@ const sidebars = {
           items: [
             'backend/features/question-generation-flow',
             'backend/features/quiz-implementation',
-            'backend/features/question-selection',
             'backend/features/features',
           ],
         },
@@ -115,16 +120,10 @@ const sidebars = {
           label: 'Development',
           items: [
             'ai-service/development/setup',
-            'ai-service/development/integration-plan',
             'ai-service/development/eval-readme',
             'ai-service/development/troubleshooting',
             'ai-service/development/testing-strategy',
           ],
-        },
-        {
-          type: 'category',
-          label: 'Reference',
-          items: ['ai-service/reference/documentation'],
         },
       ],
     },
@@ -132,14 +131,7 @@ const sidebars = {
       type: 'category',
       label: 'Shared Contracts',
       link: {type: 'doc', id: 'shared-contracts/overview'},
-      items: [
-        'shared-contracts/api-definitions',
-        {
-          type: 'category',
-          label: 'Development',
-          items: ['shared-contracts/development/mcp-setup'],
-        },
-      ],
+      items: ['shared-contracts/api-definitions'],
     },
     {
       type: 'category',
@@ -156,7 +148,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Learning Resources',
-      link: {type: 'doc', id: 'learning-resources/README'},
+      link: {type: 'doc', id: 'learning-resources/index'},
       items: [
         'learning-resources/frontend-learning-guide',
         'learning-resources/backend-learning-guide',

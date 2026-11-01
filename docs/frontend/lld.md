@@ -952,8 +952,8 @@ Technical facts first listed from the code at `75ce259`. Rows 6, 8, 10, 16, 19 a
 | [State Management](./development/state-management.md) | Slice usage guidance, the notification store, feature storage keys |
 | [API Integration](./development/api-integration.md) | Endpoint table. Some older snippets (admin, question paper) are abridged, so prefer section 7 here. |
 | [Study Session Flow](./features/study-session-flow.md) | Polling contract and mastered state in depth |
-| [Quiz Module API](./development/quiz-module-api.md) | Quiz endpoints |
-| [Teacher Dashboard API](./development/teacher-dashboard-api.md) | Teacher analytics endpoints |
+| [Quiz Module API](./reference/quiz-module-api.md) | Quiz endpoints |
+| [Teacher Dashboard API](./reference/teacher-dashboard-api.md) | Teacher analytics endpoints |
 | [Testing](./development/testing.md) | Testing guide |
 | [Deployment](./development/deployment.md) | Hosting and release |
 | [SEO Checklist](./development/seo-checklist.md) | SEO process |

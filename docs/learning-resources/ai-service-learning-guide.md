@@ -208,7 +208,6 @@ All endpoints (except `/ping`, `/health`) are rate-limited to 200 requests per 6
 | AI Service Architecture | AskAide Docs: `docs/ai-service/architecture.md` |
 | AI Service Overview | AskAide Docs: `docs/ai-service/overview.md` |
 | AI Service Setup | AskAide Docs: `docs/ai-service/development/setup.md` |
-| AI Integration Plan | AskAide Docs: `docs/ai-service/development/integration-plan.md` |
 | AI Features Quick Ref | AskAide Docs: `docs/ai-service/features/ai-features-quickref.md` |
 | Cross-Repo Map | AskAide Docs: `docs/ai-service/features/cross-repo-map.md` |
 

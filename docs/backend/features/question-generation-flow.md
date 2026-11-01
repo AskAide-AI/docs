@@ -105,7 +105,10 @@ Plus:
   `getQuestionsBatch` warms the next batch in the background → no mid-session wait.
 - **Mastery moment:** once content-complete, draining the pool returns `mastered`;
   the UI celebrates (🏆) and points to the next chapter / difficulty / finishing.
-  A new session reshuffles the existing pool.
+  A new session reshuffles the existing pool — served questions are drawn from
+  the pool and shuffled in JS with Fisher-Yates (not via MongoDB `$sample`), and
+  each question's answer options are shuffled too, so the correct answer is not
+  always in the same position.
 - Generation targets the requested `difficulty` (passed to the AI, lowercased).
 
 > **Why not a chunk-count or fixed cap?** Because the generator's output isn't

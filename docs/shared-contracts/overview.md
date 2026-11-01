@@ -10,13 +10,11 @@ When a change affects a request/response shape crossing the Backend ↔ AI Servi
 
 | File | Purpose |
 |------|---------|
-| `api-definitions.md` | Endpoint catalog for Backend and AI Service ([copy on this site](./api-definitions.md)) |
+| `api-definitions.md` | Endpoint catalog for Backend and AI Service ([copy on this site](./api-definitions.md), auto-synced from the shared-contracts repo) |
 | `data-models.ts` | Canonical TypeScript types for request/response shapes |
 | `data-models.schema.json` | Hand-maintained JSON Schema mirror of `data-models.ts` |
-| `integration-guide.md` | Short stub — the full multi-expert team guide lives in the private docs repo (`internal-docs/engineering/guides/multi-expert-team-guide.md`) |
+| `integration-guide.md` | Short stub — the full guide lives in the team's private documentation |
 | `QUICK_START.md` | Setup guide for all three repos |
-
-MCP server configuration for Cursor/WindSurf/Cline is described on this site under [MCP setup](./development/mcp-setup.md).
 
 ## API Response Envelope
 

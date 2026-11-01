@@ -1,7 +1,7 @@
 # AI Service Quick Reference
 
 > **⚠️ IMPORTANT — Internal Python API Only**
-> All features documented here use the `services.ai` Python module directly via `from services.ai import get_ai_orchestrator`. These are **NOT yet exposed as HTTP API endpoints**. They are fully implemented and ready for Backend integration once API routes are added to `main.py`. See `INTEGRATION_PLAN.md` for proposed HTTP API mappings (future work).
+> All features documented here use the `services.ai` Python module directly via `from services.ai import get_ai_orchestrator`. These are **NOT yet exposed as HTTP API endpoints**. They are fully implemented and ready for Backend integration once API routes are added to `main.py`.
 
 ## Cheat Sheet for AI Features
 

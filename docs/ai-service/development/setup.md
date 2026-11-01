@@ -80,7 +80,7 @@ quiz = orchestrator.generate_practice(
 )
 ```
 
-> **Note:** The AIOrchestrator and all `services/ai/` modules are implemented in Python code but **not yet exposed as HTTP API endpoints**. These features are available via Python imports only. See `docs/INTEGRATION_PLAN.md` for proposed API endpoints.
+> **Note:** The AIOrchestrator and all `services/ai/` modules are implemented in Python code but **not yet exposed as HTTP API endpoints**. These features are available via Python imports only — the [AI features quick reference](../features/ai-features-quickref.md) catalogs what exists and how to call it.
 
 ---
 

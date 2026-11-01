@@ -1,18 +1,40 @@
 // @ts-check
 import {themes as prismThemes} from 'prism-react-renderer';
+import {RETIRED_REDIRECTS} from './scripts/lib/retired-redirects.mjs';
 
 const config = {
   title: 'AskAide AI Docs',
   tagline: 'All-in-one learning platform documentation',
   favicon: 'img/favicon.ico',
 
-  url: 'https://AskAide-AI.github.io',
+  url: 'https://askaide-ai.github.io',
   baseUrl: '/docs/',
 
   organizationName: 'AskAide-AI',
   projectName: 'docs',
 
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
+
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        // Old paths live in scripts/lib/retired-redirects.mjs (single source of
+        // truth shared with the postbuild check-redirects gate). They are
+        // BASE-URL-RELATIVE: the plugin strips baseUrl from every route path
+        // before calling createRedirects (verified in the 3.10.1 plugin source
+        // — lib/index.js feeds it removePrefix(path, baseUrl)). With baseUrl
+        // '/docs/', writing '/docs/…' here would emit redirects under
+        // /docs/docs/… on the deployed site.
+        createRedirects: (path) => {
+          const oldPaths = RETIRED_REDIRECTS.filter((r) => r.to === path).map(
+            (r) => r.from,
+          );
+          return oldPaths.length > 0 ? oldPaths : undefined;
+        },
+      },
+    ],
+  ],
 
   markdown: {
     mermaid: true,
