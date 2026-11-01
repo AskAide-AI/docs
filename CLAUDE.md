@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Repo Is
 
-`askaide-docs/` is the **public documentation website** for AskAide AI, built with [Docusaurus](https://docusaurus.io/) 3 (React 19). It is a **static site** — no application logic, and no access to the product, backend, or database. It documents the product implemented by the sibling repos; nothing here runs in production beyond serving static HTML.
+`docs/` is the **public documentation website** for AskAide AI, built with [Docusaurus](https://docusaurus.io/) 3 (React 19). It is a **static site** — no application logic, and no access to the product, backend, or database. It documents the product implemented by the sibling repos; nothing here runs in production beyond serving static HTML.
 
 - Site title: `AskAide AI Docs`
 - Served at `https://AskAide-AI.github.io` under base URL `/docs/`
@@ -39,10 +39,10 @@ Other scripts: `npm run clear` (clear cache), `npm run deploy` (publish to GitHu
 
 ## Guardrails
 
-1. **This site is public.** Never add pricing, sales scripts, funding strategy, credentials, internal audits, or any `../askaide-internal/` content here. Public/private separation is deliberate.
+1. **This site is public.** Never add pricing, sales scripts, funding strategy, credentials, internal audits, or any `../internal-docs/` content here. Public/private separation is deliberate.
 2. **Don't hand-edit `build/`** — it is generated. Edit sources in `docs/` / `src/` and rebuild.
 3. Keep content in sync with actual product behavior; stale docs mislead users and hurt SEO.
 
 ## Cross-Repo Context
 
-Sibling repos live alongside this one under the monorepo checkout: `../frontend/`, `../Backend/`, `../ai-service/`, `../shared-contracts/`, and the private `../askaide-internal/`. This site documents the product those repos implement — when a user-facing feature changes there, the relevant page here may need updating.
+Sibling repos live alongside this one under the monorepo checkout: `../frontend/`, `../backend/`, `../ai-service/`, `../shared-contracts/`, and the private `../internal-docs/`. This site documents the product those repos implement — when a user-facing feature changes there, the relevant page here may need updating.

@@ -77,7 +77,7 @@ AskAideAI/
 │   ├── api-definitions.md
 │   ├── data-models.ts
 │   ├── data-models.schema.json
-│   ├── integration-guide.md
+│   ├── integration-guide.md   (stub — full guide in the private docs repo)
 │   └── QUICK_START.md
 │
 └── docs/                  This file and future documentation
