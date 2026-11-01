@@ -13,7 +13,10 @@
     "write-translations": "docusaurus write-translations",
     "write-heading-ids": "docusaurus write-heading-ids",
     "sync:contracts": "node scripts/sync-contracts.mjs",
-    "check:contracts": "node scripts/check-contracts-sync.mjs"
+    "check:contracts": "node scripts/check-contracts-sync.mjs",
+    "prebuild": "node scripts/check-contracts-sync.mjs && node scripts/check-docs-consistency.mjs && node scripts/check-docs-meta.mjs",
+    "prestart": "node scripts/check-contracts-sync.mjs && node scripts/check-docs-consistency.mjs",
+    "postbuild": "node scripts/check-redirects.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.1",
