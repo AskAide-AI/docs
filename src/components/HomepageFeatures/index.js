@@ -1,48 +1,50 @@
 import clsx from 'clsx';
+import Link from '@docusaurus/Link';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
-const FeatureList = [
+const EntryPointList = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
+    title: 'Frontend',
+    link: '/frontend/overview',
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+        The React SPA students, teachers, principals, and parents use: shipped
+        features and flows, per-feature API references, and development guides
+        from setup to SEO.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
+    title: 'Backend',
+    link: '/backend/overview',
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+        The Express + MongoDB API behind every screen: authentication and
+        roles, the question generation engine, fees, database schema reference,
+        and deployment.
       </>
     ),
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
+    title: 'AI Service',
+    link: '/ai-service/overview',
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+        The FastAPI + Qdrant RAG service: document ingestion, question
+        generation, learning insights, evaluation, and troubleshooting.
       </>
     ),
   },
 ];
 
-function Feature({Svg, title, description}) {
+function EntryPoint({title, link, description}) {
   return (
     <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
-      </div>
       <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
+        <Heading as="h3">
+          <Link to={link}>{title}</Link>
+        </Heading>
         <p>{description}</p>
       </div>
     </div>
@@ -54,8 +56,8 @@ export default function HomepageFeatures() {
     <section className={styles.features}>
       <div className="container">
         <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
+          {EntryPointList.map((props, idx) => (
+            <EntryPoint key={idx} {...props} />
           ))}
         </div>
       </div>

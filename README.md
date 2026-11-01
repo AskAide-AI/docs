@@ -23,20 +23,22 @@ This command starts a local development server and opens up a browser window. Mo
 npm run build
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+This command runs the prebuild gates (contract-sync check, docs↔sidebars consistency, frontmatter check), generates static content into the `build` directory, then runs the postbuild redirect check. The output can be served with `npm run serve`.
 
 ## Deployment
 
-Using SSH:
+Fully automatic — there is **no `gh-pages` branch and no manual deploy step**:
+
+1. Push to `main`.
+2. GitHub Actions runs `.github/workflows/deploy.yml`: `npm ci` → `npm run build` → publish `build/` with `actions/deploy-pages@v4`.
+3. The site goes live at `https://askaide-ai.github.io/docs/`.
+
+If a build fails (broken links, drift, missing frontmatter), the deploy fails — fix and push again.
+
+## Generated content — do not hand-edit
+
+`docs/shared-contracts/api-definitions.md` is a generated mirror of the canonical contract in the sibling `shared-contracts` repo. To change it, edit `../shared-contracts/api-definitions.md` and run:
 
 ```bash
-USE_SSH=true npm run deploy
+npm run sync:contracts
 ```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> npm run deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
