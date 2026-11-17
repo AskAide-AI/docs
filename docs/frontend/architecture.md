@@ -76,7 +76,7 @@ Operation modules (19). `auth.api.js` returns Redux thunks that dispatch actions
 - `goal.api.js` — Daily goals
 - `referral.api.js` — Invite link, referral redeem, practice-paper reward
 - `challenge.api.js` — Challenge a friend
-- `notification.api.js` — Notification bell (list, unread count, mark read)
+- `notification.api.js` — Notification bell (list, unread count, mark read) and phone alerts (push key, subscribe, unsubscribe)
 - `stats.api.js` — Public platform stats
 - `profile.api.js` — Public profile, name edit, email change
 - `feedback.api.js`, `suggestion.api.js`, `behavioral.api.js` — Feedback and suggestions

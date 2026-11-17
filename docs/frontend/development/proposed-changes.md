@@ -56,7 +56,7 @@ This page keeps the ideas that are **not built yet**. Items from the December 20
 | **Topic Mastery Paths** | 🔴 High | High | Sequential learning with prerequisites |
 | **Quick Quizzes** | 🟡 Medium | Medium | Timed mini-tests a student can start on their own for revision (only teacher quizzes are timed today) |
 | **Doubt Resolution** | 🔴 High | High | AI chat for students to clarify concepts (the AI assistant is for teachers only) |
-| **Study Reminders** | 🟡 Medium | Low | Push or email reminders to practise. Only the in-app notification bell exists; there are no push notifications |
+| **Study Reminders** | 🟡 Medium | Low | Email reminders, or reminders a student schedules. The evening streak reminder already goes to the bell and, with phone alerts on, to the phone; there are no emails or custom times yet |
 | **Levels** | 🟢 Low | Medium | Levels on top of badges and streaks |
 | **Offline Mode** | 🟡 Medium | High | Download questions for offline practice |
 | **Session Replay** | 🟢 Low | High | Replay a session's questions and answers step by step |

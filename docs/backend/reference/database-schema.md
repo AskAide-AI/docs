@@ -680,6 +680,27 @@ One row in a user's notification bell. Events with the same type and `groupKey` 
 
 ---
 
+### PushSubscription
+**File:** `src/modules/notification/models/pushSubscription.model.js`
+
+One phone or browser that turned on alerts (web push). Deleted when the user turns alerts off, on logout, when the push service reports the device gone (`404` or `410`), or when the account passes 10 devices (the oldest is dropped).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| userId | ObjectId | REF: User, REQUIRED, INDEX | Who gets the alerts. A device another account turns alerts on for moves to that account |
+| endpoint | String | REQUIRED, UNIQUE, MAX: 1000 | The browser push service address for this device |
+| keys.p256dh | String | REQUIRED, MAX: 200 | The device's public key for encrypting the push |
+| keys.auth | String | REQUIRED, MAX: 100 | The device's auth secret for the push |
+| userAgent | String | MAX: 300, DEFAULT: null | The browser that subscribed |
+| day | String | DEFAULT: null | IST `YYYY-MM-DD` of the last automatic push |
+| sentToday | Number | DEFAULT: 0 | Automatic pushes sent on `day`; capped at 3 |
+| lastSentAt | Date | DEFAULT: null | When the last automatic push was sent |
+| createdAt, updatedAt | Date | AUTO | Timestamps |
+
+**Indexes:** `{ userId }`, `{ endpoint }` (unique)
+
+---
+
 ### Announcement
 **File:** `src/modules/announcement/models/announcement.model.js`
 
@@ -695,6 +716,7 @@ A SuperAdmin message put into users' notification bells. Sending writes one `ann
 | requestId | String | REQUIRED, UNIQUE | One id per Send click, so a repeat is refused (`409 DUPLICATE_ANNOUNCEMENT`) |
 | status | String | ENUM, DEFAULT: sending | sending, sent, failed, withdrawn |
 | sentCount | Number | DEFAULT: 0 | Bell rows written |
+| pushedCount | Number | DEFAULT: null | Phones the push reached. Null while still sending, or when push is off on the server |
 | sentBy | ObjectId | REF: User, REQUIRED | The SuperAdmin who sent it |
 | sentAt, withdrawnAt | Date | DEFAULT: null | When it finished sending, and when it was withdrawn |
 | createdAt, updatedAt | Date | AUTO | Timestamps |

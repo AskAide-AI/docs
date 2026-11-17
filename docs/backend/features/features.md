@@ -337,7 +337,7 @@ sidebar_position: 340
 
 ## In-App Notifications
 **Status:** ✅ Completed  
-**Description:** A notification bell inside the app. It shows announcements from the AskAide team (see SuperAdmin Announcements below), when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift, and nudges students who practised in the last week but not today (the evening streak reminder). Notifications are kept for 60 days after their last event. Emails continue to go out as before.  
+**Description:** A notification bell inside the app. It shows announcements from the AskAide team (see SuperAdmin Announcements below), when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift, and nudges students who practised in the last week but not today (the evening streak reminder). Notifications are kept for 60 days after their last event. Emails continue to go out as before. Phones with alerts on also get a push for new events (see Phone Push Notifications below).  
 **Endpoints:**
 - `GET /api/v1/notifications` - List notifications, newest first
 - `GET /api/v1/notifications/unread-count` - Unread count for the bell
@@ -348,9 +348,22 @@ sidebar_position: 340
 
 ---
 
+## Phone Push Notifications
+**Status:** ✅ Completed  
+**Description:** Phones and browsers can get the notification bell's news as a push notification, even when AskAide is closed. A user turns on **Alerts on this phone** in the bell panel once per device. Push is off on a server until its three web push settings (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) are set; they must never be changed afterwards, because every subscribed phone is tied to the public key. A new bell row pushes for challenge plays, friends joining, gifts, class joins and milestones, streak reminders and homework reminders. Badges do not push, and a row folded into an existing one does not push again. Each device gets at most 3 of these automatic pushes per India (IST) day and none from 9:30 pm to 7 am IST; the bell always has them. Announcements push to every subscribed device of the recipients right after the send, in the background, 20 at a time, and are not capped or held for quiet hours. A device that the push service reports as gone is removed. A device belongs to one account, moves to the account that turns alerts on last, and an account keeps at most 10 devices. Only the push services of Google, Apple, Mozilla and Microsoft browsers are accepted.  
+**Endpoints:**
+- `GET /api/v1/notifications/push/key` - The public key a browser needs to subscribe (`null` when push is off)
+- `POST /api/v1/notifications/push/subscribe` - Turn on alerts for this device
+- `POST /api/v1/notifications/push/unsubscribe` - Turn off alerts for this device
+
+**Dependencies:** PushSubscription model, Notification and Announcement modules  
+**Added:** 2026-11-18
+
+---
+
 ## SuperAdmin Announcements
 **Status:** ✅ Completed  
-**Description:** A SuperAdmin writes a short message (a title of up to 80 characters, a message of up to 300, and an optional link to a page inside the app) and sends it to the notification bell of every active, non-demo user with the chosen roles (Student, Teacher, Principal, Parent, NormalUser, SuperAdmin), optionally limited to one school. Each user gets their own bell row, so unread counts and the toast work like any other notification. A SuperAdmin can check how many people a message will reach before sending. Every Send click carries a unique `requestId`, so a double click or a retry returns `409 DUPLICATE_ANNOUNCEMENT` instead of sending twice. If sending stops partway the announcement is marked `failed` with the number already reached. The history lists sent announcements with read counts. Withdrawing one deletes its bell rows for everyone and keeps the record as `withdrawn`. The message goes only to accounts that exist at send time. Users see it in the bell and as a toast the next time the app is open; there is no phone push notification yet.  
+**Description:** A SuperAdmin writes a short message (a title of up to 80 characters, a message of up to 300, and an optional link to a page inside the app) and sends it to the notification bell of every active, non-demo user with the chosen roles (Student, Teacher, Principal, Parent, NormalUser, SuperAdmin), optionally limited to one school. Each user gets their own bell row, so unread counts and the toast work like any other notification. A SuperAdmin can check how many people a message will reach before sending. Every Send click carries a unique `requestId`, so a double click or a retry returns `409 DUPLICATE_ANNOUNCEMENT` instead of sending twice. If sending stops partway the announcement is marked `failed` with the number already reached. The history lists sent announcements with read counts. Withdrawing one deletes its bell rows for everyone and keeps the record as `withdrawn`. The message goes only to accounts that exist at send time. Users see it in the bell and as a toast the next time the app is open, and phones with alerts on get it as a push right after the send (not capped, not held for quiet hours). Each announcement records how many phones the push reached (`pushedCount`). Withdrawing removes it from the bell but cannot recall a push that was already shown.  
 **Endpoints:** (all SuperAdmin only)
 - `POST /api/v1/announcements/audience` - How many users a message would reach
 - `POST /api/v1/announcements` - Send an announcement
@@ -705,4 +718,4 @@ Both serve only the student themself (or a SuperAdmin).
 
 ### WebSockets / Real-Time Notifications
 **Status:** 📋 Planned  
-**Description:** Real-time push notifications for quiz updates, achievements, and feedback.
+**Description:** Live updates inside the open app over WebSockets, so the bell and quiz screens refresh instantly instead of polling (the bell checks for new items about once a minute today). Phone push notifications for when the app is closed are already shipped; see Phone Push Notifications above.

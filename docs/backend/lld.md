@@ -1201,6 +1201,7 @@ Environment is loaded with `dotenv` (`config/server.config.js` and several modul
 | `JWT_SECRET` | Signs access and refresh JWTs and unsubscribe HMACs | `auth.js`, `auth.service.js`, `unsubscribeToken.js` |
 | `ACCESS_TOKEN_EXPIRY`, `REFRESH_TOKEN_EXPIRY`, `MAX_REFRESH_TOKENS` | Token lifetimes (2h, 30d) and active refresh-token cap (10); a deployment may override all three via env | `auth.service.js` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_ID_ANDROID`, `GOOGLE_CLIENT_ID_IOS` | Accepted Google ID-token audiences | `auth.service.js` |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Phone push (web push). Push is off unless all three are set. Never rotate the keys: subscribed phones are tied to the public key | `push.service.js` |
 | `AI_ENDPOINT` | AI Service base URL (no path) | content, questions, progress, ai-assistant, supporting (`llmSystem.service.js`), `index.js` |
 | `AI_SERVICE_API_KEY` | Sent as `x-api-key` | `requestContext.js` |
 | `SENDGRID_API_KEY`, `EMAIL` | SendGrid API key and verified sender address | `mailSender.js` |

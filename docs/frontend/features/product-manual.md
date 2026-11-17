@@ -56,7 +56,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 ### Friends, Classes & Notifications
 - **Challenge a Friend**: Send the questions you just practised on WhatsApp. Friends play without logging in and see who won.
 - **Refer & Earn**: Invite friends with your link. When a friend practises enough on a new account, you both get a free practice paper and a streak shield.
-- **Notifications**: A bell tells you when a friend plays your challenge, a friend joins, a gift unlocks, you earn a badge, or students join your class. The AskAide team can also send an announcement to the bell.
+- **Notifications**: A bell tells you when a friend plays your challenge, a friend joins, a gift unlocks, you earn a badge, or students join your class. The AskAide team can also send an announcement to the bell. Turn on **Alerts on this phone** at the top of the bell panel to get these on your lock screen too, except badges (at most 3 a day, never from 9:30 pm to 7 am; on an iPhone, add AskAide to the Home Screen first).
 
 ### Public Pages
 - **About**, **How It Works** (how questions are made and checked) and **Pricing** pages, plus a free trial on `/try` and SEO pages per class, subject and chapter.
@@ -114,6 +114,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 *   Tap the bell to see your notifications. On a phone, the bell is next to the dashboard greeting, and the **Menu** tab shows the unread count.
 *   Opening the list marks everything read. Tap a notification to go to it.
 *   New notifications can pop up as a short message, but never during practice or a quiz.
+*   To get notifications on your lock screen, turn on **Alerts on this phone** at the top of the bell panel. At most 3 a day, never from 9:30 pm to 7 am. On an iPhone or iPad, tap **Share**, then **Add to Home Screen**, and open AskAide from there first.
 
 #### **Profile**
 *   **Name**: Tap **Edit** next to your name, change it and save.

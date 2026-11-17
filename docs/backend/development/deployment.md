@@ -26,6 +26,8 @@ Ensure all environment variables are set (see [SETUP.md](./setup)):
 
 Token lifetimes also come from env: `ACCESS_TOKEN_EXPIRY` (default `2h`), `REFRESH_TOKEN_EXPIRY` (default `30d`) and `MAX_REFRESH_TOKENS` (default 10). A deployment may override all three — the API contract documents the code defaults.
 
+Phone push notifications (web push) are off until `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` are all set. Generate the key pair once and keep it for the life of the deployment: **never rotate it**, because every phone that turned alerts on is tied to the public key. A deployment without these three still works fully; only the phone alerts are missing. Browsers need the frontend to be served over HTTPS (or `localhost`) for push to work.
+
 ---
 
 ## Deployment Options

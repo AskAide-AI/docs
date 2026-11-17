@@ -379,6 +379,31 @@ The **bell** shows what's new: a friend played your challenge, a friend joined w
 - When something new arrives while you're using the app, a short pop-up appears. Pop-ups stay quiet while you're in a practice session or a quiz
 - Notifications are kept for 60 days
 
+#### Turn on phone alerts
+
+With alerts on, AskAide can show a notification on your phone's lock screen, even when AskAide is closed. It is off until you switch it on, and you switch it on once for each phone or browser.
+
+1. Tap the bell to open the list
+2. At the top, turn on **Alerts on this phone**
+3. When your phone asks to allow notifications, tap **Allow**
+
+Things to know:
+- **Which alerts you get:** the same news as the bell (challenges, gifts, friends and class joining, streak and homework reminders), plus announcements from the AskAide team. Badges only show in the bell
+- **At most 3 a day:** each phone gets at most 3 reminders or news alerts a day, and none between 9:30 pm and 7 am (India time). Anything held back is still in your bell. Announcements from the AskAide team are not counted in the 3 and can arrive at any hour
+- Tap an alert to open the related page in AskAide
+- To stop alerts, turn the switch off. Logging out also turns alerts off for that phone, so a shared phone does not keep alerting the last person
+- If two people share one phone, alerts go to whoever turned them on last
+- **If the switch says alerts are blocked:** you tapped **Block** earlier. Open your browser's site settings for AskAide, allow notifications, then come back and turn the switch on
+- **If you don't see the switch:** your browser does not support phone alerts, or you are on a test version of AskAide. Try Chrome on Android, or the installed app on iPhone
+
+**On an iPhone or iPad** (iOS 16.4 or newer), alerts only work from the installed app:
+1. Open AskAide in Safari
+2. Tap **Share**, then **Add to Home Screen**
+3. Open AskAide from the new Home Screen icon (not from Safari)
+4. Tap the bell and turn on **Alerts on this phone**
+
+Until you do this, the bell panel shows these steps in place of the switch.
+
 ---
 
 ### Student Profile
@@ -984,11 +1009,12 @@ Send a short message to the notification bell of everyone in the roles you pick.
 6. Click **Review and send**, check the preview, then confirm
 
 Things to know:
-- People see the message in their bell, and as a pop-up the next time they open AskAide. It does not reach a locked phone, because there is no phone push notification yet
+- People see the message in their bell, and as a pop-up the next time they open AskAide. Phones that have turned on **Alerts on this phone** also get it as a notification straight after you send, even when AskAide is closed. See [Turn on phone alerts](#turn-on-phone-alerts)
+- Phone alerts for an announcement are not held back at night. The confirm box warns you if it is between 9:30 pm and 7 am in India, when students' phones will buzz. Think about sending after 7 am
 - Only accounts that exist when you send it receive it
 - Pressing Send twice cannot send two copies
-- The **Sent** list shows each announcement with how many people it reached and how many have read it. If a send stops partway it is shown as **Stopped**, with the number reached
-- **Withdraw** removes it from every bell, including for people who already read it. It stays in the list as **Withdrawn**
+- The **Sent** list shows each announcement with how many people it reached and how many have read it, and once the phone alerts are sent, how many phones they reached ("pushed to N phones"). Phone alerts go out in the background, so the number can appear a little after the send, and does not appear if phone alerts are not switched on for AskAide. If a send stops partway it is shown as **Stopped**, with the number reached
+- **Withdraw** removes it from every bell, including for people who already read it. It cannot take back a phone alert that was already shown. It stays in the list as **Withdrawn**
 
 ---
 

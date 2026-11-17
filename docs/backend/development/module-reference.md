@@ -198,19 +198,30 @@ Quiz sets with `sectionIds` are visible and startable only to students with a `T
 ## Notification Module
 
 **Path:** `src/modules/notification/`
-**Purpose:** The in-app notification bell
+**Purpose:** The in-app notification bell, and phone push notifications (web push) for the same events
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
 | `/notifications` | GET | auth | `?before=<cursor>&limit=` (max 50, default 20) → `{ items, hasMore, nextCursor, unread }`, newest first |
 | `/notifications/unread-count` | GET | auth | `{ unread }` |
 | `/notifications/read` | POST | auth | `{ ids }` (up to 100) or `{ all: true }` → `{ updated, unread }` |
+| `/notifications/push/key` | GET | auth | `{ publicKey }`: the key a browser needs to turn on phone alerts. `publicKey` is `null` when push is off on this server |
+| `/notifications/push/subscribe` | POST | auth | The browser's push subscription (`{ endpoint, keys: { p256dh, auth } }`) → `{ subscribed: true }`. `400 BAD_PUSH_ENDPOINT` if the endpoint is not a known browser push service |
+| `/notifications/push/unsubscribe` | POST | auth | `{ endpoint }` → `{ removed }`. Turns off alerts for one of the user's devices |
 
 **How it works:** other services call `notificationService.notify()`, which never throws. Events with the same type and target (`groupKey`) on the same IST day fold into one row with a count and the latest first names, so ten plays of one challenge read as one row ("Name and 9 others played your challenge"). One-time events (badges, milestones, gift reminders) are stored once. Text is worded when the list is read.
 
 **Types:** `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `badge_earned`, `class_joined`, `class_milestone`, `streak_reminder`, `homework_reminder`, `announcement` (written by the Announcement module below).
 
 **Retention:** a row is removed 60 days after its last event (TTL index on `lastAt`).
+
+**Phone push (web push):** `push.service.js` sends a notification to every phone or browser (a "device") that turned on alerts. One `PushSubscription` row is stored per device.
+- **Off by default:** push works only when `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` are all set. If any is missing, `GET /push/key` returns `{ publicKey: null }`, nothing is sent, and the bell works as before. Set the keys once and never change them: every phone that turned alerts on is tied to the public key.
+- **Devices:** the endpoint must be a known browser push service (Google, Apple, Mozilla or Microsoft), otherwise `400 BAD_PUSH_ENDPOINT`. A device belongs to one account: if another account turns alerts on from the same device, it moves to that account. An account keeps at most 10 devices; turning on an 11th drops the oldest.
+- **Which bell rows push:** a brand-new bell row pushes to the user's devices. A row that is folded into an existing one (for example the 2nd play of the same challenge that day) or stored as already read does not push. `badge_earned` never pushes, because the badge is already on screen. Everything else in **Types** except `announcement` pushes. Announcements push from their own module below.
+- **Limits:** at most 3 automatic pushes per device per India (IST) day, and none from 9:30 pm to 7 am IST. A push that is skipped is still in the bell.
+- **Clean-up:** if the push service says a device is gone (`404` or `410`), the device is deleted. A push that fails for any other reason is logged and dropped; it never breaks the event behind it.
+- **What the phone shows:** the same title and text as the bell row, and tapping it opens the row's in-app link.
 
 **Daily job:** at 5 pm IST, `notificationScheduler.js` sends one gift reminder to each invited friend who joined 20 hours to 7 days ago and is still short of 3 answers, tells teachers once when a class report or the certificate unlocks, and sends the evening streak nudge (`streak_reminder`) to students who practised in the last 7 days but not today.
 
@@ -232,7 +243,9 @@ Quiz sets with `sectionIds` are visible and startable only to students with a `T
 - `requestId` (8 to 64 letters, digits or dashes) is one id per Send click and is unique. Sending the same `requestId` again returns `409 DUPLICATE_ANNOUNCEMENT`, so a double click or a retry cannot send two copies.
 - Sending writes one `announcement` notification row per user, in batches of 1000. The announcement's `status` goes `sending` to `sent`, or to `failed` with a partial `sentCount` if it stopped partway. People who sign up later do not receive it.
 - Withdrawing deletes the bell rows everywhere and sets the record to `withdrawn`. Withdrawing twice returns `409 ALREADY_WITHDRAWN`; withdrawing while a send started in the last 10 minutes is still running returns `409 STILL_SENDING`.
-- Users see the message in the bell, and as a toast the next time the app is open. There is no phone push notification.
+- Users see the message in the bell, and as a toast the next time the app is open. Devices with phone alerts on also get a push.
+- **Phone push for announcements:** right after the send reply, in the background, the message is pushed to every subscribed device of the users whose bell got it, 20 devices at a time. It is not counted in the 3-a-day limit and is not held for quiet hours. The number of devices reached is saved on the announcement as `pushedCount`. It is `null` while the push is still going, or when push is off on the server. A push failure never fails the send. If the server restarts mid-push, the bell rows are already written and only the remaining phone alerts are lost.
+- Withdrawing removes the bell rows but cannot recall a push that was already shown.
 
 ## Other Modules
 

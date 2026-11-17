@@ -38,7 +38,7 @@ dist/
 ├── class/.../index.html         # Prerendered: class hubs, subjects, chapters
 ├── fonts/*.woff2                # Self-hosted fonts (preloaded by index.html)
 ├── favicon.ico, favicon.svg, apple-touch-icon.png, icons/
-├── sw.js                        # PWA service worker
+├── sw.js                        # PWA service worker (also loads push-sw.js for phone alerts)
 └── sitemap.xml / robots.txt / _redirects
 ```
 
@@ -61,6 +61,8 @@ VITE_API_URL=https://backend-6752.onrender.com/api/v1
 > **Where this URL comes from:** `backend-6752.onrender.com` is the fallback in `vite.config.ts` (`VITE_API_URL || 'https://backend-6752.onrender.com/api/v1'`). Confirm the live production URL with the team before relying on it — a deployment can override it via env.
 
 > **Note:** Set environment variables in your deployment platform's settings, not in committed files.
+
+> **Phone alerts:** the frontend needs no extra setting for them. It asks the backend for the push key (`GET /notifications/push/key`), so alerts work once the backend has its web push settings. They work only on the production build served over HTTPS, because the service worker is off in `npm run dev`.
 
 ---
 

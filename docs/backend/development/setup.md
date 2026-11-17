@@ -851,6 +851,7 @@ npm install
 | `GOOGLE_CLIENT_ID_ANDROID` | Google OAuth Android client ID |
 | `GOOGLE_CLIENT_ID_IOS` | Google OAuth iOS client ID |
 | `JWT_SECRET` | Secret for signing JWT tokens |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Phone push notifications (web push). Optional: if any of the three is missing, push stays off and the bell works as before. Generate the key pair once with `npx web-push generate-vapid-keys`, and **never change it**: every phone that turned alerts on is tied to the public key, so a new key silently stops them all. `VAPID_SUBJECT` is a contact address such as `mailto:` plus a support email |
 
 ### Question Generation Configuration
 The following environment variables control the non-blocking question generation pipeline:

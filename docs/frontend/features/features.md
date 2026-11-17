@@ -233,16 +233,35 @@ sidebar_position: 70
 **Status:** ✅ Completed
 **Description:** Signed-in users get a notification bell. It shows an unread count and opens one panel: a top sheet on phones, a popover beside the bell on desktop. Opening the panel marks everything read. Tapping a notification goes where it points. A toast shows the newest unread notification once, also when news arrives while the app is open, but stays quiet during practice (`/study`) and quizzes. Examples: a friend played your challenge, a friend joined with your invite, a gift unlocked, a badge earned, students joined your class link, or an announcement from the AskAide team (shown with a megaphone icon, and it opens the page the sender linked to, if any).
 **Where the bell is:** the desktop sidebar on app pages, the top Navbar on public pages, beside the dashboard greeting on phones, a count on the BottomNav **Menu** tab, and a **Notifications** row in the mobile menu.
+**Phone alerts:** at the top of the panel, an **Alerts on this phone** switch turns on web push for this browser (see Phone Alerts below).
+**Phone alerts:** at the top of the panel, an **Alerts on this phone** switch turns on web push for this browser (see Phone Alerts below).
 **Pages:** All pages for signed-in users
 **Components:**
 - `notifications/NotificationBell.jsx`
 - `notifications/NotificationCenter.jsx`
 - `notifications/NotificationToaster.jsx`
+- `notifications/PushToggle.jsx`
+- `notifications/PushToggle.jsx`
 - `hooks/useNotifications.js` (one shared store; unread count polled every 60 s while the tab is visible)
 **API Dependencies:**
 - GET `/notifications`, GET `/notifications/unread-count`
 - POST `/notifications/read`
 **Added:** October 2026
+
+---
+
+### Phone Alerts (Web Push)
+**Status:** ✅ Completed
+**Description:** Users can get the bell's news as a notification on their phone's lock screen, even when AskAide is closed. An **Alerts on this phone** switch sits at the top of the notification panel, with a one-line hint underneath ("At most 3 a day, never at night" when on). Turning it on asks the browser for permission, subscribes the device and registers it with the server. Turning it off removes the device. The switch is hidden where the browser cannot do push. If the user blocked notifications, the switch is disabled and the hint says to allow them in the browser's site settings. On an iPhone or iPad outside the installed app, the panel shows the steps to tap **Share**, then **Add to Home Screen**, and open AskAide from there (iOS 16.4 or newer), instead of the switch. Logging out turns alerts off for that device, so a shared phone does not keep alerting the last account. If the browser holds a subscription made by a different account, it is dropped when the next account opens the panel. When a push arrives, the service worker shows its title and text; tapping it focuses an open AskAide tab or opens a new one at the linked in-app page (links are always AskAide paths). Push works only on a production build, because the service worker is off in `npm run dev`. If the server has no web push keys, turning the switch on shows "Phone alerts aren't ready yet".
+**Pages:** All pages for signed-in users (the switch is in the notification panel)
+**Components:**
+- `notifications/PushToggle.jsx`
+- `utils/push.js` (browser permission, subscribe and unsubscribe)
+- `public/push-sw.js` (loaded into the Workbox service worker through `importScripts`)
+**API Dependencies:**
+- GET `/notifications/push/key`
+- POST `/notifications/push/subscribe`, POST `/notifications/push/unsubscribe`
+**Added:** November 18, 2026
 
 ---
 
@@ -352,7 +371,7 @@ sidebar_position: 70
 
 ### Announcements
 **Status:** ✅ Completed
-**Description:** A SuperAdmin writes a short message and puts it in the notification bell of every user in the chosen groups. The form has a **Title** (up to 80 characters), a **Message** (up to 300), an optional **Open this page when tapped** link (an AskAide page such as `/study`; outside links are refused), **Send to** group buttons (Students, Teachers, Parents, Principals, Normal users, Super admins for testing) and a **School** picker (default: all schools). A live line says **Goes to N users**, a preview shows how the bell row will look, and a note warns if some of the same people got an announcement in the last 24 hours. **Review and send** opens a confirm dialog. Each confirmation carries one request id, so a retry cannot send twice. The **Sent** list shows each announcement with its status (Sending, Sent, Stopped, Withdrawn), how many users it reached and how many have read it. **Withdraw** removes it from every bell, including for people who already read it. Users see it in the bell and as a toast the next time they open the app; there is no phone push notification yet.
+**Description:** A SuperAdmin writes a short message and puts it in the notification bell of every user in the chosen groups. The form has a **Title** (up to 80 characters), a **Message** (up to 300), an optional **Open this page when tapped** link (an AskAide page such as `/study`; outside links are refused), **Send to** group buttons (Students, Teachers, Parents, Principals, Normal users, Super admins for testing) and a **School** picker (default: all schools). A live line says **Goes to N users**, a preview shows how the bell row will look, and a note warns if some of the same people got an announcement in the last 24 hours. **Review and send** opens a confirm dialog. Each confirmation carries one request id, so a retry cannot send twice. The **Sent** list shows each announcement with its status (Sending, Sent, Stopped, Withdrawn), how many users it reached, how many have read it and, once the phone alerts are sent, how many phones it reached ("pushed to N phones"). The confirm dialog notes that phones with alerts on also get it as a push straight away, and shows a warning when it is night in India (9:30 pm to 7 am IST), because announcements are not held back for quiet hours. **Withdraw** removes it from every bell, including for people who already read it, but cannot take back a phone alert that was already shown. Users see it in the bell and as a toast the next time they open the app, and on their phone if alerts are on.
 **Pages:** /admin (Announcements tab)
 **Components:**
 - `admin/AnnouncementsPanel.jsx`

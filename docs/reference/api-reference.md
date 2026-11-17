@@ -4895,6 +4895,8 @@ Base: `/api/v1/notifications/`
 | `class_milestone` | Daily job: a teacher's class report or certificate unlocked (sent once) |
 | `announcement` | A SuperAdmin announcement ([Announcements](#33-announcements)); `title` and `body` are the message |
 
+Phone alerts for these events are described under [Phone push](#phone-push-web-push) below.
+
 The daily job runs at **5 pm IST**. Events of the same type and target on the same IST day are grouped into one row (`count` > 1, e.g. "Kabir and 2 others played your challenge"); `title` and `body` are written from the grouped data when the list is read. One-time events never repeat. Rows are deleted 60 days after their last event. Shapes: `NotificationItem`, `NotificationList`, `NotificationReadResult` in shared contracts.
 
 ---
@@ -4983,6 +4985,80 @@ or
 ```
 
 **Errors:** 400 (neither `ids` nor `all`, or an invalid id)
+
+---
+
+#### Phone push (web push)
+
+Three routes let a browser turn on phone alerts (a push notification on the lock screen) for the signed-in user. Push is off on a server until its three web push settings are set; then `GET /push/key` returns `publicKey: null` and nothing is sent. Shapes: `PushKeyResult`, `PushSubscribeRequest`, `PushUnsubscribeRequest`, `PushPayload`.
+
+**What gets pushed.** A brand-new bell row for `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `class_joined`, `class_milestone`, `streak_reminder` or `homework_reminder` is also pushed to the user's devices. A row folded into an existing one, or stored as already read, is not pushed again. `badge_earned` is never pushed. Each device gets at most 3 of these a day (IST) and none from 9:30 pm to 7 am IST; the bell still has them. `announcement` rows are pushed separately (see [Announcements](#33-announcements)). A device the push service reports as gone is deleted.
+
+**Push payload** (what the service worker receives): `{ "title": "⚔️ Kabir beat your challenge! 😤", "body": "...", "link": "/c/M4RT9K/results", "tag": "challenge_played:M4RT9K" }`. `link` is the in-app page opened when the alert is tapped.
+
+##### GET `/push/key`
+
+The public key a browser needs to subscribe.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Push key fetched",
+  "data": { "publicKey": "<public key>" }
+}
+```
+
+`publicKey` is `null` when push is off on this server.
+
+---
+
+##### POST `/push/subscribe`
+
+Turn on alerts for this device. Send the browser's push subscription (`subscription.toJSON()`).
+
+**Request:**
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": { "p256dh": "...", "auth": "..." }
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Alerts turned on for this device",
+  "data": { "subscribed": true }
+}
+```
+
+`endpoint` must be an `https` address on a known browser push service (Google, Apple, Mozilla or Microsoft), or the request fails with `400 BAD_PUSH_ENDPOINT`. Sending the same endpoint again updates it, so it is safe to repeat. A device belongs to one account: if another account turns alerts on from the same device, it moves to that account. An account keeps at most 10 devices; turning on an 11th drops the oldest.
+
+**Errors:** 400 (`BAD_PUSH_ENDPOINT`, or a missing or invalid `keys`)
+
+---
+
+##### POST `/push/unsubscribe`
+
+Turn off alerts for one of the signed-in user's devices. The web app also calls it on logout.
+
+**Request:**
+```json
+{ "endpoint": "https://fcm.googleapis.com/fcm/send/..." }
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Alerts turned off for this device",
+  "data": { "removed": true }
+}
+```
+
+`removed` is `false` if that device was not registered to this account.
 
 ---
 
@@ -5234,14 +5310,14 @@ A public demo school, **Saraswati Vidya Mandir (Demo)** (school code `DEMO-SVM`,
 
 Base: `/api/v1/announcements/`
 
-A SuperAdmin message put into the notification bell of every user in the chosen roles. Every route needs a signed-in **SuperAdmin**. Sending writes one `announcement` row per active, non-demo user with one of the chosen roles (optionally only one school's users), in batches of 1000. Users see it in the bell and as a toast the next time the app is open; there is no phone push notification. Accounts created after the send do not receive it. Shapes: `AdminAnnouncement`, `SendAnnouncementRequest`, `AnnouncementList`, `AnnouncementWithdrawResult`.
+A SuperAdmin message put into the notification bell of every user in the chosen roles. Every route needs a signed-in **SuperAdmin**. Sending writes one `announcement` row per active, non-demo user with one of the chosen roles (optionally only one school's users), in batches of 1000. Users see it in the bell and as a toast the next time the app is open. Devices with phone alerts on also get a push right after the send, in the background and 20 at a time; it is not capped and not held for quiet hours, and `pushedCount` on the announcement records how many devices it reached (`null` while still pushing, or when push is off on the server). Withdrawing cannot recall a push that was already shown. Accounts created after the send do not receive it. Shapes: `AdminAnnouncement`, `SendAnnouncementRequest`, `AnnouncementList`, `AnnouncementWithdrawResult`.
 
 | Method | Route | Access | Body / Query | Response `data` |
 |--------|-------|--------|--------------|-----------------|
 | POST | `/announcements/audience` | SuperAdmin | `{ roles[], schoolId? }` | `{ count }`: how many users the message would reach |
 | POST | `/announcements` | SuperAdmin | `{ title, body, link?, roles[], schoolId?, requestId }`. `title` 1 to 80 characters, `body` 1 to 300, `roles` one or more of `Student`, `Teacher`, `Principal`, `Parent`, `NormalUser`, `SuperAdmin`. `link` must be an in-app path with a single leading `/` (for example `/study`). `requestId` is 8 to 64 letters, digits or dashes: one per Send click | `201 AdminAnnouncement`. `status` is `sent`, or `failed` with a partial `sentCount` if it stopped partway. The same `requestId` again returns `409 DUPLICATE_ANNOUNCEMENT` |
 | GET | `/announcements?page=&limit=` | SuperAdmin | query (`limit` up to 50) | `{ items: AdminAnnouncement[], pagination }`, newest first, each with `readCount` |
-| DELETE | `/announcements/:id` | SuperAdmin | none | `{ id, removedFrom }`. Deletes the bell rows everywhere and keeps the record as `withdrawn`. `409 ALREADY_WITHDRAWN`; `409 STILL_SENDING` while the send is still running (for up to 10 minutes) |
+| DELETE | `/announcements/:id` | SuperAdmin | none | `{ id, removedFrom }`. Deletes the bell rows everywhere and keeps the record as `withdrawn`. `409 ALREADY_WITHDRAWN`; `409 STILL_SENDING` while the send is still running (for up to 10 minutes). Phone alerts already shown are not recalled |
 
 ---
 
