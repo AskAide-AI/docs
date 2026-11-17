@@ -6,7 +6,7 @@ sidebar_position: 340
 
 # AskAide AI - Features
 
-**Last Updated:** 2026-10-18
+**Last Updated:** 2026-11-18
 
 ---
 
@@ -54,9 +54,9 @@ sidebar_position: 340
 
 ## Content Management (Classes, Subjects, Chapters)
 **Status:** ✅ Completed  
-**Description:** Hierarchical content structure: Class → Subject → Chapter → Topic, including chapter PDF ingestion, chapter startability metadata, bulk chapter deletion, and RAG status checks.  
+**Description:** Hierarchical content structure: Class → Subject → Chapter → Topic, including chapter PDF ingestion, chapter startability metadata, bulk chapter deletion, and RAG status checks. Classes run from Nursery to 12th. Nursery, LKG, UKG and 1st to 5th are school-only classes: a school uses them for sections, student import, fees, attendance, timetable, report cards and transfer certificates, but they are hidden from every practice screen, because practice starts at Class 6. They are created, with their basic subjects, by the seed script `npm run seed:school-classes` (safe to run again).  
 **Endpoints:**
-- `GET /api/v1/classes` - List all classes
+- `GET /api/v1/classes` - List practice classes (6th to 12th); `?schoolOnly=include` adds the school-only classes
 - `GET /api/v1/subjects/class/:classId` - Subjects by class
 - `GET /api/v1/chapters/class/:classId/subject/:subjectId` - Chapters list
 - `POST /api/v1/chapters/create-with-pdf` - Create chapter with PDF upload
@@ -337,7 +337,7 @@ sidebar_position: 340
 
 ## In-App Notifications
 **Status:** ✅ Completed  
-**Description:** A notification bell inside the app. It shows when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift, and nudges students who practised in the last week but not today (the evening streak reminder). Notifications are kept for 60 days after their last event. Emails continue to go out as before.  
+**Description:** A notification bell inside the app. It shows announcements from the AskAide team (see SuperAdmin Announcements below), when friends play your challenge, join with your invite, or unlock a gift; when you earn a badge; and, for teachers, when students join a class link or a class milestone unlocks. Similar events on the same day are grouped into one row ("Name and 2 others played your challenge"). A daily job at 5 pm IST reminds invited friends how many questions are left for their gift, and nudges students who practised in the last week but not today (the evening streak reminder). Notifications are kept for 60 days after their last event. Emails continue to go out as before.  
 **Endpoints:**
 - `GET /api/v1/notifications` - List notifications, newest first
 - `GET /api/v1/notifications/unread-count` - Unread count for the bell
@@ -345,6 +345,20 @@ sidebar_position: 340
 
 **Dependencies:** Notification model, node-cron  
 **Added:** 2026-10-10
+
+---
+
+## SuperAdmin Announcements
+**Status:** ✅ Completed  
+**Description:** A SuperAdmin writes a short message (a title of up to 80 characters, a message of up to 300, and an optional link to a page inside the app) and sends it to the notification bell of every active, non-demo user with the chosen roles (Student, Teacher, Principal, Parent, NormalUser, SuperAdmin), optionally limited to one school. Each user gets their own bell row, so unread counts and the toast work like any other notification. A SuperAdmin can check how many people a message will reach before sending. Every Send click carries a unique `requestId`, so a double click or a retry returns `409 DUPLICATE_ANNOUNCEMENT` instead of sending twice. If sending stops partway the announcement is marked `failed` with the number already reached. The history lists sent announcements with read counts. Withdrawing one deletes its bell rows for everyone and keeps the record as `withdrawn`. The message goes only to accounts that exist at send time. Users see it in the bell and as a toast the next time the app is open; there is no phone push notification yet.  
+**Endpoints:** (all SuperAdmin only)
+- `POST /api/v1/announcements/audience` - How many users a message would reach
+- `POST /api/v1/announcements` - Send an announcement
+- `GET /api/v1/announcements` - Sent announcements, newest first, with read counts
+- `DELETE /api/v1/announcements/:id` - Withdraw an announcement
+
+**Dependencies:** Announcement and Notification models  
+**Added:** 2026-11-18
 
 ---
 
@@ -492,7 +506,7 @@ Both serve only the student themself (or a SuperAdmin).
 
 ## School Fees
 **Status:** ✅ Completed  
-**Description:** Fee collection for schools. A principal sets up fee heads and structures (tuition, transport and so on, with instalments and due dates), and generates bills per student. Staff record payments at the counter. One payment can clear several bills (advance or multi-month) and produces one receipt; the bills change together or not at all. A principal can give an advance-payment discount of 0 to 50% per structure, waive late fines, cancel bills, and refund a payment (a refund is a new row; a payment can be refunded once). UPI and online payments stay pending until reconciled. Every money change is audited with a reason. Amounts are stored in paise and shown in rupees.  
+**Description:** Fee collection for schools. A principal sets up fee heads and structures (tuition, transport and so on, with instalments and due dates), and generates bills per student. Staff record payments at the counter. One payment can clear several bills (advance or multi-month) and produces one receipt; the bills change together or not at all. A principal can give an advance-payment discount of 0 to 50% per structure, waive late fines, cancel bills, and refund a payment (a refund is a new row; a payment can be refunded once). UPI and online payments stay pending until reconciled. Parents can pay the school's own UPI ID from their School card and send the UTR as an "I've paid" claim; the claim is a pending payment that staff confirm or reject (with a reason the parent sees) after checking the bank, and there is no payment gateway. Every money change is audited with a reason. Amounts are stored in paise and shown in rupees.  
 **Endpoints:**
 - `POST /api/v1/fees/heads`, `POST /api/v1/fees/structures`, `POST /api/v1/fees/structures/:id/publish` - Set up the price list
 - `PATCH /api/v1/fees/structures/:id/advance-discount` - Advance-payment discount
@@ -501,10 +515,12 @@ Both serve only the student themself (or a SuperAdmin).
 - `GET /api/v1/fees/students/:studentId/bills` - A student's open bills
 - `POST /api/v1/fees/payments/collect` - One payment for several bills, one receipt
 - `POST /api/v1/fees/payments` and `POST /api/v1/fees/payments/:id/reconcile` - Single-bill payment and UPI confirmation
+- `GET /api/v1/fees/payments/pending` - Payments waiting for the office, including parents' UPI claims
+- `POST /api/v1/parent-dashboard/child/:childId/fees/upi-claim` - A parent's "I've paid" claim (`{ utr }`, 12 digits)
 - `POST /api/v1/fees/payments/:id/refund` - Refund (principal)
 - `GET /api/v1/fees/receipts/:receiptNo` - Receipt print data
 - `GET /api/v1/fees/collections` - Day book for a date range (teachers see only their own)
-- `GET /api/v1/fees/settings` and `PUT /api/v1/fees/settings` - Receipt prefix, UPI ID, late fine per day
+- `GET /api/v1/fees/settings` and `PUT /api/v1/fees/settings` - Receipt prefix, the school's UPI ID and payee name, late fine per day
 
 **Dependencies:** FeeHeadMaster, FeeStructure, FeeInvoice, FeePayment, FeeSettings, FeeAudit models  
 **Added:** 2026-10-11
@@ -578,14 +594,28 @@ Both serve only the student themself (or a SuperAdmin).
 
 ## Bulk Student Import and Transfer Certificates
 **Status:** ✅ Completed  
-**Description:** A principal imports a class list of up to 500 students at once (admission number, name, class and section, parent phone). Admission numbers are unique per school. A transfer certificate (TC) is issued from the student's record; a student with open fee dues is blocked unless the principal overrides with a reason. An issued TC marks the student as having left, so no new attendance or fee bills are created for them.  
+**Description:** A principal imports a class list of up to 500 students at once (admission number, name, class and section, parent phone, plus optional record columns, see Student Records below). Admission numbers are unique per school. A transfer certificate (TC) is requested from the student's record. A teacher's request waits for the principal (`PENDING`, with no TC number) and a principal's request issues at once. The principal can approve, reject (with a reason) or later cancel an issued TC (with a reason; the TC number stays and is never reused, and the student is back on the class list). Open fee dues block a TC for Classes 9 to 12 unless the principal overrides with a reason, which is audited. Classes 1 to 8 are never blocked for dues, following the Right to Education Act: the TC is issued, the dues stay on the fee record, and the TC notes this. An issued TC marks the student as having left, so no new attendance or fee bills are created for them.  
 **Endpoints:**
 - `POST /api/v1/school/import-students` - Bulk import (principal)
 - `POST /api/v1/tc/request` - Request a TC (`override` needs the principal)
-- `GET /api/v1/tc/:studentId` - TC for a student
+- `GET /api/v1/tc` - The school's TC list (`?status=`)
+- `GET /api/v1/tc/:studentId` - TC history for a student
+- `POST /api/v1/tc/:tcId/approve`, `POST /api/v1/tc/:tcId/reject`, `POST /api/v1/tc/:tcId/cancel` - Principal decisions
 
 **Dependencies:** User (admissionNo, leftSchoolAt), TcCertificate, TcCounter, FeeInvoice models  
-**Added:** 2026-10-11
+**Added:** 2026-10-11 (principal approval, cancel and the Classes 1 to 8 rule: 2026-10-29)
+
+---
+
+## Student Records
+**Status:** ✅ Completed  
+**Description:** The details a transfer certificate and a report card print: date of birth, gender, father's, mother's and guardian's names, category (General, SC, ST, OBC, EWS), nationality, date and class of first admission, PEN (11 digits) and APAAR ID (12 digits). The records come from optional columns in the bulk import or from the principal's "Edit details" form. A re-import only fills blank fields and never overwrites what is saved. A principal's correction can overwrite, and every change is logged from old value to new value with who made it. Dates are read day first, and impossible dates, a future birth date or an unlikely age are refused with the reason. An APAAR ID can be used by one student per school. AskAide never stores an Aadhaar number: there is no field for it, and a 12-digit PEN is refused.  
+**Endpoints:**
+- `GET /api/v1/school/students/:studentId/record` - Record and change history (teacher or principal of the school)
+- `PATCH /api/v1/school/students/:studentId/record` - Correct the record (principal)
+
+**Dependencies:** User (`studentRecord`), StudentRecordAudit models  
+**Added:** 2026-10-29
 
 ---
 
@@ -599,6 +629,19 @@ Both serve only the student themself (or a SuperAdmin).
 
 **Dependencies:** User, ParentStudent, School, Section models  
 **Added:** 2026-10-11
+
+---
+
+## Student Login Slips
+**Status:** ✅ Completed  
+**Description:** Imported students of Class 6 and above get their own login on a printed password slip, with no email or SMS needed, so they can practise at home. The login ID is built from the school code and admission number and can be typed in any case. Passwords are stored only as hashes, so a slip can be printed only in the response that set it. Making slips for a section skips students who already use their login. A new slip for one student replaces the password even if they use it, and ends their sessions. Classes below Class 6 get no slips, because practice starts at Class 6.  
+**Endpoints:**
+- `GET /api/v1/student-logins` - A section's students and their login state
+- `POST /api/v1/student-logins` - Issue logins for a section
+- `POST /api/v1/student-logins/renew` - New slip for one student
+
+**Dependencies:** User, School, Section models  
+**Added:** 2026-10-30
 
 ---
 

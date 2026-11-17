@@ -7,7 +7,7 @@ sidebar_position: 70
 # Features
 
 > Complete list of all user-facing features in the AskAideAI frontend application.
-> Last Updated: October 10, 2026
+> Last Updated: November 18, 2026
 
 ---
 
@@ -231,7 +231,7 @@ sidebar_position: 70
 
 ### In-App Notifications
 **Status:** ✅ Completed
-**Description:** Signed-in users get a notification bell. It shows an unread count and opens one panel: a top sheet on phones, a popover beside the bell on desktop. Opening the panel marks everything read. Tapping a notification goes where it points. A toast shows the newest unread notification once, also when news arrives while the app is open, but stays quiet during practice (`/study`) and quizzes. Examples: a friend played your challenge, a friend joined with your invite, a gift unlocked, a badge earned, students joined your class link.
+**Description:** Signed-in users get a notification bell. It shows an unread count and opens one panel: a top sheet on phones, a popover beside the bell on desktop. Opening the panel marks everything read. Tapping a notification goes where it points. A toast shows the newest unread notification once, also when news arrives while the app is open, but stays quiet during practice (`/study`) and quizzes. Examples: a friend played your challenge, a friend joined with your invite, a gift unlocked, a badge earned, students joined your class link, or an announcement from the AskAide team (shown with a megaphone icon, and it opens the page the sender linked to, if any).
 **Where the bell is:** the desktop sidebar on app pages, the top Navbar on public pages, beside the dashboard greeting on phones, a count on the BottomNav **Menu** tab, and a **Notifications** row in the mobile menu.
 **Pages:** All pages for signed-in users
 **Components:**
@@ -347,6 +347,19 @@ sidebar_position: 70
 **API Dependencies:** 
 - GET `/chapters/with-topics`
 **Added:** Initial release
+
+---
+
+### Announcements
+**Status:** ✅ Completed
+**Description:** A SuperAdmin writes a short message and puts it in the notification bell of every user in the chosen groups. The form has a **Title** (up to 80 characters), a **Message** (up to 300), an optional **Open this page when tapped** link (an AskAide page such as `/study`; outside links are refused), **Send to** group buttons (Students, Teachers, Parents, Principals, Normal users, Super admins for testing) and a **School** picker (default: all schools). A live line says **Goes to N users**, a preview shows how the bell row will look, and a note warns if some of the same people got an announcement in the last 24 hours. **Review and send** opens a confirm dialog. Each confirmation carries one request id, so a retry cannot send twice. The **Sent** list shows each announcement with its status (Sending, Sent, Stopped, Withdrawn), how many users it reached and how many have read it. **Withdraw** removes it from every bell, including for people who already read it. Users see it in the bell and as a toast the next time they open the app; there is no phone push notification yet.
+**Pages:** /admin (Announcements tab)
+**Components:**
+- `admin/AnnouncementsPanel.jsx`
+**API Dependencies:**
+- POST `/announcements/audience`, POST `/announcements`
+- GET `/announcements`, DELETE `/announcements/:id`
+**Added:** November 18, 2026
 
 ---
 
@@ -528,30 +541,33 @@ Screens for running a school, at `/school-ops/*`. They appear in the **SCHOOL OP
 
 | Screen | Tabs (role) |
 |--------|-------------|
-| Fees `/school-ops/fees` | Collect, Billing, Receipts (all three roles); Setup (SuperAdmin) |
-| Day book `/school-ops/collections` | Every receipt in a date range, with totals by mode and cashier; CSV download and print |
+| Fees `/school-ops/fees` | Collect, Billing, Receipts (all three roles); Setup (SuperAdmin); Settings (Principal and SuperAdmin: the school's UPI ID) |
+| Day book `/school-ops/collections` | Every receipt in a date range, with totals by mode and cashier; CSV download and print. Also the **Pending UPI** list of parents' "I've paid" claims to confirm or reject |
 | Attendance `/school-ops/attendance` | Mark, Day view, Staff (all three roles) |
 | Timetable `/school-ops/timetable` | Today, Cover (Principal and SuperAdmin); Setup (SuperAdmin) |
 | Gradebook `/school-ops/gradebook` | Enter marks; Plans (SuperAdmin); Report cards (Principal and SuperAdmin) |
-| TC `/school-ops/tc` | Request (Teacher and Principal); dues-block override (Principal and SuperAdmin) |
+| TC `/school-ops/tc` | Request (Teacher and Principal); approve, reject, cancel and dues-block override (Principal and SuperAdmin); student record (see Transfer Certificates and Student Records below) |
 | Notices `/school-ops/notices` | All three roles (see School Notices below) |
-| Parent logins `/school-ops/parents` | Principal and SuperAdmin (see Parent Logins below) |
-| Import `/school-ops/import` | SuperAdmin: CSV of students, up to 500 rows, previewed before import |
+| Logins `/school-ops/logins` | Principal and SuperAdmin: **Parents** (index) and **Students** printed slips (see below). `/school-ops/parents` redirects here |
+| Import `/school-ops/import` | SuperAdmin: Excel (.xlsx) or CSV of students, up to 500 rows, previewed before import |
 
 Collect can take an advance or several months in one payment: the server spreads it oldest-first and applies the principal's advance discount when every remaining month of a fee is paid. One receipt is issued for the whole payment. Pickers choose the school, class, section and student from lists, not pasted IDs.
-**Pages:** /school-ops/fees, /school-ops/collections, /school-ops/attendance, /school-ops/timetable, /school-ops/gradebook, /school-ops/tc, /school-ops/notices, /school-ops/parents, /school-ops/import
+School-only classes: Nursery, LKG, UKG and Classes 1 to 5 appear in the school pickers and the SuperAdmin Sections screen (the class list is requested with `?schoolOnly=include`), but never in practice. A school student whose classes are all school-only who opens Study sees "Practice starts from Class 6".
+**Pages:** /school-ops/fees, /school-ops/collections, /school-ops/attendance, /school-ops/timetable, /school-ops/gradebook, /school-ops/tc, /school-ops/notices, /school-ops/logins, /school-ops/import
 **Components:**
 - `school-ops/fees/*` (FeesLayout, CollectPanel, BillingPanel, ReceiptsPanel, SetupPanel), `school-ops/CollectSection.jsx`
 - `school-ops/attendance/*` (AttendanceLayout, MarkPanel, DayPanel, StaffPanel)
 - `school-ops/timetable/*` (TimetableLayout, TodayPanel, CoverPanel, SetupPanel)
 - `school-ops/gradebook/*` (GradebookLayout, EntryPanel, PlansPanel, CardsPanel)
-- `school-ops/CollectionsPanel.jsx`, `school-ops/TcPanel.jsx`, `school-ops/ImportPanel.jsx`
+- `school-ops/fees/SettingsPanel.jsx` (the school's UPI ID and payee name), `school-ops/fees/PendingUpiPanel.jsx`
+- `school-ops/CollectionsPanel.jsx`, `school-ops/TcPanel.jsx`, `school-ops/StudentRecordForm.jsx`, `school-ops/ImportPanel.jsx`, `school-ops/importParse.js` (reads .xlsx and CSV)
 - `school-ops/shared.jsx` (`useOpsRole()`: `canSetup` is SuperAdmin, `canApprove` is Principal and SuperAdmin), `school-ops/pickers.jsx`
 **API Dependencies:**
 - `/fees/*` (heads, structures, invoices, payments, collect, receipts, defaulters, collections)
 - `/attendance/*` (days, school-day, monthly, absentees, staff, settings)
 - `/timetable/*`, `/gradebook/*`
-- `/tc/request`, `/tc/:studentId`, `/school/import-students`
+- `/tc/request`, `/tc`, `/tc/:studentId`, `/tc/:tcId/approve|reject|cancel`, `/school/students/:studentId/record`, `/school/import-students`
+- GET `/fees/payments/pending`, `/fees/settings` (PUT to save)
 - `/notices`, `/parent-logins`
 **Added:** October 2026
 
@@ -570,12 +586,27 @@ Collect can take an advance or several months in one payment: the server spreads
 
 ---
 
+### Transfer Certificates and Student Records
+**Status:** ✅ Completed
+**Description:** At `/school-ops/tc` a teacher or principal picks a student and requests a transfer certificate (TC) with a reason of at least 5 characters. A teacher's request shows **Waiting for principal** and has no number. The principal sees a school list of pending requests with **Approve** and **Reject**, and of issued TCs with **Print** and **Cancel TC**. Reject and cancel ask for a reason. A student with a TC is off the class list, so the school list is where an issued TC is found to cancel. For Classes 9 to 12, approval blocked by open dues offers the audited dues override. Classes 1 to 8 are never held back for dues (Right to Education Act): the TC prints as valid and notes that the dues stay on the fee record. A cancelled TC prints stamped CANCELLED, and a pending request prints nothing. The principal's **Edit details** form changes the student's school record (teachers can see it): date of birth, parents' or guardian's names, category, nationality, first admission date and class, PEN (11 digits) and APAAR ID (12 digits). These print on the TC and the report card. There is no Aadhaar field: AskAide never stores it. Principal Today shows the pending and cancelled TC counts.
+**Pages:** /school-ops/tc, /print/tc/:studentId
+**Components:**
+- `school-ops/TcPanel.jsx`, `school-ops/StudentRecordForm.jsx`
+- `school-ops/print/TcPrint.jsx`
+**API Dependencies:**
+- POST `/tc/request`, GET `/tc`, GET `/tc/:studentId`
+- POST `/tc/:tcId/approve`, `/tc/:tcId/reject`, `/tc/:tcId/cancel`
+- GET and PATCH `/school/students/:studentId/record`
+**Added:** October 2026
+
+---
+
 ### Printable School Documents
 **Status:** ✅ Completed
-**Description:** Fee receipt, report card, transfer certificate, day book and parent login slips open in their own tab as A4 pages with no app chrome. Colours are black on white, for cheap printers. Print links come from School Ops and from the parent's School card (receipts and report cards).
-**Pages:** /print/receipt/:receiptNo, /print/report-card/:planId/:studentId, /print/tc/:studentId, /print/day-book, /print/parent-slips
+**Description:** Fee receipt, report card, transfer certificate, day book and parent and student login slips open in their own tab as A4 pages with no app chrome. Colours are black on white, for cheap printers. Print links come from School Ops and from the parent's School card (receipts and report cards).
+**Pages:** /print/receipt/:receiptNo, /print/report-card/:planId/:studentId, /print/tc/:studentId, /print/day-book, /print/parent-slips, /print/student-slips
 **Components:**
-- `school-ops/print/PrintShell.jsx`, `ReceiptPrint.jsx`, `ReportCardPrint.jsx`, `TcPrint.jsx`, `DayBookPrint.jsx`, `ParentSlipsPrint.jsx`, `printLinks.js`
+- `school-ops/print/PrintShell.jsx`, `ReceiptPrint.jsx`, `ReportCardPrint.jsx`, `TcPrint.jsx`, `DayBookPrint.jsx`, `ParentSlipsPrint.jsx`, `StudentSlipsPrint.jsx`, `printLinks.js`
 **API Dependencies:** The same endpoints as the screens above (receipt lookup, report cards, TC, collections, parent logins)
 **Added:** October 2026
 
@@ -584,13 +615,42 @@ Collect can take an advance or several months in one payment: the server spreads
 ### Parent Logins and Password Slips
 **Status:** ✅ Completed
 **Description:** A principal gives each family a login for the parent portal, with no email or SMS. Brothers and sisters on one family share one login (same phone in the import). The screen lists each section's families with a status: No login yet, Slip given (not used yet), or Using AskAide. **Make slips** creates the logins for a section and opens printable slips, eight to an A4 page, to cut out and send home. **New slip** gives a family a new password. A password exists only in the response that set it: the slip page keeps it for that tab's history entry, and nothing stores it readable.
-**Pages:** /school-ops/parents, /print/parent-slips
+**Pages:** /school-ops/logins (Parents tab, the default), /print/parent-slips
 **Components:**
-- `school-ops/ParentLoginsPanel.jsx`
+- `school-ops/logins/LoginsLayout.jsx`, `school-ops/ParentLoginsPanel.jsx`
 - `school-ops/print/ParentSlipsPrint.jsx`
 **API Dependencies:**
 - GET `/parent-logins?schoolId&sectionId`
 - POST `/parent-logins` (`{ schoolId, sectionId }`), POST `/parent-logins/renew` (`{ schoolId, studentId }`)
+**Added:** October 2026
+
+---
+
+### Student Login Slips
+**Status:** ✅ Completed
+**Description:** The **Students** tab of **Logins** (`/school-ops/logins/students`) gives students their own printed slip, with no email or SMS. Pick a section: it lists each student with a status (No slip yet, Slip given and not used yet, or using). **Print N slips** makes logins for students who have none or have not used their slip yet, and opens printable slips. **New slip** gives one student a new password, even if they use it. Only students added by the school import, in Class 6 and above, get a slip, because practice starts at Class 6; a lower class shows a note instead. A password exists only in the response that set it.
+**Pages:** /school-ops/logins/students, /print/student-slips
+**Components:**
+- `school-ops/StudentLoginsPanel.jsx`
+- `school-ops/print/StudentSlipsPrint.jsx`
+**API Dependencies:**
+- GET `/student-logins?schoolId&sectionId`
+- POST `/student-logins` (`{ schoolId, sectionId }`), POST `/student-logins/renew` (`{ schoolId, studentId }`)
+**Added:** October 2026
+
+---
+
+### Pay School Fees by UPI (Parent)
+**Status:** ✅ Completed
+**Description:** When the school has saved its own UPI ID (Fees → Settings, with an optional payee name), the parent's School card shows what is due now with a **Pay by UPI** button, a QR code and a **Copy UPI ID** button. There is no payment gateway. After paying in their UPI app the parent types the 12-digit UTR and sends it as "I've paid". The claim shows as waiting; the school office checks its bank and confirms it in **Day book → Pending UPI**, and only then does it count as paid. A rejected claim shows the office's reason to the parent. Without a UPI ID the card says to pay at the school office.
+**Pages:** /parent, /school-ops/collections, /school-ops/fees/settings
+**Components:**
+- `dashboard/UpiPayBlock.jsx`, `dashboard/ChildSchoolCard.jsx`
+- `school-ops/fees/SettingsPanel.jsx`, `school-ops/fees/PendingUpiPanel.jsx`
+**API Dependencies:**
+- POST `/parent-dashboard/child/:childId/fees/upi-claim` (`{ utr }`)
+- GET `/fees/payments/pending`, POST `/fees/payments/:id/reconcile`
+- GET and PUT `/fees/settings`
 **Added:** October 2026
 
 ---
@@ -630,6 +690,16 @@ Collect can take an advance or several months in one payment: the server spreads
 - `pages/info/PricingPage.jsx`
 - `pages/info/HowItWorksPage.jsx`
 - `pages/info/InfoLayout.jsx`
+**Added:** October 2026
+
+---
+
+### Trust Page
+**Status:** ✅ Completed
+**Description:** A public page at `/trust` for schools. It lists the safeguards that are true today (such as school-scoped records, role-based access, teacher-published quizzes and papers, reviewed paper questions, encryption and hashed passwords), states the honest limits, and answers common questions, with the line "AI drafts. Your teachers decide." It is linked from the landing page, For Schools and the info-page footers.
+**Pages:** /trust
+**Components:**
+- `pages/info/TrustPage.jsx`
 **Added:** October 2026
 
 ---

@@ -7,7 +7,7 @@ sidebar_position: 160
 # Styling Guide
 
 > Styling approach and guidelines for the AskAideAI frontend.
-> Last Updated: October 10, 2026
+> Last Updated: November 18, 2026
 
 ---
 
@@ -277,6 +277,10 @@ Dark mode is **already implemented** via the `ThemeContext` provider.
    <div style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}>
    ```
 4. **Use Tailwind for layout, spacing, typography** — these don't need dark mode variants
+
+### Themes
+
+The list of themes lives in one place, `src/theme/themes.js` (currently Light and Dark). Settings, every theme toggle, `ThemeContext` and the pre-paint script in `index.html` all follow it. Each theme has one CSS file, `src/styles/themes/<id>.css`, that sets the colour tokens under `:root[data-theme="<id>"]`. Adding a theme means adding an entry to the list and one CSS file; a test fails if the two disagree, a token is missing, or a text and background pair drops below a 4.5:1 contrast ratio. Non-colour tokens (radius, shadow, font stacks) live in `src/styles/tokens.css`, and component tokens in `src/styles/components.css`.
 
 ### Checking Dark Mode
 When building a component, always test in both light and dark mode. If you see white text on white background or colors that look wrong, you're using hardcoded Tailwind classes instead of CSS variables.

@@ -6,7 +6,7 @@ sidebar_position: 450
 
 # AskAide AI - Database Schema
 
-**Last Updated:** 2026-10-18  
+**Last Updated:** 2026-11-18  
 **Database:** MongoDB with Mongoose ODM (65 registered models)
 
 ---
@@ -64,8 +64,9 @@ School ──→ (N) FeeStructure, FeeInvoice, FeePayment, AttendanceDay, Timeta
 | schoolId | ObjectId | REF: School | For institutional users and teachers with class links |
 | admissionNo | String | MAX: 30, DEFAULT: null | School admission number, set for school-imported students. Unique per school (partial index on `schoolId` + `admissionNo`) |
 | sectionId | ObjectId | REF: Section | Class list the student is on (attendance, marks and billing check entries against it) |
-| leftSchoolAt | Date | DEFAULT: null | Set when a TC is issued; the student keeps their history but gets no new attendance or fee bills |
-| loginSlipAt | Date | DEFAULT: null | Set for a parent login issued on a printed password slip; only these accounts accept the loose slip ID |
+| leftSchoolAt | Date | DEFAULT: null | Set when a TC is issued (cleared if the principal cancels it); the student keeps their history but gets no new attendance or fee bills |
+| studentRecord | Object | OPTIONAL | School record printed on the TC and report card: `dateOfBirth`, `gender` (Male, Female, Other), `fatherName`, `motherName`, `guardianName`, `category` (General, SC, ST, OBC, EWS), `nationality`, `admissionDate`, `admissionClass`, `pen` (11 digits), `apaar` (12 digits). There is deliberately no Aadhaar field |
+| loginSlipAt | Date | DEFAULT: null | Set for a parent or student login issued on a printed password slip; only these accounts accept the loose slip ID |
 | isDemo | Boolean | DEFAULT: false | Account of the public demo school. Rebuilt nightly, never emailed, excluded from metrics, cannot change its identity |
 | lastLoginAt | Date | | Last login |
 | loginCount | Number | DEFAULT: 0 | Logins |
@@ -74,7 +75,7 @@ School ──→ (N) FeeStructure, FeeInvoice, FeePayment, AttendanceDay, Timeta
 | createdAt | Date | AUTO | Timestamp |
 | updatedAt | Date | AUTO | Timestamp |
 
-**Indexes:** `userName` (unique), `email` (unique), `googleId` (sparse)
+**Indexes:** `userName` (unique), `email` (unique), `googleId` (sparse), `{ schoolId, studentRecord.apaar }` (unique, partial: one APAAR ID per school)
 
 ---
 
@@ -124,8 +125,9 @@ School ──→ (N) FeeStructure, FeeInvoice, FeePayment, AttendanceDay, Timeta
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
-| grade | Number | REQUIRED, MIN: 6, MAX: 12 | Numeric grade |
-| name | String | REQUIRED, ENUM | 6th, 7th, 8th, 9th, 10th, 11th, 12th |
+| grade | Number | REQUIRED, UNIQUE, MIN: -2, MAX: 12 | Numeric grade: Nursery is -2, LKG -1, UKG 0 |
+| name | String | REQUIRED, ENUM, UNIQUE | Nursery, LKG, UKG, 1st to 12th. Must match the grade |
+| schoolOnly | Boolean | DEFAULT: false | Set from the grade: true for Nursery to 5th. School-only classes are used by the school office and hidden from every practice screen |
 | isActive | Boolean | DEFAULT: true | Soft delete flag |
 
 ---
@@ -664,7 +666,7 @@ One row in a user's notification bell. Events with the same type and `groupKey` 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | userId | ObjectId | REF: User, REQUIRED | Who sees it |
-| type | String | REQUIRED, ENUM | challenge_played, friend_joined, gift_unlocked, gift_reminder, badge_earned, class_joined, class_milestone, streak_reminder, homework_reminder |
+| type | String | REQUIRED, ENUM | challenge_played, friend_joined, gift_unlocked, gift_reminder, badge_earned, class_joined, class_milestone, streak_reminder, homework_reminder, announcement |
 | groupKey | String | REQUIRED | Target the events are grouped by (for example a challenge code or a class link) |
 | day | String | REQUIRED | IST `YYYY-MM-DD`, or `once` for one-time events |
 | count | Number | | Events folded into the row |
@@ -674,7 +676,30 @@ One row in a user's notification bell. Events with the same type and `groupKey` 
 | readAt | Date | | Null while unread |
 | lastAt | Date | | Latest event |
 
-**Indexes:** `{ userId, type, groupKey, day }` (unique compound), `{ userId, lastAt: -1 }`, `{ userId, readAt }`, TTL on `lastAt` (60 days)
+**Indexes:** `{ userId, type, groupKey, day }` (unique compound), `{ userId, lastAt: -1 }`, `{ userId, readAt }`, `{ type, groupKey }` (every row of one event, used for announcement read counts and withdraw), TTL on `lastAt` (60 days)
+
+---
+
+### Announcement
+**File:** `src/modules/announcement/models/announcement.model.js`
+
+A SuperAdmin message put into users' notification bells. Sending writes one `announcement` Notification row per user (its `groupKey` is this document's id). Withdrawing deletes those rows and keeps this record.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| title | String | REQUIRED, MAX: 80 | Heading |
+| body | String | REQUIRED, MAX: 300 | Message |
+| link | String | DEFAULT: null | In-app path opened when the row is tapped, for example `/study` |
+| roles | [String] | REQUIRED, ENUM | Student, Teacher, Principal, Parent, NormalUser, SuperAdmin |
+| schoolId | ObjectId | REF: School, DEFAULT: null | Only users of this school, when set |
+| requestId | String | REQUIRED, UNIQUE | One id per Send click, so a repeat is refused (`409 DUPLICATE_ANNOUNCEMENT`) |
+| status | String | ENUM, DEFAULT: sending | sending, sent, failed, withdrawn |
+| sentCount | Number | DEFAULT: 0 | Bell rows written |
+| sentBy | ObjectId | REF: User, REQUIRED | The SuperAdmin who sent it |
+| sentAt, withdrawnAt | Date | DEFAULT: null | When it finished sending, and when it was withdrawn |
+| createdAt, updatedAt | Date | AUTO | Timestamps |
+
+**Indexes:** `{ requestId }` (unique), `{ createdAt: -1 }`
 
 ---
 
@@ -833,6 +858,10 @@ Append-only money-in event. Corrections are new REFUND rows, never edits.
 | clientRequestId | String | | One key per screen submit. Unique per school when present, so a double click returns the first receipt |
 | reversesPaymentId | ObjectId | REF: FeePayment | The payment a REFUND row reverses. Unique: a payment can be refunded once |
 | refundReason | String | | Reason for the refund |
+| source | String | ENUM, DEFAULT: office | office, parent. `parent` is a parent's "I've paid" UPI claim, which stays PENDING and is never counted until staff confirm it |
+| claimedBy | ObjectId | REF: User | The parent who made the claim |
+| settledBy, settledAt | ObjectId, Date | | Who confirmed or rejected a PENDING payment, and when |
+| rejectReason | String | MAX: 300 | Why a claim was rejected; the parent sees it |
 | allocations | [Object] | | For a multi-bill payment: `invoiceId`, `amountPaise`, `discountPaise` per bill. Empty for a single-bill payment |
 
 **Indexes:** `{ schoolId, receiptNo }` (unique), `{ schoolId, transactionRef }` (unique, partial), `{ schoolId, clientRequestId }` (unique, partial), `{ reversesPaymentId }` (unique, partial), `{ invoiceId, status }`
@@ -847,7 +876,8 @@ One row per school.
 | schoolId | ObjectId | REF: School, UNIQUE | School |
 | receiptPrefix | String | DEFAULT: SCH, MAX: 8 | Receipt number prefix |
 | receiptCounter | Number | DEFAULT: 0 | Advanced only with atomic `$inc` |
-| upiId | String | MAX: 60 | UPI ID shown to parents |
+| upiId | String | MAX: 60 | The school's own UPI ID shown to parents. Blank means parents see "Pay at the school office" |
+| upiPayeeName | String | MAX: 50 | Name parents see in their UPI app. Blank uses the school name |
 | gatewayProvider, gatewayKeyRef | String | MAX: 40, 120 | Gateway name and the vault key name. The secret itself is never stored here |
 | lateFinePaisePerDay | Number | DEFAULT: 0 | School default late fine |
 | updatedBy | ObjectId | REF: User | Last editor |
@@ -1083,11 +1113,31 @@ Transfer certificate record. A BLOCKED row is kept as a paper trail for each ref
 | tcNo | String | REQUIRED | Certificate number, unique per school |
 | academicYear | String | REQUIRED | Year |
 | duesSnapshotPaise | Number | REQUIRED, INTEGER | Open dues at the time of the request |
-| status | String | ENUM | ISSUED, BLOCKED |
+| status | String | ENUM | PENDING (a teacher's request waiting for the principal), ISSUED, BLOCKED, REJECTED, CANCELLED |
 | reason | String | REQUIRED, 5 to 500 chars | Reason for the request |
-| issuedBy, overrideBy | ObjectId | REF: User | Who requested and who overrode the dues block |
+| requestedBy | ObjectId | REF: User | Who asked for the TC |
+| issuedBy, issuedAt, overrideBy | ObjectId, Date | REF: User | Who issued the TC and when, and who overrode the dues block |
+| rteDues | Boolean | DEFAULT: false | Classes 1 to 8 with dues: the TC is issued anyway (Right to Education Act) and the dues stay on the fee record |
+| approvedBy, approvedAt | ObjectId, Date | | The principal's approval |
+| rejectedBy, rejectedAt, rejectReason | ObjectId, Date, String | | A rejected request and why |
+| cancelledBy, cancelledAt, cancelReason | ObjectId, Date, String | | A cancelled TC and why. The TC number is never reused |
 
-**Indexes:** `{ schoolId, tcNo }` (unique), `{ schoolId, studentId }`
+**Indexes:** `{ schoolId, tcNo }` (unique), `{ schoolId, studentId }`, one `PENDING` request per student and one `ISSUED` TC per student (unique partial indexes)
+
+### StudentRecordAudit
+**File:** `src/modules/onboarding/models/studentRecordAudit.model.js`
+
+Append-only log of changes to a student's school record.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| schoolId, studentId | ObjectId | REQUIRED | Scope |
+| actorId | ObjectId | REF: User, REQUIRED | Who changed it |
+| source | String | REQUIRED, ENUM | EDIT (the principal's form) or IMPORT (a re-import filling blank fields) |
+| changes | [Object] | | `field`, `from`, `to` for each change |
+| createdAt | Date | AUTO | When |
+
+**Indexes:** `{ schoolId, studentId, createdAt: -1 }`
 
 ### TcCounter
 **File:** `src/modules/onboarding/models/tcCounter.model.js`

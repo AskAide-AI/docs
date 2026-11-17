@@ -7,7 +7,24 @@ sidebar_position: 130
 # Component Library
 
 > Complete reference of all reusable components in the AskAideAI frontend.
-> Last Updated: October 10, 2026
+> Last Updated: November 18, 2026
+
+---
+
+## Shared UI Library (`src/components/ui`)
+
+New screens are built from one shared set of primitives, imported from `src/components/ui` (for example `import { Button, Field, Input, Select, Modal } from '../ui'`), instead of raw `<button>`, `<input>`, `<select>` or `<textarea>` elements with inline styles. Lint warns on the raw elements.
+
+| Component | Use |
+|-----------|-----|
+| `Button`, `IconButton` | Buttons (`variant`, `size`, `loading`, `pressed` for toggle chips) |
+| `Field`, `Input`, `Textarea`, `Select`, `Checkbox`, `Switch` | Form controls. `Field` adds the label, hint and error |
+| `Modal` | Dialogs. `common/ConfirmDialog` and `ui/Dropdown` are thin wrappers over `Modal` and `Select` |
+| `Card`, `Badge`, `Tabs`, `Text`, `Spinner` | Layout and text |
+| `NavItem` | Sidebar rows, menu rows, bottom tabs and navbar links (real links that still respect the leave-session guard) |
+| `ChoiceCard`, `StepButton` | Answer options and question-grid squares |
+
+A live gallery of every component and state is at `/ui-kit` (open on the dev server, SuperAdmin-only in production). The look of each component lives in one file, `src/styles/components.css`, as tokens a theme can override.
 
 ---
 

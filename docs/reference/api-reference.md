@@ -47,6 +47,7 @@ sidebar_position: 620
   - [Notices](#30-notices)
   - [Principal Today](#31-principal-today)
   - [Demo School](#32-demo-school)
+  - [Announcements](#33-announcements)
 - [AI Service API (`/`)](#ai-service-api)
   - [Document Management](#1-document-management)
   - [Search & RAG](#2-search--rag)
@@ -4892,6 +4893,7 @@ Base: `/api/v1/notifications/`
 | `badge_earned` | You earned a badge |
 | `class_joined` | Students joined a teacher's class link |
 | `class_milestone` | Daily job: a teacher's class report or certificate unlocked (sent once) |
+| `announcement` | A SuperAdmin announcement ([Announcements](#33-announcements)); `title` and `body` are the message |
 
 The daily job runs at **5 pm IST**. Events of the same type and target on the same IST day are grouped into one row (`count` > 1, e.g. "Kabir and 2 others played your challenge"); `title` and `body` are written from the grouped data when the list is read. One-time events never repeat. Rows are deleted 60 days after their last event. Shapes: `NotificationItem`, `NotificationList`, `NotificationReadResult` in shared contracts.
 
@@ -5056,14 +5058,16 @@ Payment `mode` values: `cash`, `bank-transfer`, `upi-link`, `online`.
 | PATCH | `/fees/invoices/:id/concession` | Principal | `{ concession, reason }`; audit-written | `FeeInvoice` |
 | POST | `/fees/invoices/:id/cancel` | Principal | `{ reason }`; unpaid invoices only | `FeeInvoice` |
 | POST | `/fees/payments` | Teacher / Principal | `{ invoiceId, amount, mode, transactionRef?, clientRequestId?, notes? }`. Cash / bank settle immediately and atomically (only if that much is still due, else `400 OVERPAYMENT`); `upi-link` / `online` go to PENDING. The same `clientRequestId`, or the same UTR on the same bill, returns `200 duplicate: true` with the first receipt. A UTR already used on another bill → `409 REF_USED_ELSEWHERE`. Another school's invoice → `403 NOT_YOUR_SCHOOL` before any write | `{ payment, invoice, duplicate }` |
-| POST | `/fees/payments/:id/reconcile` | Teacher / Principal | `{ success, gatewayRef? }`; PENDING → SUCCESS / FAILED, claimed atomically (a retry → `400 ALREADY_SETTLED`). Money beyond the due stays in `amountPaidPaise` | `{ payment, invoice }` |
+| GET | `/fees/payments/pending?schoolId=` | Teacher / Principal (scoped) | query. Every pending payment of the school, oldest first, up to 200 | `{ items: FeePendingPayment[] }`: parents' UPI "I've paid" claims and office "UPI (confirm later)" receipts, to confirm or reject after checking the bank |
+| POST | `/parent-dashboard/child/:childId/fees/upi-claim` | Parent | `{ utr }` (exactly 12 digits). The parent paid the school's own UPI ID and says so. Records a PENDING payment for everything due now, oldest bills first; it never counts until the office confirms it. The school comes from the child's link, never the body | `201 { claim: { _id, status: 'PENDING', amountPaise, utr, at }, duplicate }`. `400 UPI_NOT_SET`, `400 NOTHING_DUE`, `409 CLAIM_PENDING` (one open claim per child), `409 UTR_USED` (a UTR is unique per school) |
+| POST | `/fees/payments/:id/reconcile` | Teacher / Principal | `{ success, gatewayRef?, reason? }`; `reason` (3–300 characters) is required when `success` is false (`400 REASON_REQUIRED`) and is shown to the parent. PENDING → SUCCESS / FAILED, claimed atomically (a retry → `400 ALREADY_SETTLED`). Money beyond the due stays in `amountPaidPaise` | `{ payment, invoice }` |
 | POST | `/fees/payments/:id/refund` | Principal | `{ reason }`; writes a new REFUND row; once per payment (`400 ALREADY_REFUNDED`) | `{ refund, invoice }` |
 | POST | `/fees/payments/collect` | Teacher / Principal | `{ schoolId?, studentId, invoiceIds[] \| amount, mode, transactionRef?, clientRequestId?, notes?, expectedTotalPaise?, preview? }`. One payment and one receipt for several bills (advance or multi-month). `invoiceIds` pays those bills in full; `amount` is spread oldest-first, the last bill may be part-paid; more than all open bills → `400 MORE_THAN_DUE`. When every remaining bill of a structure is paid together, its `advanceDiscountPct` comes off the bills not yet due (stored as a concession, audited). Bills change together or not at all (`409 BILLS_CHANGED`, also when the total differs from `expectedTotalPaise`). `preview: true` returns only the plan | Preview: `{ plan: { allocations[], discountPaise, totalPaise } }`. Record: `{ payment, plan, duplicate }` |
 | GET | `/fees/collections?schoolId=&from=&to=&receivedBy=&page=&limit=` | Teacher / Principal (scoped) | query. IST day range, max 1 year; `limit` up to 5000 for print and export | The day book: `{ from, to, rows[], pagination, totals: { byMode, collectedPaise, refundsPaise, netPaise, receipts, pending }, byCashier[] }`. Pending UPI is listed but not counted |
 | GET | `/fees/students/:studentId/bills?schoolId=` | Teacher / Principal (scoped) | query. Open bills, oldest due first; late fines refreshed | `{ bills: (FeeInvoice & { label, structureName, installments, advanceDiscountPct })[] }` |
 | GET | `/fees/receipts/:receiptNo?schoolId=` | Teacher / Principal (scoped) | `schoolId` is needed for SuperAdmin (receipt numbers are unique per school) | `{ payment, invoice, print: { docType, school, student, structure, installmentNo, amountPaise, amountWords, mode, transactionRef, receivedByName, date, balanceDuePaise, ... } }` |
 | GET | `/fees/settings?schoolId=` | Teacher / Principal (scoped) | query | `FeeSettings` |
-| PUT | `/fees/settings` | Principal | `{ schoolId, receiptPrefix?, upiId?, gatewayProvider?, gatewayKeyRef?, lateFinePerDay? }` | `FeeSettings` |
+| PUT | `/fees/settings` | Principal | `{ schoolId, receiptPrefix?, upiId?, upiPayeeName?, gatewayProvider?, gatewayKeyRef?, lateFinePerDay? }` | `FeeSettings` |
 
 Fee events are also published to webhooks as `fee.paid` (see Webhook Events in the shared contracts).
 
@@ -5138,16 +5142,22 @@ Printable documents share two shapes: `school = { name, code, address, phone, em
 
 ### 29. Onboarding (Student Import, Transfer Certificates, Parent Logins)
 
-Base: `/api/v1/` (the routes are mounted at `/school/import-students`, `/tc/*` and `/parent-logins`).
+Base: `/api/v1/` (the routes are mounted at `/school/import-students`, `/school/students/:studentId/record`, `/tc/*`, `/parent-logins` and `/student-logins`).
 
-**Student import.** Principal (own school) or SuperAdmin. `POST /school/import-students` takes `{ schoolId, rows[{ admissionNo, name, className, sectionName, parentPhone? }] }` (max 500 rows). Each row is validated; missing sections are created; the import is idempotent on `schoolId + admissionNo`. Student logins are minted as `adm<schoolcode><admissionNo>` with a random password. The parent phone is stored on the student's profile. Response `data`: `ImportResult { created, skipped, failed, total }`.
+**Student import.** Principal (own school) or SuperAdmin. `POST /school/import-students` takes `{ schoolId, rows[{ admissionNo, name, className, sectionName, parentPhone? }] }` (max 500 rows). Each row is validated; missing sections are created; the import is idempotent on `schoolId + admissionNo`. Student logins are minted as `adm<schoolcode><admissionNo>` with a random password. The parent phone is stored on the student's profile. Response `data`: `ImportResult { created, updated, skipped, failed, total }`.
+
+**Student records.** Each import row may also carry `dateOfBirth`, `gender`, `fatherName`, `motherName`, `guardianName`, `category`, `nationality`, `admissionDate`, `admissionClass`, `pen` and `apaar`. They are saved on the student and printed on the TC and report card. Dates are read day first. An impossible date, a future birth date, a PEN that is not 11 digits, an APAAR ID that is not 12 digits or is already used in the school, or an unknown category or gender fails that row with the reason. A re-import never overwrites: for a student that already exists it only fills blank record fields (reported under `updated`). Aadhaar numbers are never stored: there is no field, and a 12-digit PEN is refused. `GET /school/students/:studentId/record` (Teacher / Principal of the school) returns the record and its change history; `PATCH /school/students/:studentId/record` (Principal or SuperAdmin) changes only the fields sent (an empty string clears one), and every change is logged from old to new value.
 
 **Transfer certificates (TC).** Teacher or Principal (scoped). `POST /tc/request` takes `{ schoolId, studentId, academicYear?, reason, override? }`. The server sums all open dues across years:
 
-- dues above zero without a Principal override → `409` with `tc: BLOCKED` and `duesPaise` (the request is kept as a paper-trail row);
-- dues of zero, or a Principal override → `201` with `tc: ISSUED` and an atomic `tcNo` (for example `TC25-000123`);
-- a repeat request returns the existing certificate with `duplicate: true`;
+- a Teacher's request becomes `PENDING` (no TC number yet) and waits for the Principal: `201 { tc: PENDING, pending: true }`. A Principal's or SuperAdmin's request issues at once;
+- Classes 1 to 8 are never blocked for dues (Right to Education Act): the TC is issued, the dues stay on the fee record, and the row carries `rteDues: true`;
+- Classes 9 to 12 with dues above zero and no Principal override → `409` with `tc: BLOCKED` and `duesPaise` (the request is kept as a paper-trail row);
+- dues of zero, or a Principal override → `201` with `tc: ISSUED` and an atomic `tcNo` (for example `TC26-000123`);
+- a repeat request returns the existing certificate or waiting request with `duplicate: true`;
 - a Teacher sending `override: true` while dues are open gets `403 OVERRIDE_PRINCIPAL_ONLY`.
+
+The Principal (or SuperAdmin with `schoolId`) decides: `POST /tc/:tcId/approve` moves `PENDING` to `ISSUED` and assigns the number (dues are checked again: `409 DUES_OPEN` for Classes 9 to 12 without an override), `POST /tc/:tcId/reject` (`reason`) moves `PENDING` to `REJECTED`, and `POST /tc/:tcId/cancel` (`reason`) moves `ISSUED` to `CANCELLED`. A cancelled TC keeps its number (never reused), prints stamped CANCELLED and puts the student back on the class list. A wrong state returns `409 NOT_PENDING` or `NOT_ISSUED`. `GET /tc?status=` lists the school's TCs.
 
 An issued TC sets the student's `leftSchoolAt`: they leave the class list and can no longer be marked present or billed. Marks and the final report card still work.
 
@@ -5156,9 +5166,20 @@ An issued TC sets the student's `leftSchoolAt`: they leave the class list and ca
 | POST | `/school/import-students` | Principal / SuperAdmin | `{ schoolId, rows[] }` (max 500) | `ImportResult` |
 | POST | `/tc/request` | Teacher / Principal | `{ schoolId, studentId, academicYear?, reason, override? }` | `{ tc, duplicate?, blocked?, duesPaise?, advancePaidPaise? }`. `advancePaidPaise` is fees already paid for bills due after today |
 | GET | `/tc/:studentId?schoolId=` | Teacher / Principal | query | `{ certificates: TcCertificate[], print: { school, student, attendance } }` (the printable TC or dues slip) |
+| GET | `/school/students/:studentId/record?schoolId=` | Teacher / Principal (own school) | query | The student's record and change history. `404 NOT_YOUR_STUDENT` for another school |
+| PATCH | `/school/students/:studentId/record` | Principal / SuperAdmin | `{ schoolId?, ...record fields }`, at least one field | `{ record, changes[] }`. `400 INVALID_RECORD`, `409 APAAR_IN_USE` |
+| GET | `/tc?status=` | Teacher / Principal | query | The school's TC list |
+| POST | `/tc/:tcId/approve` | Principal / SuperAdmin | `{ schoolId?, override? }` | `{ tc, duesPaise, rte, advancePaidPaise }`. `409 DUES_OPEN`, `NOT_PENDING` |
+| POST | `/tc/:tcId/reject` | Principal / SuperAdmin | `{ schoolId?, reason }` | `{ tc }` |
+| POST | `/tc/:tcId/cancel` | Principal / SuperAdmin | `{ schoolId?, reason }` | `{ tc }` |
 | GET | `/parent-logins?sectionId=&schoolId=` | Principal / SuperAdmin | query | `{ school, section, counts: { families, new, 'not-used', using }, families: ParentLoginFamily[] }` |
 | POST | `/parent-logins` | Principal / SuperAdmin | `{ sectionId, schoolId? }` | `201 { school, section, made, renewed, skipped: [{ key, reason: 'using' \| 'busy', children[] }], slips: ParentLoginSlip[] }` |
 | POST | `/parent-logins/renew` | Principal / SuperAdmin | `{ studentId, schoolId? }` | `201 { school, slips: [ParentLoginSlip] }`. `404 STUDENT_NOT_FOUND`, `409 SLIP_BUSY` |
+| GET | `/student-logins?sectionId=&schoolId=` | Principal / SuperAdmin | query | `{ school, section, allowed, counts, students[] }`. `allowed` is false below Class 6 |
+| POST | `/student-logins` | Principal / SuperAdmin | `{ sectionId, schoolId? }` | `201 { school, section, made, renewed, skipped[], slips[] }`. `400 CLASS_NOT_ON_ASKAIDE` below Class 6 |
+| POST | `/student-logins/renew` | Principal / SuperAdmin | `{ studentId, schoolId? }` | `201 { school, section, slips: [slip] }`. `404 STUDENT_NOT_FOUND`, `400 NOT_IMPORTED`, `409 SLIP_BUSY` |
+
+**Student login slips.** Same rules as parent slips, for the students themselves: only imported students still on a class list, and only Class 6 and above (practice starts at Class 6). The login ID is built from the school code and admission number. The password is shown once, in the response that sets it, and stored hashed. A section batch skips students who already use their login; a new slip for one student replaces the password even if they use it.
 
 **Parent logins on printed slips.** No email and no SMS: each slip is printed by the school. A family is the school's students (on a class list, not left) who share the parent phone from the import, so siblings in any section share one login. A phone on more than 4 children (an office number), or no phone, gives each child a login of its own. The login ID is the 10-digit phone, otherwise `<schoolcode>-<admissionNo>`. The password is shown **only once**, in the response that sets it, and is stored hashed. A new password ends all of that parent's sessions. Slip logins are accepted by `POST /authenticate/login` as typed (spaces, dashes or capitals are ignored). `POST /parent-logins` gives a new password to families that have not logged in since their last slip; families that are using their login are skipped.
 
@@ -5206,6 +5227,21 @@ A public demo school, **Saraswati Vidya Mandir (Demo)** (school code `DEMO-SVM`,
 | GET | `/demo/status` | SuperAdmin | none | `{ ready, rebuilding, school: { name, builtAt } \| null }` |
 | POST | `/demo/rebuild` | SuperAdmin | none | `202 { started, message }`. Wipes and rebuilds in the background |
 
+
+---
+
+### 33. Announcements
+
+Base: `/api/v1/announcements/`
+
+A SuperAdmin message put into the notification bell of every user in the chosen roles. Every route needs a signed-in **SuperAdmin**. Sending writes one `announcement` row per active, non-demo user with one of the chosen roles (optionally only one school's users), in batches of 1000. Users see it in the bell and as a toast the next time the app is open; there is no phone push notification. Accounts created after the send do not receive it. Shapes: `AdminAnnouncement`, `SendAnnouncementRequest`, `AnnouncementList`, `AnnouncementWithdrawResult`.
+
+| Method | Route | Access | Body / Query | Response `data` |
+|--------|-------|--------|--------------|-----------------|
+| POST | `/announcements/audience` | SuperAdmin | `{ roles[], schoolId? }` | `{ count }`: how many users the message would reach |
+| POST | `/announcements` | SuperAdmin | `{ title, body, link?, roles[], schoolId?, requestId }`. `title` 1 to 80 characters, `body` 1 to 300, `roles` one or more of `Student`, `Teacher`, `Principal`, `Parent`, `NormalUser`, `SuperAdmin`. `link` must be an in-app path with a single leading `/` (for example `/study`). `requestId` is 8 to 64 letters, digits or dashes: one per Send click | `201 AdminAnnouncement`. `status` is `sent`, or `failed` with a partial `sentCount` if it stopped partway. The same `requestId` again returns `409 DUPLICATE_ANNOUNCEMENT` |
+| GET | `/announcements?page=&limit=` | SuperAdmin | query (`limit` up to 50) | `{ items: AdminAnnouncement[], pagination }`, newest first, each with `readCount` |
+| DELETE | `/announcements/:id` | SuperAdmin | none | `{ id, removedFrom }`. Deletes the bell rows everywhere and keeps the record as `withdrawn`. `409 ALREADY_WITHDRAWN`; `409 STILL_SENDING` while the send is still running (for up to 10 minutes) |
 
 ---
 

@@ -8,15 +8,28 @@ sidebar_position: 260
 
 > All notable changes to the AskAideAI frontend will be documented in this file.
 > Format: [Semantic Versioning](https://semver.org/)
-> Last Updated: October 19, 2026
+> Last Updated: November 18, 2026
 
 ---
 
 ## [Unreleased]
 
+### November 2026
+
+#### Added
+- **Announcements tab** (2026-11-18) — `/admin` → Announcements (SuperAdmin): a title, a message and an optional in-app link, the groups and school to send to, a live "Goes to N users" count, a bell preview, a confirm dialog, a warning when the same people got an announcement in the last 24 hours, a history with sent and read counts, and Withdraw. One request id per confirmation, so a retry cannot send twice. Users see it in the bell and as a toast (`/announcements`). There is no phone push yet.
+
 ### October 2026
 
 #### Added
+- **Shared UI library and themes** (2026-10-25) — screens are built from `src/components/ui` (Button, Field, Input, Select, Modal, Card, Badge, Tabs, NavItem and more), with a live gallery at `/ui-kit` (SuperAdmin-only in production). The themes come from one list (`src/theme/themes.js`) with one CSS file per theme, and component looks live in `src/styles/components.css`. The app shell and the teacher quiz screens now use the library.
+- **Trust page** (2026-10-29) — `/trust` lists the safeguards that are true today and the honest limits. For Schools gets the line "AI drafts. Your teachers decide."
+- **Excel import** (2026-10-29) — School Ops → Import reads Excel `.xlsx` as well as CSV (quoted CSV cells are read correctly too). An old `.xls` file gets a message to save it as `.xlsx` or CSV.
+- **TC approval and cancel** (2026-10-29) — a teacher's TC request shows "Waiting for principal". The principal approves or rejects it and can cancel an issued TC (reason required). Classes 1 to 8 are never held back for dues (Right to Education Act). A cancelled TC prints stamped CANCELLED. Principal Today shows pending and cancelled TC counts.
+- **Student records** (2026-10-29) — an "Edit details" form (principal) and optional import columns for date of birth, parents' or guardian's names, category, nationality, first admission, PEN and APAAR ID, printed on the TC and report card. No Aadhaar field.
+- **Student login slips** (2026-10-30) — School Ops → Logins → Students prints slips for a section's students of Class 6 and above (`/print/student-slips`). The Logins screen is now `/school-ops/logins`, with Parents and Students tabs; `/school-ops/parents` redirects to it.
+- **Parents pay fees by UPI** (2026-10-30) — the School card shows "Pay by UPI", a QR code and the school's UPI ID, and takes the 12-digit UTR as "I've paid". Principals save the UPI ID under Fees → Settings; the office confirms or rejects claims under Day book → Pending UPI.
+- **School-only classes** (2026-10-30) — Nursery, LKG, UKG and Classes 1 to 5 appear in school screens (class pickers, Sections, notices) but never in practice. A school student in those classes who opens Study sees "Practice starts from Class 6".
 - **Written questions on papers** (2026-10-19) — printed papers can now carry assertion-reason, 2-mark, 3-mark, 5-mark and case-based questions from a separate reviewed store (`paperquestions`; a person sets each draft `live`). The free generator shows how many questions of each type the chosen chapters have ready and lets the teacher count them; with written questions ready, an untouched form makes a 20-mark class test. The paper editor edits assertion-reason options and case-study parts with marks, and the PDF/Word output prints written sections and case parts with an answer key carrying the value points. Sections with a single question no longer say "marks each". Written questions are never shown to students.
 - **Paper editor + Set A/B** (2026-10-18) — the shared editor (`question-paper/paper/`) prints a hand-made school paper: exam header (session, class & section, date, time), CBSE-style auto instructions, sections A/B with continuous numbering, swap / edit / delete / move / add own question, Set A + Set B, a separate answer key, PDF with an embedded DejaVu Serif Condensed subset (jsPDF's built-in fonts printed √ π → θ H₂O ≤ as garbage) and an editable Word file. Free papers keep their draft on the device (resume after reload or signup). Guest drafts are device-only; signed-in teachers autosave via `PUT /question-paper/:id`.
 - **Homework status** — the quiz analytics page (`/teacher/quiz/:quizId/analytics`) lists every student the quiz is for as Done, In progress, Not done or Never logged in, with a one-tap reminder, a WhatsApp message to the parent and a way to give more time. Parents see **Homework this week** on the School card. New `teacher/quiz/QuizStudentsPanel.jsx`.

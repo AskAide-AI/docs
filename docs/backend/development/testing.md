@@ -12,7 +12,7 @@ sidebar_position: 390
 
 ## Current Status
 
-> ✅ **Tests are implemented.** 52 test files exist across 22 of the 26 modules, covering attendance, auth, challenge, content, demo, fees, gradebook, notice, notification, onboarding, parent, principal, progress, question-paper, questions, quiz, referral, school, supporting, teacher, timetable and user. Most test a service with mocked models; a few test a controller or mount a real router (see [Route Tests](#route-tests)).
+> ✅ **Tests are implemented.** 53 test files exist across 23 of the 27 modules, covering announcement, attendance, auth, challenge, content, demo, fees, gradebook, notice, notification, onboarding, parent, principal, progress, question-paper, questions, quiz, referral, school, supporting, teacher, timetable and user. Most test a service with mocked models; a few test a controller or mount a real router (see [Route Tests](#route-tests)).
 
 ---
 

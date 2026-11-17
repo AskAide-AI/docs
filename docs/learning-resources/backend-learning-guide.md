@@ -99,7 +99,7 @@ Backend/
     - progress/
     - quiz/
     - teacher/
-    - ... (26 total modules)
+    - ... (27 total modules)
   - shared/                       # Shared utilities, middleware, models
     - middleware/
       - auth.js                 # JWT auth, role guards

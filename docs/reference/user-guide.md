@@ -52,13 +52,15 @@ Welcome to **AskAide AI**, the AI-powered education platform designed for Indian
   - [Chapter Upload](#chapter-upload)
   - [Chapter Management](#chapter-management)
   - [Relation View](#relation-view)
+  - [Announcements](#announcements)
   - [School Ops](#school-ops)
     - [Who Can Do What](#who-can-do-what)
     - [Principal Today](#principal-today)
     - [Fees & Receipts](#fees--receipts)
     - [Attendance, Timetable & Gradebook](#attendance-timetable--gradebook)
     - [Transfer Certificates](#transfer-certificates)
-    - [Parent Logins & Notices](#parent-logins--notices)
+    - [Student Import](#student-import)
+    - [Logins & Notices](#logins--notices)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -113,6 +115,8 @@ AskAide runs a public demo school with made-up but realistic data. You can see e
 1. Navigate to the login page
 2. Enter your email and password
 3. Click **Login**
+
+Students of a school in Class 6 or above may get a **password slip** from the school office instead. Type the **Login ID** and **Password** exactly as printed (the Login ID can be in any case). If the slip is lost or the password does not work, ask the school office for a new slip: it replaces the old password.
 
 **First-Time Onboarding:**
 1. Select your **class** (6–12)
@@ -364,7 +368,7 @@ Invite friends to AskAide. When a friend you invited answers **3 questions**, yo
 
 ### Notifications
 
-The **bell** shows what's new: a friend played your challenge, a friend joined with your invite, your gift unlocked, you're a few questions away from your gift, you earned a badge, your streak needs you tonight, or a teacher has sent you a homework reminder. Teachers also see students joining their class links and their class report or certificate becoming ready.
+The **bell** shows what's new: a friend played your challenge, a friend joined with your invite, your gift unlocked, you're a few questions away from your gift, you earned a badge, your streak needs you tonight, or a teacher has sent you a homework reminder. The AskAide team can also send a short announcement to the bell, which shows with a megaphone icon. Teachers also see students joining their class links and their class report or certificate becoming ready.
 
 - **Where the bell is:** in the sidebar on desktop, in the top bar on public pages, and next to the greeting on the student dashboard on phones. On phones, the **Menu** tab in the bottom bar also shows the number of unread notifications, and the menu has a **Notifications** row
 - A red number on the bell shows how many are unread. It updates about every minute while AskAide is open
@@ -728,6 +732,8 @@ If your child is on a school's class list, a **School** card appears under your 
 
 Notices and homework appear on the current month's view.
 
+**Paying by UPI.** If the school has set its own UPI ID, the **Fees** part of the School card shows a **Pay by UPI** button and a QR code for what is due now. There is no payment gateway and no extra fee: the money goes straight to the school's UPI ID. After paying in your UPI app, type the 12-digit **UTR** (the UPI reference number) and send it as "I've paid". The school office checks its bank and then confirms it, and only then does it count as paid. If the office rejects it, you see the reason. You can have one waiting claim at a time. If the school has not set a UPI ID, the card says to pay at the school office.
+
 ---
 
 ### Login on a Printed Slip
@@ -966,18 +972,36 @@ This is useful for:
 - Finding unassigned students
 - Verifying teacher workloads
 
+### Announcements
+
+Send a short message to the notification bell of everyone in the roles you pick. Only an admin (SuperAdmin) can do this.
+
+1. Click **Admin Panel → Announcements**
+2. Write a **Title** (up to 80 characters) and a **Message** (up to 300). A preview shows how it will look in the bell
+3. Optionally, in **Open this page when tapped**, type a page inside AskAide, such as `/study`. Links to other websites are not allowed
+4. Under **Send to**, pick one or more groups: Students, Teachers, Parents, Principals, Normal users, or Super admins (test). Pick a **School** to reach only that school's users, or leave it on **All schools**
+5. The page shows **Goes to N users** (active, non-demo accounts only). If some of them already got an announcement in the last 24 hours, you see a warning
+6. Click **Review and send**, check the preview, then confirm
+
+Things to know:
+- People see the message in their bell, and as a pop-up the next time they open AskAide. It does not reach a locked phone, because there is no phone push notification yet
+- Only accounts that exist when you send it receive it
+- Pressing Send twice cannot send two copies
+- The **Sent** list shows each announcement with how many people it reached and how many have read it. If a send stops partway it is shown as **Stopped**, with the number reached
+- **Withdraw** removes it from every bell, including for people who already read it. It stays in the list as **Withdrawn**
+
 ---
 
 ## School Ops
 
-School Ops runs a school's day-to-day work in one place: fees, the day book, attendance, timetable, gradebook, transfer certificates, notices and parent logins. Open it from the **School Ops** group in the sidebar (on phones, from **Menu**). Each screen has its own tabs across the top.
+School Ops runs a school's day-to-day work in one place: fees, the day book, attendance, timetable, gradebook, transfer certificates, notices, logins and student import. Open it from the **School Ops** group in the sidebar (on phones, from **Menu**). Each screen has its own tabs across the top.
 
 ### Who Can Do What
 
 | Role | Can do |
 |------|--------|
 | **Teacher** | Collect fees and see the day book, mark attendance, enter marks, see your own timetable and cover duties, request transfer certificates, post notices |
-| **Principal** | Everything a teacher can do, plus refunds, fee concessions, the staff register, approving cover, publishing report cards, overriding the dues block on a transfer certificate, and parent logins |
+| **Principal** | Everything a teacher can do, plus refunds, fee concessions, the staff register, approving cover, publishing report cards, approving transfer certificates and overriding their dues block, the school's UPI settings, and parent and student logins |
 | **Admin** | Everything, plus setup: fee heads and fee structures, exam plans, timetable setup, and bulk student import |
 
 ### Principal Today
@@ -989,6 +1013,8 @@ The principal's home screen (**Principal** in the sidebar) shows **Today at [sch
 The Fees screen has **Collect**, **Billing**, **Receipts** and, for admins, **Setup** tabs.
 
 - **Collect:** see who owes fees, then **Record cash payment**. You can record cash, a bank transfer (enter the UTR number), or UPI (confirm later)
+- **Pending UPI:** on the **Day book** screen, parents' "I've paid" claims wait here. Check your bank, then **Confirm** or **Reject** (a reason is required, and the parent sees it)
+- **Settings** (principals): save the school's own UPI ID and the name parents should see in their UPI app. Without a UPI ID, parents see "Pay at the school office"
 - **Advance and several months:** one payment can cover several months or pay ahead for later months. The school gets one receipt for the whole payment
 - **Billing:** generate invoices for a fee structure
 - **Receipts:** look up any receipt by its number and print it. Principals can refund a payment (a reason of at least 5 characters is required) and apply a concession
@@ -1002,20 +1028,40 @@ The Fees screen has **Collect**, **Billing**, **Receipts** and, for admins, **Se
 
 ### Transfer Certificates
 
-- A teacher or principal requests a transfer certificate (TC) for a student who is leaving. Each TC gets the next number for the school
-- If the student still has unpaid dues, the request is blocked. A principal can override the block; every override is recorded
+- A teacher or principal requests a transfer certificate (TC) for a student who is leaving. A teacher's request shows **Waiting for principal** and has no number yet. The principal **approves** it (the TC then gets the next number for the school) or **rejects** it with a reason. A principal's own request is issued at once
+- For Classes 9 to 12, a student with unpaid dues is blocked. A principal can override the block; every override is recorded
+- Classes 1 to 8 are never held back for dues, as the Right to Education Act requires. The TC is issued and the dues stay on the fee record
+- A principal can **Cancel TC** with a reason. The number is never reused, the TC prints stamped CANCELLED, and the student returns to the class list
+- A principal can use **Edit details** to fill in or correct the student's date of birth, parents' names, category, nationality, first admission, PEN and APAAR ID. They print on the TC and report card. AskAide never stores Aadhaar numbers
 - Print the TC from the **TC** tab
 
-### Parent Logins & Notices
+### Student Import
 
-**Parent logins** (principal and admin) give each family a login on a printed slip. No email or SMS is sent.
+Admins add a school's students from **School Ops → Import**.
 
-1. Open **Parent logins**. Each family shows one of three statuses: **No login yet**, **Slip given, not used yet**, or **Using AskAide**
+1. Pick the school and upload an **Excel (.xlsx)** or **CSV** file. An old `.xls` file is not read: open it in Excel and save it as `.xlsx` or CSV first
+2. The file needs a header row with at least a name column and an admission number column. Class, section and parent phone columns are also read. Optional record columns (date of birth, gender, father, mother, guardian, category, nationality, admission date and class, PEN, APAAR) are saved on the student's record
+3. Check the preview, then import. Up to 500 rows go in at a time, and rows with problems are listed with the reason
+4. Importing the same file again does not create duplicates. For students already on AskAide it only fills blank record fields and never overwrites what is saved
+
+### Logins & Notices
+
+**Logins** (principal and admin) give people a login on a printed slip. No email or SMS is sent. Open **Logins** from School Ops and pick **Parents** or **Students**.
+
+**Parents**
+
+1. Open **Logins → Parents**. Each family shows one of three statuses: **No login yet**, **Slip given, not used yet**, or **Using AskAide**
 2. Tap **Make & print** slips for families with no login. Families who haven't logged in yet can be given a new slip too
 3. Slips print eight to an A4 page. Cut along the dashed lines and send them home
 4. Brothers and sisters share one login. Families already using AskAide are left alone
 
 Passwords are shown only once, on the printed slips, so print them straight away. A **New slip** gives a family a new password. The old slip stops working, and anyone signed in with it is signed out.
+
+**Students**
+
+Open **Logins → Students**, pick a section, and print slips for its students so they can practise at home. Only students added by the school import, in Class 6 and above, get a slip (practice starts at Class 6). Students who already use their login are left alone, and **New slip** replaces one student's password.
+
+**School-only classes.** Nursery, LKG, UKG and Classes 1 to 5 are on AskAide for the school office only: sections, import, fees, attendance, timetable, report cards and transfer certificates. Their students do not see practice questions.
 
 **Notices** (principal and teachers) post a message for parents. It appears on each child's School card, and the page shows how many parents have seen it ("seen by X of Y").
 

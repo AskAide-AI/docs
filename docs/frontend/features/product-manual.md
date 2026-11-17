@@ -50,13 +50,13 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 - **Roster Management**: Bulk upload and management of Teachers and Students.
 - **Curriculum Management**: Upload Textbook PDFs to automatically extract Chapters and Topics via AI.
 - **Class Links**: Teachers sign up on their own and bring students in with a link or QR code, no admin needed.
-- **School Ops**: Fees and receipts, day book, attendance, timetable and cover, gradebook and report cards, transfer certificates, notices and parent logins, for principals, teachers and SuperAdmin. Each job is its own tabbed screen.
-- **Printables**: Fee receipts, report cards, transfer certificates, the day book and parent login slips print as A4 pages.
+- **School Ops**: Fees and receipts, day book, attendance, timetable and cover, gradebook and report cards, transfer certificates, notices and parent and student logins, for principals, teachers and SuperAdmin. Each job is its own tabbed screen.
+- **Printables**: Fee receipts, report cards, transfer certificates, the day book and parent and student login slips print as A4 pages.
 
 ### Friends, Classes & Notifications
 - **Challenge a Friend**: Send the questions you just practised on WhatsApp. Friends play without logging in and see who won.
 - **Refer & Earn**: Invite friends with your link. When a friend practises enough on a new account, you both get a free practice paper and a streak shield.
-- **Notifications**: A bell tells you when a friend plays your challenge, a friend joins, a gift unlocks, you earn a badge, or students join your class.
+- **Notifications**: A bell tells you when a friend plays your challenge, a friend joins, a gift unlocks, you earn a badge, or students join your class. The AskAide team can also send an announcement to the bell.
 
 ### Public Pages
 - **About**, **How It Works** (how questions are made and checked) and **Pricing** pages, plus a free trial on `/try` and SEO pages per class, subject and chapter.
@@ -144,6 +144,12 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 4.  **Verify**: Check **Chapter-Topic View** to ensure content was ingested correctly.
 5.  **Fill gaps**: Pick a class in chapter management. The coverage line shows how many chapters are covered, ready and still need a PDF. **Generate next 3 empty** starts questions for three chapters with none, so run it again once questions land.
 
+#### **Workflow 4: Send an Announcement**
+1.  **Navigate**: Open **Admin Panel > Announcements**.
+2.  **Write**: Add a title, a short message and, if you like, a page inside AskAide to open when tapped.
+3.  **Choose**: Pick the groups and, if needed, one school. The page shows how many users it goes to.
+4.  **Send**: Review the preview and confirm. It appears in each user's bell and as a pop-up the next time they open AskAide. You can withdraw it later.
+
 ---
 
 ### 👩‍🏫 **Teacher**
@@ -198,11 +204,11 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 3.  **Print**: Open the receipt in its own A4 tab. End the day with the **Day book** and print it or download it as CSV.
 
 #### **Workflow 3: Approve Transfer Certificates and Report Cards**
-1.  **TC**: Teachers request a transfer certificate. Approve it from **School Ops > TC**; it can override a dues block.
+1.  **TC**: Teachers request a transfer certificate and it waits for you. Approve or reject it from **School Ops > TC**. For Classes 9 to 12 you can override a dues block; Classes 1 to 8 are never held back for dues. You can also cancel an issued TC.
 2.  **Report cards**: Approve and publish report cards under **School Ops > Gradebook > Report cards**.
 
-#### **Workflow 4: Give Parents Their Logins**
-1.  **Navigate**: Open **School Ops > Parent logins**.
+#### **Workflow 4: Give Parents and Students Their Logins**
+1.  **Navigate**: Open **School Ops > Logins**. **Parents** is the default tab; **Students** (Class 6 and above) works the same way.
 2.  **Make slips**: For a section, create one login per family. Brothers and sisters share one login.
 3.  **Print**: Print the slips (eight to a page), cut them out and send them home. There are no emails or SMS.
 
@@ -224,6 +230,7 @@ AskAide AI is an advanced EdTech platform that delivers **AI-powered adaptive le
 1.  **Open**: The **School card** sits under the practice view for a child on a school class list.
 2.  **Read**: Today's attendance, this month's register (use the arrows to move between months), fees due, overdue and next, receipts, report cards, and notices from school.
 3.  **Homework**: **Homework this week** shows what is due, and whether it is Done, In progress, Not done or To do.
+4.  **Pay by UPI**: If the school has set its own UPI ID, pay what is due from the Fees part of the card, then send the 12-digit UTR as "I've paid". The school confirms it after checking its bank.
 
 #### **Workflow 3: Get a Receipt or Report Card**
 1.  **Open**: Tap a receipt or report card on the School card. It opens as a printable A4 page.

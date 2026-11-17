@@ -7,7 +7,7 @@ sidebar_position: 120
 # Pages and Routes
 
 > Complete reference of all pages and routing in the AskAideAI frontend.
-> Last Updated: October 10, 2026
+> Last Updated: November 18, 2026
 
 ---
 
@@ -56,7 +56,7 @@ sidebar_position: 120
 | `/school-ops/fees`, `/school-ops/collections`, `/school-ops/attendance`, `/school-ops/timetable`, `/school-ops/gradebook`, `/school-ops/tc`, `/school-ops/notices` | School Ops screens | Protected | SuperAdmin, Principal, Teacher | One job per tabbed screen; tabs depend on role |
 | `/school-ops/logins` | LoginsLayout | Protected | SuperAdmin, Principal | Printed login slips: parent logins (index) and student logins (`students`) |
 | `/school-ops/parents` | (redirect) | — | — | Redirects to `/school-ops/logins` (kept for old links) |
-| `/school-ops/import` | ImportPanel | Protected | SuperAdmin | Bulk student import (CSV) and demo school rebuild |
+| `/school-ops/import` | ImportPanel | Protected | SuperAdmin | Bulk student import (Excel .xlsx or CSV) and demo school rebuild |
 | `/print/receipt/:receiptNo`, `/print/report-card/:planId/:studentId`, `/print/tc/:studentId`, `/print/day-book` | Print pages (A4, no app chrome) | Protected | SuperAdmin, Principal, Teacher (receipt and report card also Parent) | Printable school documents |
 | `/print/parent-slips`, `/print/student-slips` | ParentSlipsPrint, StudentSlipsPrint | Protected | SuperAdmin, Principal | Printable parent and student login slips |
 | `/admin` | AdminDashboard | Protected | SuperAdmin | Admin panel |
@@ -382,17 +382,17 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 | `/school-ops/timetable` | Today (index), `cover` (Principal), `setup` (SuperAdmin) |
 | `/school-ops/gradebook` | Enter marks (index), `plans` (SuperAdmin), `cards` (Principal) |
 | `/school-ops/collections` | Day book |
-| `/school-ops/tc` | Transfer certificates |
+| `/school-ops/tc` | Transfer certificates: request, approve, reject, cancel, student record |
 | `/school-ops/notices` | Notices |
 | `/school-ops/logins` | Parent logins (index), `students` |
-| `/school-ops/import` | Bulk import (SuperAdmin) |
+| `/school-ops/import` | Bulk import of an Excel (.xlsx) or CSV file (SuperAdmin) |
 
 **Features:**
 - The nav shows a tab only when the role can use it (`useOpsRole()` in `school-ops/shared.jsx`); the server still enforces roles
 - Pickers choose school, class, section and student from lists
 - Advance and several-month payments in one receipt
 - Notices for the whole school, a class or a section
-- Parent login slips: one login per family, printed eight to a page
+- Parent login slips: one login per family, printed eight to a page; student login slips (Class 6 and above) at `/school-ops/logins/students`
 
 ---
 
@@ -457,6 +457,7 @@ Signed-in pages set their own browser tab title, `<Page> | AskAide` (for example
 - Chapter Upload
 - Relation View
 - Chapter-Topic View
+- Announcements — send a short message into the notification bell of the chosen roles or school, with a live audience count, a bell preview, a send history with read counts and a withdraw button (`/announcements`)
 - AI System — view, test and switch the live LLM instantly (`/admin/system/llm/*`)
 
 ---

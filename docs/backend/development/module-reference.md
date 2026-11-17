@@ -6,7 +6,7 @@ sidebar_position: 360
 
 # Backend Module Reference
 
-There are 26 modules. All follow `src/modules/<name>/` with `controllers`, `services`, `validators`, `routes`, `models` and `tests` subfolders (not every module has all of them). Paths below are relative to `/api/v1`.
+There are 27 modules. All follow `src/modules/<name>/` with `controllers`, `services`, `validators`, `routes`, `models` and `tests` subfolders (not every module has all of them). Paths below are relative to `/api/v1`.
 
 ## Auth Module
 
@@ -59,7 +59,7 @@ There are 26 modules. All follow `src/modules/<name>/` with `controllers`, `serv
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/classes` | GET | auth | List classes |
+| `/classes` | GET | auth | List practice classes (6th to 12th). `?schoolOnly=include` also returns the school-only classes (Nursery, LKG, UKG, 1st to 5th) for school setup screens |
 | `/subjects` | GET | auth | List subjects |
 | `/subjects/class/:classId` | GET | auth | Subjects by class |
 | `/chapters` | POST | teacher | Create chapter |
@@ -208,11 +208,31 @@ Quiz sets with `sectionIds` are visible and startable only to students with a `T
 
 **How it works:** other services call `notificationService.notify()`, which never throws. Events with the same type and target (`groupKey`) on the same IST day fold into one row with a count and the latest first names, so ten plays of one challenge read as one row ("Name and 9 others played your challenge"). One-time events (badges, milestones, gift reminders) are stored once. Text is worded when the list is read.
 
-**Types:** `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `badge_earned`, `class_joined`, `class_milestone`, `streak_reminder`, `homework_reminder`.
+**Types:** `challenge_played`, `friend_joined`, `gift_unlocked`, `gift_reminder`, `badge_earned`, `class_joined`, `class_milestone`, `streak_reminder`, `homework_reminder`, `announcement` (written by the Announcement module below).
 
 **Retention:** a row is removed 60 days after its last event (TTL index on `lastAt`).
 
 **Daily job:** at 5 pm IST, `notificationScheduler.js` sends one gift reminder to each invited friend who joined 20 hours to 7 days ago and is still short of 3 answers, tells teachers once when a class report or the certificate unlocks, and sends the evening streak nudge (`streak_reminder`) to students who practised in the last 7 days but not today.
+
+## Announcement Module
+
+**Path:** `src/modules/announcement/`
+**Purpose:** A SuperAdmin writes one short message and it appears in the notification bell of every user in the chosen roles (optionally one school). Mounted at `/announcements`. Every route sits behind `auth, isSuperAdmin`.
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/announcements/audience` | POST | SuperAdmin | `{ roles, schoolId? }` → `{ count }`: how many users the message would reach |
+| `/announcements` | POST | SuperAdmin | Send. Body `{ title, body, link?, roles, schoolId?, requestId }` → `201` with the announcement record |
+| `/announcements` | GET | SuperAdmin | `?page=&limit=` (max 50): sent announcements, newest first, each with a `readCount` |
+| `/announcements/:id` | DELETE | SuperAdmin | Withdraw: removes the bell rows and keeps the record as `withdrawn` |
+
+**Rules:**
+- `roles` are one or more of `Student`, `Teacher`, `Principal`, `Parent`, `NormalUser`, `SuperAdmin`. The audience is every active, non-demo account with one of those roles, limited to one school when `schoolId` is set.
+- `title` is 1 to 80 characters and `body` is 1 to 300. `link` is optional and must be an in-app path with a single leading `/` (for example `/study`); links to other sites are refused.
+- `requestId` (8 to 64 letters, digits or dashes) is one id per Send click and is unique. Sending the same `requestId` again returns `409 DUPLICATE_ANNOUNCEMENT`, so a double click or a retry cannot send two copies.
+- Sending writes one `announcement` notification row per user, in batches of 1000. The announcement's `status` goes `sending` to `sent`, or to `failed` with a partial `sentCount` if it stopped partway. People who sign up later do not receive it.
+- Withdrawing deletes the bell rows everywhere and sets the record to `withdrawn`. Withdrawing twice returns `409 ALREADY_WITHDRAWN`; withdrawing while a send started in the last 10 minutes is still running returns `409 STILL_SENDING`.
+- Users see the message in the bell, and as a toast the next time the app is open. There is no phone push notification.
 
 ## Other Modules
 
@@ -286,13 +306,16 @@ Principal writes; teachers and principals read and record payments. Models: `Fee
 | `/students/:studentId/bills` | GET | staff | A student's open bills, oldest due first |
 | `/payments/collect` | POST | staff | One payment for several bills, one receipt (`clientRequestId` makes a resend return the first receipt) |
 | `/payments` | POST | staff | Record a payment on one bill |
-| `/payments/:id/reconcile` | POST | staff | PENDING UPI or online payment to SUCCESS or FAILED |
+| `/payments/pending` | GET | staff | PENDING payments waiting for the office, including parents' UPI claims |
+| `/payments/:id/reconcile` | POST | staff | PENDING UPI or online payment to SUCCESS or FAILED (a reject needs a reason, which the parent sees) |
 | `/payments/:id/refund` | POST | principal | Refund: a new REFUND row; a payment can be refunded once |
 | `/receipts/:receiptNo` | GET | staff | Receipt print data |
 | `/collections` | GET | staff | Day book for an IST date range; teachers see only their own collections |
-| `/settings` | GET, PUT | read: staff, write: principal | Receipt prefix, UPI ID, late fine per day |
+| `/settings` | GET, PUT | read: staff, write: principal | Receipt prefix, the school's UPI ID and the name parents see in their UPI app, late fine per day |
 
 Late fines accrue per full IST day past the due date, until the bill is paid, unless a principal waives them with a concession.
+
+**Parents paying by UPI.** There is no payment gateway and no per-payment fee. A principal saves the school's own UPI ID (and the name parents see) under fee settings. The parent's School card then shows a UPI payment block for what is due now. After paying in their UPI app, the parent sends the 12-digit UTR with "I've paid". That creates one PENDING payment (`source: 'parent'`) for the bills due now, oldest first. It does not count as paid until staff check the bank and confirm it from `/fees/payments/pending`; a reject needs a reason, which the parent sees. A child can have only one open claim, and a UTR can be used once per school (rejected ones included).
 
 #### Attendance (`src/modules/attendance/`, mounted at `/attendance`)
 Models: `AttendanceDay`, `AttendancePeriod`, `StaffAttendance`, `AbsenteeEvent`, `SchoolSettings`.
@@ -351,16 +374,30 @@ Models: `ExamPlan`, `MarkSheet`, `ReportCard`.
 
 Report cards are immutable snapshots. Weighted % and grade are computed on publish, and no class ranks are published.
 
-#### Onboarding: Import, Transfer Certificates, Parent Logins
-Models: `TcCertificate`, `TcCounter`. The routes mount at `/school/import-students`, `/tc/*` and `/parent-logins`.
+#### Onboarding: Import, Student Records, Transfer Certificates, Logins
+Models: `TcCertificate`, `TcCounter`, `StudentRecordAudit`. The routes mount at `/school/import-students`, `/school/students/:studentId/record`, `/tc/*`, `/parent-logins` and `/student-logins`.
 
 | Endpoint | Method | Who | Description |
 |----------|--------|-----|-------------|
-| `/school/import-students` | POST | principal | Bulk student import, up to 500 rows; admission numbers are unique per school |
-| `/tc/request` | POST | staff | Issue a transfer certificate. Open dues produce a `BLOCKED` record unless a principal overrides with a reason |
-| `/tc/:studentId` | GET | staff | The student's TC |
+| `/school/import-students` | POST | principal | Bulk student import, up to 500 rows; admission numbers are unique per school. Optional record columns are saved as the student's record; a re-import only fills blank fields |
+| `/school/students/:studentId/record` | GET | staff | A student's school record and its change history |
+| `/school/students/:studentId/record` | PATCH | principal | Correct the record; every change is logged old to new |
+| `/tc/request` | POST | staff | A teacher's request waits for the principal (`PENDING`, no TC number). A principal's request issues at once. Open dues block Classes 9 to 12 (`BLOCKED`) unless a principal overrides with a reason; Classes 1 to 8 are never blocked for dues |
+| `/tc` | GET | staff | The school's TC list, filtered by `?status=` |
+| `/tc/:studentId` | GET | staff | The student's TC history |
+| `/tc/:tcId/approve` | POST | principal | `PENDING` to `ISSUED`; the TC number is assigned now |
+| `/tc/:tcId/reject` | POST | principal | `PENDING` to `REJECTED`, with a reason |
+| `/tc/:tcId/cancel` | POST | principal | `ISSUED` to `CANCELLED`, with a reason; the student is back on the class list |
 | `/parent-logins` | GET, POST | principal | List a section's families; issue logins on a printed password slip (one per family, password shown once) |
 | `/parent-logins/renew` | POST | principal | New slip for one student's family; ends that family's sessions |
+| `/student-logins` | GET, POST | principal | List a section's students and their login state; issue logins on a printed password slip (Class 6 and above, imported students only; password shown once) |
+| `/student-logins/renew` | POST | principal | New slip for one student, even one who already uses their login |
+
+**Student records.** Optional fields saved on the student: date of birth, gender, father's, mother's and guardian's names, category, nationality, date and class of first admission, PEN (11 digits) and APAAR ID (12 digits). The TC and report card print them. Dates are read day first. AskAide never stores Aadhaar numbers: there is no field for it, and a 12-digit PEN is refused. An APAAR ID can be used by one student per school.
+
+**Transfer certificate steps.** A teacher's request is `PENDING` and has no TC number until the principal approves it. An issued TC takes the student off the class list; cancelling it (the number is never reused) brings them back. A cancelled TC prints stamped CANCELLED.
+
+**Student login slips.** A student's login ID is built from the school code and admission number. Slips are only made for students of Class 6 and above, because practice starts at Class 6. Passwords are stored only as hashes, so they can be printed only in the response that set them. A section batch skips students who already use their login.
 
 #### Demo School (`src/modules/demo/`, mounted at `/demo`)
 A public, read-only-ish school for trying the product. Its accounts and school carry `isDemo: true`. The school is rebuilt every night at 02:00 IST by `demoScheduler.js` and can be rebuilt on demand.
@@ -386,7 +423,7 @@ All routes sit behind `auth, isParent`; every `:childId` must be a linked child:
 | `/child/:childId/school` | GET | School view (see below). Optional `?month=YYYY-MM` |
 | `/child/:childId/receipts/:receiptNo` | GET | A fee receipt for printing |
 | `/child/:childId/report-cards/:planId` | GET | A published report card for printing |
-| `/child/:childId/fees/upi-claim` | POST | Parent's "I've paid" claim for a pending UPI payment |
+| `/child/:childId/fees/upi-claim` | POST | Parent's "I've paid" claim after paying the school's own UPI ID. Body `{ utr }` (12 digits). Records a PENDING payment that counts only after the office confirms it |
 | `/notices/read` | POST | Mark notices seen (`noticeIds`, 1 to 50) |
 
 **School view** (`/child/:childId/school`) returns the child's school name, section and attendance for the month (with today's status and `schoolToday` respecting working days and holidays), fees (due by today, overdue, next bill, receipts), published report cards, notices from the last 60 days with read flags, and the homework this IST week and the next 7 days.

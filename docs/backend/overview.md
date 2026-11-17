@@ -45,7 +45,7 @@ All endpoints return:
 
 Errors use `AppError` class with global error handler.
 
-## Modules (26 total)
+## Modules (27 total)
 
 | Module | Purpose |
 |--------|---------|
@@ -67,6 +67,7 @@ Errors use `AppError` class with global error handler.
 | `referral` | Invite codes, signup attribution, rewards after the friend answers 3 questions |
 | `challenge` | Challenge-a-friend links: public play without login, claim after signup, results |
 | `notification` | In-app notification bell and the daily 5 pm IST notification job |
+| `announcement` | SuperAdmin announcements: one message written into the notification bell of every user in the chosen roles or school |
 | `campaign` | SuperAdmin email campaigns and one-click unsubscribe |
 | `demo` | Public demo school: passwordless sign-in for four roles, nightly rebuild |
 | `fees` | School fee structures, bills, counter payments with one receipt per payment, refunds, day book |
@@ -74,7 +75,7 @@ Errors use `AppError` class with global error handler.
 | `timetable` | Weekly timetable versions, slots, free-teacher lookup, substitutions |
 | `notice` | School notices to the whole school, a class or a section, with parent "seen by" counts |
 | `gradebook` | Exam plans, mark sheets, weighted report cards |
-| `onboarding` | Bulk student import, transfer certificates with the dues block, parent logins on printed slips |
+| `onboarding` | Bulk student import, student records, transfer certificates (principal approval, dues block, RTE rule), parent and student logins on printed slips |
 
 ## AI Integration
 
